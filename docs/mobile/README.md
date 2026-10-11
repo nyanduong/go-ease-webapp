@@ -61,6 +61,8 @@ Android debug key do toolchain sinh chỉ cho local, không thay key preview/rel
 
 Ghi commit/build ID, OS, loại thiết bị và môi trường riêng Android/iOS theo WORKFLOW. Mỗi nền tảng: cài development build; thấy loading rồi health `api-only` thành công từ API thực; dừng API hoặc ngắt mạng thấy error; khởi động lại bấm Thử lại thấy success; kiểm tra timeout và payload sai; đọc log/network và thử layout/scroll/safe area trên thiết bị. Payload sai có thể dùng fixture riêng nhưng ghi rõ test double, không ghi live. Không dùng Metro export/browser responsive/Android để suy iOS đạt.
 
+Các flow native tại `apps/mobile/.maestro` dùng Maestro local: `health-success.yaml` mở development client qua `DEV_CLIENT_URL`, `health-network-error.yaml` chạy khi API test đã dừng, `health-recovery.yaml` sau khi API thực sẵn sàng; timeout/contract có tên `*-fixture.yaml` và phải dùng fixture local riêng được ghi rõ. Không thao tác backend/thiết bị khác. [Maestro Windows/Java17+](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli) và [release2.11.0](https://github.com/mobile-dev-inc/Maestro/releases/tag/cli-2.11.0) đã kiểm chứng CLI thực; không cần cloud/account cho `maestro test`. Chỉ cài ZIP ở thư mục test riêng, verify hash release, dùng biến process-local tắt analytics/update, không sửa PATH global. Lần chạy đầu đã phát hiện thiếu SplashScreenManager trước health, các flow còn lại **chưa chạy**; xem receipt, không coi flow file là kết quả pass.
+
 Trước bàn giao #10/#11 còn cần preview trên Android thật và iPhone thật, mở khi Metro tắt, gọi HTTPS staging. Thiếu điều kiện thì giữ #15 mở và ghi ca bị chặn; không đánh dấu M0 hoàn tất.
 
 ## Dependency và ranh giới
@@ -69,8 +71,8 @@ Expo `57.0.27`, React Native `0.86.3`, React `19.2.3`, dev-client `57.0.19`, saf
 
 | Nhóm / nguồn đối chiếu 11/10/2026 | Android | iOS |
 | --- | --- | --- |
-| Expo/RN/React theo metadata SDK 57 | Metro export và native APK debug x86_64 build pass; cài/runtime chưa kiểm chứng | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
-| [expo-dev-client SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/dev-client/) | Có trong APK development đã build; chưa cài/chạy app | Có hỗ trợ theo SDK; cần đường build/cài thực, không dùng Expo Go thay thế |
+| Expo/RN/React theo metadata SDK 57 | Metro export và native APK debug x86_64 build/cài pass; mở health fail vì thiếu SplashScreenManager | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
+| [expo-dev-client SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/dev-client/) | Launch/deeplink thật qua Maestro đã chạy; cần sửa `expo-splash-screen` theo [SDK57 ~57.0.9](https://docs.expo.dev/versions/v57.0.0/sdk/splash-screen/) rồi build lại | Có hỗ trợ theo SDK; cần đường build/cài thực, không dùng Expo Go thay thế |
 | [safe-area-context SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/safe-area-context/) | Kotlin/Java/C++ build pass sau checkout ngắn; notch/edge-to-edge chưa thử trên app | Có hỗ trợ theo SDK; bundle pass, safe area trên simulator/iPhone chưa thử |
 
 Nguồn tương thích và bundle thành công không thay native acceptance; cập nhật bảng và receipt khi build/runtime thực có kết quả.

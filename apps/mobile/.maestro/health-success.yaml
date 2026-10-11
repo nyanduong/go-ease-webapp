@@ -1,0 +1,11 @@
+# Requires the real local API and Metro for the installed development client.
+appId: vn.goease.mobile.dev
+---
+- launchApp:
+    clearState: true
+- openLink: ${DEV_CLIENT_URL}
+- extendedWaitUntil:
+    visible: "API đang hoạt động"
+    timeout: 120000
+- assertVisible: "Đã nhận phản hồi health hợp lệ từ máy chủ."
+- takeScreenshot: health-success
