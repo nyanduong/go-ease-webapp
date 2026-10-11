@@ -3,6 +3,7 @@ export * from './auth.js';
 export const API_SERVICE = 'goease-api' as const;
 
 export * from './ai.js';
+export * from './maps.js';
 
 /** Chỉ xác nhận tiến trình API trả lời, chưa kiểm tra dịch vụ ngoài. */
 export interface HealthResponse {

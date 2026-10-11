@@ -1,29 +1,9 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GoogleSignInButton } from 'react-native-nitro-google-signin';
-import { apiBaseUrl } from '../../lib/config';
-import { createNativeAuthClient } from './client';
-import { googleConfig } from './google';
-import { nativeGoogleProvider, sessionVault } from './runtime';
-import { createNativeAuthStore } from './store';
+import { useNativeAuth } from './context';
 
 export function AuthPanel() {
-  const store = useMemo(() => {
-    try {
-      const config = googleConfig(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, Platform.OS);
-      const url = apiBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL, __DEV__ ? 'development' : 'preview');
-      return createNativeAuthStore(createNativeAuthClient(url), nativeGoogleProvider(config), sessionVault);
-    } catch {
-      // A blocked store never calls any of these dependencies.
-      return createNativeAuthStore(createNativeAuthClient(''), { credential: async () => { throw new Error(); }, signOut: async () => {} }, sessionVault, true);
-    }
-  }, []);
-  const state = useSyncExternalStore(store.subscribe, store.snapshot);
-  useEffect(() => {
-    void store.restore();
-    const subscription = AppState.addEventListener('change', value => { if (value === 'active') void store.restore(); });
-    return () => { subscription.remove(); store.dispose(); };
-  }, [store]);
+  const { store, state } = useNativeAuth();
   return <View style={styles.card} accessibilityLiveRegion="polite">
     <Text style={styles.title} accessibilityRole="header">Đăng nhập Google</Text>
     <Text style={styles.text}>{state.message}</Text>
