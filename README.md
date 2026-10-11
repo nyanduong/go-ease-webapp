@@ -4,7 +4,7 @@ GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app A
 
 `apps/web` giữ React + Vite + TypeScript, Tailwind CSS + shadcn/ui để phát triển quản trị; `apps/api` giữ NestJS + TypeScript dùng chung. PostgreSQL + Prisma 7 có schema/migration/seed sau [thiết kế dữ liệu #2](https://github.com/nyanduong/go-ease-webapp/issues/2) đã review/merge; [runbook DB](docs/database/RUNBOOK.md) hướng dẫn cluster local cô lập, role tối thiểu và backup/restore. Chia sẻ contracts/logic phù hợp, không hứa dùng chung toàn bộ UI.
 
-MVP gồm chuyến 1–5 ngày, ngân sách tổng nhóm VND, trải nghiệm địa phương và khách sạn/vé máy bay qua đối tác; một điểm đến mở thử tại Việt Nam chưa chốt. Gemini online qua backend, Ollama chỉ thử nghiệm; bản đồ khách hàng là native trong app, SDK hiện dùng react-native-maps/Google provider, cần nghiệm chứng native/live riêng từng nền tảng theo [Maps](docs/maps/README.md). M0 kiểm chứng nền/tích hợp, chưa phải toàn bộ MVP. Xem [phạm vi MVP](docs/MVP_SCOPE.md), [kiến trúc](docs/ARCHITECTURE.md), [quy trình GitHub](docs/WORKFLOW.md) và [hướng dẫn agent](AGENTS.md).
+MVP gồm chuyến 1–5 ngày, ngân sách tổng nhóm VND, trải nghiệm địa phương và khách sạn/vé máy bay qua đối tác; một điểm đến mở thử tại Việt Nam chưa chốt. Gemini online qua backend, Ollama chỉ thử nghiệm; bản đồ khách hàng là native trong app, SDK hiện dùng react-native-maps/Google provider, cần nghiệm chứng native/live riêng từng nền tảng theo [Maps](docs/maps/README.md). M0 kiểm chứng nền/tích hợp, chưa phải toàn bộ MVP. Xem [bàn giao/UAT M0](docs/handover/README.md), [phạm vi MVP](docs/MVP_SCOPE.md), [kiến trúc](docs/ARCHITECTURE.md), [quy trình GitHub](docs/WORKFLOW.md) và [hướng dẫn agent](AGENTS.md).
 
 ## Cài và chạy trên Windows/Linux
 
@@ -17,7 +17,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Web: http://127.0.0.1:5173 — API: http://127.0.0.1:3000/api/health. `pnpm dev` build contracts thành công trước khi chạy ứng dụng, rồi giữ một TypeScript watcher cho contracts cùng API/web. Thay đổi runtime được API nạp lại và Vite cập nhật trên web; bấm **Kiểm tra lại** để gửi health request mới. Lỗi compile contracts hiện trong terminal, giữ dist hợp lệ trước đó và tự build lại khi sửa lỗi. Ctrl+C dừng các watcher và cả hai app. Lệnh chạy trực tiếp trong PowerShell/Linux.
+Web admin: http://127.0.0.1:5173 — [màn kỹ thuật health](http://127.0.0.1:5173/technical/health) — API: http://127.0.0.1:3000/api/health. `pnpm dev` build contracts thành công trước khi chạy ứng dụng, rồi giữ một TypeScript watcher cho contracts cùng API/web. Thay đổi runtime được API nạp lại và Vite cập nhật trên web; mở `/technical/health`, bấm **Kiểm tra lại** để gửi health request mới. Lỗi compile contracts hiện trong terminal, giữ dist hợp lệ trước đó và tự build lại khi sửa lỗi. Ctrl+C dừng các watcher và cả hai app. Lệnh chạy trực tiếp trong PowerShell/Linux.
 
 API dev thêm bootstrap flag `--dev-watch`: khi restart/dừng, Nest đóng các socket preconnect/keep-alive còn mở để watcher không treo. Request đang chạy có thể mất kết nối; UI phải giữ draft và cho retry. `pnpm start` không thêm flag, giữ cách drain response mặc định của Nest. Xem [Nest FAQ](https://docs.nestjs.com/faq/keep-alive-connections) và [receipt fix #23](docs/verification/ISSUE-23.md).
 
@@ -42,7 +42,7 @@ pnpm dev:api
 pnpm dev:web
 ```
 
-Dừng terminal API, bấm **Kiểm tra lại** trên web: phải hiện lỗi. Chạy lại API, bấm **Thử lại**: phải nhận phản hồi thành công mới.
+Mở web `/technical/health`. Dừng terminal API, bấm **Kiểm tra lại**: phải hiện lỗi. Chạy lại API, bấm **Thử lại**: phải nhận phản hồi thành công mới.
 
 `dev:api` và `dev:web` chỉ theo dõi ứng dụng tương ứng, **không build/watch contracts**. Khi sửa contracts trong chế độ chạy riêng, dùng thêm một terminal `pnpm dev:contracts` (watcher này tự build lần đầu; chờ “Found 0 errors” trước khi bật app), hoặc chạy lại lệnh build contracts thủ công. Chỉ chạy một watcher/build contracts tại một thời điểm; không chạy các lệnh này đồng thời với `pnpm dev`.
 
@@ -64,7 +64,8 @@ pnpm build
 - Smoke: Playwright khởi động API thật port 3020 và web production port 4173; desktop/mobile Chromium, health network, retry, console và tràn ngang. Hai port này cần trống; test không tái sử dụng dịch vụ lạ đang chạy. Có thể chạy riêng `pnpm test:unit` hoặc `pnpm test:smoke`.
 - Dev: `pnpm test:dev` chạy `pnpm dev` trong fixture không có dist, tái sử dụng dependency đã install nhưng liên kết contracts riêng của fixture. Chromium xác minh runtime API và guard web, compile error không emit và phục hồi. Port 3031/5181 phải trống. Linux dùng SIGINT và xác minh tiến trình con/cổng đã dừng; Windows test tự dọn process tree, Ctrl+C còn được thử trực tiếp bằng PowerShell. Probe chỉ sửa fixture và được khôi phục byte-exact.
 - Kiến trúc: `pnpm test:architecture` kiểm tra AST import/re-export/require/import động, alias/relative, ranh giới workspace và vòng import local; fixture âm phải bị chặn. Chạy trong `pnpm test`, xem [phạm vi kiểm tra](docs/ARCHITECTURE.md#kiểm-tra-ranh-giới-tự-động).
-- CI: PR vào main và push main đều chạy check **Quality Gate**, không cần secret hoặc dịch vụ AI/cloud DB. DB suite dùng binaries PostgreSQL có trên Ubuntu runner và cluster thử cô lập. Job tuần tự chỉ thành công khi typecheck, lint, test (gồm kiến trúc và regression hiện có) và build đều đạt.
+- Đóng gói: `pnpm test:deploy` sau API build kiểm tra artifact production đã prune/chuyển thư mục với PostgreSQL thật và API thực; operator migration/grants/seed/verify nằm riêng. Trên Windows chỉ dựng lại junction đã xác minh nằm trong artifact khi chuyển thư mục, không liên kết về workspace. Hướng dẫn triển khai, secret files, private network và backup/restore/rollback ở [staging](docs/staging/README.md); [preview Android/iOS](docs/staging/MOBILE_PREVIEW.md) vẫn cần tài nguyên thật.
+- CI: PR vào main và push main đều chạy check **Quality Gate**, không cần secret hoặc dịch vụ AI/cloud DB. DB suite dùng binaries PostgreSQL có trên Ubuntu runner và cluster thử cô lập. Sau root build, bước container bắt buộc dựng bốn image và kiểm tra private PG/operator/runtime/proxy/browser/backup/restore bằng local HTTP. Job tuần tự chỉ thành công khi typecheck, lint, test (gồm kiến trúc và regression hiện có), build và bước container đều đạt. Docker engine local chưa kết nối được; không suy CI/local HTTP là HTTPS staging.
 
 Sau build, có thể chạy API bằng `pnpm --filter @goease/api start` và web bằng `pnpm --filter @goease/web preview`. Preview mặc định port 4173; nếu dùng web preview cùng API mặc định, thêm `http://127.0.0.1:4173` vào WEB_ORIGINS rồi khởi động lại API. Đây là local preview, chưa phải staging.
 

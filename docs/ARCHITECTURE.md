@@ -14,6 +14,7 @@ apps/web/src/           # admin shell/pages, catalog/auth client, components/ui,
 apps/mobile/            # App.tsx; src/features/auth/maps/trips, health; native config
 packages/contracts/src/# type và runtime guard giao tiếp
 scripts/               # kiểm tra AST dependency
+deploy/                # artifact/container/proxy/operator preflight và regression
 tests/                 # architecture, dependency, smoke, dev regression
 docs/                  # scope, workflow, kiến trúc và kiểm chứng
 ```
@@ -51,7 +52,7 @@ Timestamp là thời điểm ISO UTC. Endpoint chỉ chứng minh tiến trình 
 
 Test hiện có: API/config và subprocess regression cô lập env, UI fetch doubles, smoke web production–API thật, dev fixture kiểm tra contracts/recovery/process cleanup. Chromium mobile là viewport web, không kiểm chứng native. Root typecheck/lint/test/build được chạy tuần tự trong **Quality Gate**; CI của PR mới phải kiểm chứng trên HEAD mới.
 
-API local chỉ lắng nghe `127.0.0.1`; địa chỉ này trên điện thoại là điện thoại, chưa phải laptop. Bind/network trên thiết bị theo #15; public hosting/HTTPS/rollback theo #10. Localhost không được gọi là staging.
+API local mặc định lắng nghe `127.0.0.1`; địa chỉ này trên điện thoại là điện thoại, chưa phải laptop. `HOST` chỉ nhận loopback hoặc `0.0.0.0` tường minh. Image staging dùng bind container `0.0.0.0`, không publish API/PG ra host; proxy chỉ publish loopback phía sau HTTPS ingress do owner cấp. Web production dùng same-origin `/api`; public app URL vẫn cần HTTPS thật. Gói API production được prune/kiểm tra độc lập, tách migration/seed/probe khỏi runtime; operator riêng cấp lại và xác minh ma trận quyền. Xem [staging](staging/README.md) và [preview hai nền tảng](staging/MOBILE_PREVIEW.md). Local HTTP/container CI không được gọi là HTTPS staging hoặc nghiệm thu điện thoại.
 
 ## Ranh giới sẽ triển khai theo issue
 
