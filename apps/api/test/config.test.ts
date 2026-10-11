@@ -11,7 +11,8 @@ test('cấu hình local dùng origin rõ ràng và port mặc định', () => {
 test('từ chối port, mode, wildcard, credentials và path sai', () => {
   for (const input of [{ PORT: 'abc' }, { PORT: '0' }, { PORT: '65536' }, { NODE_ENV: 'preview' },
     { WEB_ORIGINS: '*' }, { WEB_ORIGINS: 'https://site.example/path' },
-    { WEB_ORIGINS: 'https://user:password@site.example' }]) {
+    { WEB_ORIGINS: 'https://user:password@site.example' }, { DATABASE_URL: 'https://not-postgres.example' },
+    { GOOGLE_WEB_CLIENT_ID: '*' }, { GOOGLE_WEB_CLIENT_ID: '' }]) {
     assert.throws(() => validateEnvironment(input));
   }
 });

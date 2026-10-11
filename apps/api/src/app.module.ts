@@ -2,6 +2,7 @@ import { Module, type DynamicModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnvironment } from './config.js';
 import { HealthController } from './health/health.controller.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 
 @Module({
   controllers: [HealthController],
@@ -15,6 +16,6 @@ export class AppModule {
         isGlobal: true, ignoreEnvFile: true, validatePredefined: false, skipProcessEnv: true,
         load: [() => validateEnvironment(environment)],
       });
-    return { module: AppModule, imports: [config] };
+    return { module: AppModule, imports: [config, AuthModule] };
   }
 }

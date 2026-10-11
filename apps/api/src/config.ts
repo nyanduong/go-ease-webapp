@@ -2,6 +2,8 @@ export interface Environment {
   NODE_ENV: 'development' | 'test' | 'production';
   PORT: number;
   WEB_ORIGINS: string[];
+  DATABASE_URL?: string;
+  GOOGLE_WEB_CLIENT_ID?: string;
 }
 
 export function validateEnvironment(input: Record<string, unknown>): Environment {
@@ -26,5 +28,15 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
       throw new Error('WEB_ORIGINS chỉ chấp nhận origin HTTP/HTTPS, không chứa path, credentials hoặc wildcard.');
     }
   }
-  return { NODE_ENV: mode, PORT: port, WEB_ORIGINS: [...new Set(origins)] };
+  const database = input.DATABASE_URL;
+  const googleClient = input.GOOGLE_WEB_CLIENT_ID;
+  if (database !== undefined && (typeof database !== 'string' || !/^postgres(?:ql)?:\/\//.test(database))) {
+    throw new Error('DATABASE_URL phải là URL PostgreSQL phía server.');
+  }
+  if (googleClient !== undefined && (typeof googleClient !== 'string' || !/^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(googleClient))) {
+    throw new Error('GOOGLE_WEB_CLIENT_ID phải là client ID Google phía server.');
+  }
+  return { NODE_ENV: mode, PORT: port, WEB_ORIGINS: [...new Set(origins)],
+    ...(database === undefined ? {} : { DATABASE_URL: database }),
+    ...(googleClient === undefined ? {} : { GOOGLE_WEB_CLIENT_ID: googleClient }) };
 }
