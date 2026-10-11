@@ -5,6 +5,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { Test } from '@nestjs/testing';
+import pg from 'pg';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { isAuthChallengeResponse, isCurrentSessionResponse, isSessionResponse, type AuthChallengeResponse, type SessionResponse } from '@goease/contracts';
 import { AppModule } from '../src/app.module.js';
@@ -79,10 +80,10 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
   await grantRuntime(database.migrationUrl, database.runtime);
   const op = operator = createDatabaseClient(database.migrationUrl);
   const db = runtime = createDatabaseClient(database.runtimeUrl);
-  async function server() {
+  async function server(databaseUrl = database.runtimeUrl) {
     const verifier = new TestIdentities();
     const module = await Test.createTestingModule({ imports: [await AppModule.register({ NODE_ENV: 'test', WEB_ORIGINS: origin,
-      DATABASE_URL: database.runtimeUrl, GOOGLE_WEB_CLIENT_ID: clientId })] })
+      DATABASE_URL: databaseUrl, GOOGLE_WEB_CLIENT_ID: clientId })] })
       .overrideProvider(GoogleIdentityVerifier).useValue(verifier).compile();
     const app = module.createNestApplication<NestExpressApplication>({ logger: false });
     configureApp(app); apps.add(app); await app.listen(0, '127.0.0.1');
@@ -260,6 +261,21 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
       await op.session.updateMany({ where: { userId: expiring.body.user.id }, data: { createdAt: new Date(Date.now() - 600_000), expiresAt: new Date(Date.now() - 1) } });
       await fault(await s.get('auth/me', expiring.headers), 401, 'SESSION_REQUIRED');
     } finally { await s.close(); }
+  });
+
+  await t.test('runtime DB statement lock is bounded, fails closed, and pool recovers after lock release', async () => {
+    const s = await server(`${database.runtimeUrl}?statement_timeout=60000&query_timeout=60000`);
+    const locker = new pg.Client({ connectionString: database.migrationUrl });
+    try {
+      const login = await s.login('HTTP-statement-timeout');
+      await locker.connect(); await locker.query('BEGIN'); await locker.query('LOCK TABLE "Session" IN ACCESS EXCLUSIVE MODE');
+      const started = performance.now();
+      await fault(await fetch(`${s.url}/api/auth/me`, { headers: login.headers, signal: AbortSignal.timeout(12_000) }), 500, 'INTERNAL_ERROR');
+      const elapsed = performance.now() - started;
+      assert.ok(elapsed >= 4000 && elapsed < 10_000, `bounded statement elapsed=${Math.round(elapsed)}ms`);
+      await locker.query('ROLLBACK');
+      assert.equal((await s.get('auth/me', login.headers)).status, 200);
+    } finally { await locker.query('ROLLBACK').catch(() => undefined); await locker.end(); await s.close(); }
   });
 
   await t.test('strict input, safe error envelope, bounded challenge limiter and expired-row cleanup', async () => {

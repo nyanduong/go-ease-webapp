@@ -4,7 +4,7 @@ REST prefix `/api`. `GET /health` chỉ kiểm tra tiến trình, vẫn hoạt �
 
 ## Cấu hình server
 
-`DATABASE_URL` là role runtime tối thiểu theo [runbook DB](../database/RUNBOOK.md); migration/operator dùng role riêng. `GOOGLE_WEB_CLIENT_ID` là Web client ID Google làm audience cho ID token của cả ba client; không cần client secret để xác minh ID token. `WEB_ORIGINS` là danh sách origin chính xác, không wildcard/path. Thiếu DB hoặc client ID: auth trả `503 AUTH_NOT_CONFIGURED`, không tạo identity giả. Health không chứng minh Google/DB sẵn sàng.
+`DATABASE_URL` là role runtime tối thiểu theo [runbook DB](../database/RUNBOOK.md); migration/operator dùng role riêng. Prisma runtime/seed client giới hạn pool 5, connect/acquire 3 giây, statement/query 5 giây, idle 10 giây; auth transaction maxWait 3 giây/timeout 5 giây. Prisma migration engine riêng không đổi. DB lỗi trả envelope nội bộ an toàn và không xác thực thành công. `GOOGLE_WEB_CLIENT_ID` là Web client ID Google làm audience cho ID token của cả ba client; không cần client secret để xác minh ID token. `WEB_ORIGINS` là danh sách origin chính xác, không wildcard/path. Thiếu DB hoặc client ID: auth trả `503 AUTH_NOT_CONFIGURED`, không tạo identity giả. Health không chứng minh Google/DB sẵn sàng.
 
 Web thực cần HTTPS vì cookie `__Host-` luôn Secure. Admin/API cần cùng site (ví dụ cùng registrable domain HTTPS) hoặc reverse proxy cùng origin để cookie SameSite=Lax được gửi; hai default hosting domain khác site không đáp ứng chỉ bằng bật CORS. CORS bật credentials và GET/POST/OPTIONS chỉ khi DB + client ID được cấu hình; preflight chỉ cho Content-Type, Authorization, X-GoEase-Auth-Proof, X-CSRF-Token. CORS không thay kiểm tra quyền/Origin. Native dùng bearer, không sao chép cookie web.
 
