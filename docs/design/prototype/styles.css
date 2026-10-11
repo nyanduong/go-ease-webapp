@@ -199,7 +199,8 @@ dialog::backdrop { background: #18372c80; backdrop-filter: blur(3px); }
 .error-number { font-size: 52px; color: #8a6740; line-height: 1; font-weight: 750; margin-bottom: 22px; }
 .admin-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
 .admin-info-grid .design-note { margin: 0; }
-.device.android button { min-height: 48px; }
+.device.android button { min-width: 48px; min-height: 48px; }
+.device.ios button { min-width: 44px; }
 .device.android .map-pin { width: 48px; height: 48px; }
 .device.ios .small-button { min-height: 44px; }
 #prototype-dialog[data-platform="android"] button { min-height: 48px; }
