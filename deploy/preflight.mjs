@@ -2,6 +2,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { parseEnv } from 'node:util';
 import { stagingHost } from './validate.mjs';
 
 export function immutableImage(value) {
@@ -30,6 +31,9 @@ export async function stagingPreflight(env, context = process.cwd()) {
     values.set(match[1], match[2]);
   }
   const allowed = ['DATABASE_URL', 'WEB_ORIGINS', 'GOOGLE_WEB_CLIENT_ID', 'GOOGLE_MAPS_SERVER_API_KEY', 'MAPS_ROUTES_ENABLED', 'GEMINI_API_KEY', 'GEMINI_MODEL'];
+  const parsed = parseEnv(text);
+  if ([...values].some(([name, value]) => parsed[name] !== value)) throw new Error('Runtime env must use canonical unquoted values without inline comments');
+  if (values.has('MAPS_ROUTES_ENABLED') && !['true', 'false'].includes(values.get('MAPS_ROUTES_ENABLED'))) throw new Error('Routes flag must be canonical true or false');
   if ([...values.keys()].some(key => !allowed.includes(key)) || values.get('WEB_ORIGINS') !== `https://${host}`
     || !/^postgres(?:ql)?:\/\//.test(values.get('DATABASE_URL') ?? '')) throw new Error('Runtime needs private DB and exact HTTPS origin, without migration/Node override variables');
   if (values.get('MAPS_ROUTES_ENABLED') === 'true' && env.GOEASE_ALLOW_PAID_PROVIDER !== 'owner-attested') throw new Error('Provider billing/quota/budget authorization must be separately attested');

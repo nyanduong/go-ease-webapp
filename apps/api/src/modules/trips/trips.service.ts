@@ -4,7 +4,7 @@ import { canonicalCreateTrip, canonicalUpdateTrip, isCreateTripRequest, isTripCu
   isTripUuid, isUpdateTripRequest, MAX_TRIP_VERSION, SAMPLE_DESTINATION, TRIP_TIME_ZONE,
   type TripDetail, type TripListResponse, type UpdateTripRequest } from '@goease/contracts';
 import { Prisma } from '../../generated/prisma/client.js';
-import { samplePlaces } from '../../database/seed.js';
+import { samplePlaces } from '../../database/sample-catalog.js';
 import { ApiFault } from '../../common/api-fault.js';
 import { TripsDatabase } from './trips-database.js';
 import { tripDetail, tripInclude, tripSummary } from './mapper.js';

@@ -51,6 +51,15 @@ test('staging operator resets dirty direct grants, refuses elevation and uses ex
     } finally { await admin.end(); }
     const owner = operatorConnection(cluster.url(db.databaseName)); await owner.connect();
     try {
+      await owner.query(`ALTER FUNCTION public.goease_immutable_parent() OWNER TO ${db.runtime}`);
+      await assert.rejects(verifyRuntime(db.runtimeUrl, db.runtime), /verification failed/);
+      await assert.rejects(grantRuntime(db.migrationUrl, db.runtime), /Runtime grant failed/);
+      await owner.query(`ALTER FUNCTION public.goease_immutable_parent() OWNER TO ${db.migrator}`);
+      await verifyRuntime(db.runtimeUrl, db.runtime);
+      await owner.query("CREATE TYPE public.test_only_role_enum AS ENUM ('TEST_ONLY')");
+      await owner.query(`ALTER TYPE public.test_only_role_enum OWNER TO ${db.runtime}`);
+      await assert.rejects(verifyRuntime(db.runtimeUrl, db.runtime), /verification failed/);
+      await owner.query('DROP TYPE public.test_only_role_enum');
       await owner.query(`ALTER TABLE "Place" OWNER TO ${db.runtime}`);
       await assert.rejects(grantRuntime(db.migrationUrl, db.runtime), /Runtime grant failed/);
     } finally { await owner.end(); }

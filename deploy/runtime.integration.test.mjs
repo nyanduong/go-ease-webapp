@@ -1,14 +1,14 @@
 /* global process, fetch, AbortSignal, setTimeout */
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, mkdir, cp, writeFile, rename } from 'node:fs/promises';
+import { mkdtemp, mkdir, cp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
-import { prepareArtifact } from './prepare-artifact.mjs';
+import { prepareArtifact, relocateArtifact, isolateProjectLinks } from './prepare-artifact.mjs';
 import { verifyArtifact } from './verify-artifact.mjs';
 
 const execute = promisify(execFile), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,16 +17,16 @@ test('pruned, moved production artifact uses PostgreSQL WASM and its own runtime
   const parent = await mkdtemp(path.join(os.tmpdir(), 'goease-pruned-runtime-'));
   const initial = path.join(parent, 'initial'), deployed = path.join(parent, 'relocated');
   const pnpmCli = process.env.npm_execpath;
-  assert.ok(pnpmCli && /\.(?:c?js)$/.test(pnpmCli), 'Run with pnpm exec node --test deploy/*.test.mjs');
+  assert.ok(pnpmCli && /\.(?:c?js)$/.test(pnpmCli), 'Run with pnpm test:deploy so the pinned pnpm CLI path is available');
   try {
     await execute(process.execPath, [pnpmCli, '--filter', '@goease/api', 'deploy', '--legacy', '--prod', '--no-optional', '--offline', initial], { cwd: root, timeout: 90_000, maxBuffer: 1024 * 1024, windowsHide: true });
   } catch { throw new Error('Isolated production deploy failed; inspect package graph without printing environment'); }
-  await rename(initial, deployed);
-  await prepareArtifact(deployed); await verifyArtifact(deployed);
+  await prepareArtifact(initial); await relocateArtifact(initial, deployed); await verifyArtifact(deployed);
   // Separate operator bundle: contains explicit tools that runtime lacks.
   const operator = path.join(parent, 'operator');
   try { await execute(process.execPath, [pnpmCli, '--filter', '@goease/api', 'deploy', '--legacy', '--no-optional', '--offline', operator], { cwd: root, timeout: 90_000, maxBuffer: 1024 * 1024, windowsHide: true }); }
   catch { throw new Error('Isolated operator deploy failed'); }
+  await isolateProjectLinks(operator);
   await mkdir(path.join(operator, 'dist/scripts/lib'), { recursive: true });
   for (const file of ['dist/scripts/staging-operator.js', 'dist/scripts/lib/runtime-role.js', 'dist/src/database/seed.js', 'prisma7.config.ts']) {
     await cp(path.join(root, 'apps/api', file), path.join(operator, file));
@@ -50,12 +50,16 @@ const database = createDatabaseClient();
 try { assert.equal(await database.place.count(), 3); assert.equal((await database.$queryRawUnsafe('SELECT current_user AS role'))[0].role, process.env.RUNTIME_ROLE); }
 finally { await database.$disconnect(); }
 console.info('Isolated PostgreSQL WASM query PASS');\n`);
-    const result = await execute(process.execPath, [proof], { cwd: deployed, env: runtimeEnv, timeout: 15_000, maxBuffer: 64 * 1024, windowsHide: true });
+    let result;
+    try { result = await execute(process.execPath, [proof], { cwd: deployed, env: runtimeEnv, timeout: 15_000, maxBuffer: 64 * 1024, windowsHide: true }); }
+    catch { throw new Error('Isolated runtime PostgreSQL query failed; private connection details are not logged'); }
     assert.match(result.stdout, /WASM query PASS/);
     // Actual deployed Nest API boots from its own runtime graph; no test provider.
     const reservation = net.createServer(); await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
     const port = reservation.address().port; await new Promise(resolve => reservation.close(resolve));
-    const server = spawn(process.execPath, ['dist/src/main.js'], { cwd: deployed, env: { ...runtimeEnv, NODE_ENV: 'production', HOST: '127.0.0.1', PORT: String(port), WEB_ORIGINS: 'https://admin.invalid' }, stdio: 'ignore', windowsHide: true });
+    // TEST_ONLY config lets the actual guard reject anonymous requests before
+    // any provider call. This is not a real OAuth client or authenticated user.
+    const server = spawn(process.execPath, ['dist/src/main.js'], { cwd: deployed, env: { ...runtimeEnv, NODE_ENV: 'production', HOST: '127.0.0.1', PORT: String(port), WEB_ORIGINS: 'https://admin.invalid', GOOGLE_WEB_CLIENT_ID: '123-test-only.apps.googleusercontent.com' }, stdio: 'ignore', windowsHide: true });
     const exit = new Promise(resolve => { server.once('exit', resolve); server.once('error', () => resolve(-1)); });
     try {
       let health;

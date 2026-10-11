@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { publicClientId, stagingHost } from './validate.mjs';
-import { prepareArtifact } from './prepare-artifact.mjs';
+import { prepareArtifact, relocateArtifact } from './prepare-artifact.mjs';
 import { verifyArtifact } from './verify-artifact.mjs';
 import { immutableImage, privateFile, stagingPreflight } from './preflight.mjs';
 
@@ -26,6 +26,15 @@ test('preflight rejects mutable images, source-context secrets and runtime migra
   }
   const valid = 'DATABASE_URL=postgresql://TEST_ONLY@database/goease_test\nWEB_ORIGINS=https://admin.goease.vn\n';
   await writeFile(env.GOEASE_API_ENV_FILE, valid);
+  assert.deepEqual(await stagingPreflight(env, root), { host: 'admin.goease.vn', secretFiles: 4 });
+  for (const flag of ['"true"', 'true # comment', "'true'", ' TRUE']) {
+    await writeFile(env.GOEASE_API_ENV_FILE, valid + `MAPS_ROUTES_ENABLED=${flag}\n`);
+    await assert.rejects(stagingPreflight(env, root));
+  }
+  await writeFile(env.GOEASE_API_ENV_FILE, valid + 'MAPS_ROUTES_ENABLED=true\n');
+  await assert.rejects(stagingPreflight(env, root), /attested/);
+  assert.deepEqual(await stagingPreflight({ ...env, GOEASE_ALLOW_PAID_PROVIDER: 'owner-attested' }, root), { host: 'admin.goease.vn', secretFiles: 4 });
+  await writeFile(env.GOEASE_API_ENV_FILE, valid + 'MAPS_ROUTES_ENABLED=false\n');
   assert.deepEqual(await stagingPreflight(env, root), { host: 'admin.goease.vn', secretFiles: 4 });
   await writeFile(env.GOEASE_API_ENV_FILE, valid + 'DATABASE_MIGRATION_URL=TEST_ONLY\n');
   await assert.rejects(stagingPreflight(env, root));
@@ -65,4 +74,41 @@ test('contained forbidden-name link is removed without deleting its target', asy
   await prepareArtifact(root);
   assert.equal(await readFile(path.join(target, 'keep.js'), 'utf8'), 'TEST_ONLY');
   await assert.rejects(readFile(path.join(root, '.env/keep.js')), { code: 'ENOENT' });
+});
+test('artifact relocation rebases contained junctions and refuses occupied or escaping destinations', async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'goease-artifact-move-'));
+  const original = path.join(parent, 'original'), moved = path.join(parent, 'moved');
+  await mkdir(path.join(original, 'actual'), { recursive: true });
+  await writeFile(path.join(original, 'actual/keep.js'), 'TEST_ONLY');
+  await symlink(path.join(original, 'actual'), path.join(original, 'dependency'), process.platform === 'win32' ? 'junction' : 'dir');
+  await relocateArtifact(original, moved);
+  assert.equal(await readFile(path.join(moved, 'dependency/keep.js'), 'utf8'), 'TEST_ONLY');
+  await assert.rejects(readFile(path.join(original, 'actual/keep.js')), { code: 'ENOENT' });
+  await assert.rejects(relocateArtifact(moved, path.join(parent, '../outside')), /sibling/);
+  await mkdir(original); await assert.rejects(relocateArtifact(moved, original), /exists/);
+});
+test('pnpm redundant API self alias is removed, without following it into workspace', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'goease-artifact-self-'));
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'goease-artifact-workspace-'));
+  await writeFile(path.join(root, 'package.json'), '{"name":"@goease/api"}');
+  await writeFile(path.join(outside, 'keep.ts'), 'TEST_ONLY');
+  const aliases = path.join(root, 'node_modules/.pnpm/node_modules/@goease'); await mkdir(aliases, { recursive: true });
+  await symlink(outside, path.join(aliases, 'api'), process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(prepareArtifact(root), /Unexpected project self alias/);
+  await prepareArtifact(root, outside);
+  await assert.rejects(readFile(path.join(aliases, 'api/keep.ts')), { code: 'ENOENT' });
+  assert.equal(await readFile(path.join(outside, 'keep.ts'), 'utf8'), 'TEST_ONLY');
+});
+test('self alias under an escaping ancestor is refused before any outside unlink', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'goease-artifact-ancestor-'));
+  const ancestor = await mkdtemp(path.join(os.tmpdir(), 'goease-artifact-external-ancestor-'));
+  const source = await mkdtemp(path.join(os.tmpdir(), 'goease-artifact-external-source-'));
+  await writeFile(path.join(root, 'package.json'), '{"name":"@goease/api"}');
+  await writeFile(path.join(source, 'keep.ts'), 'TEST_ONLY');
+  const aliases = path.join(ancestor, '.pnpm/node_modules/@goease'); await mkdir(aliases, { recursive: true });
+  await symlink(source, path.join(aliases, 'api'), process.platform === 'win32' ? 'junction' : 'dir');
+  await symlink(ancestor, path.join(root, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(prepareArtifact(root, source), /parent escapes/);
+  assert.equal(await readFile(path.join(aliases, 'api/keep.ts'), 'utf8'), 'TEST_ONLY');
+  assert.equal(await readFile(path.join(source, 'keep.ts'), 'utf8'), 'TEST_ONLY');
 });

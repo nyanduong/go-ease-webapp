@@ -15,6 +15,8 @@
 
 API production dùng `pnpm deploy --legacy --prod --no-optional`. Bước prepare bỏ TypeScript, declaration, source map và env khỏi artifact; verifier kiểm tra link không thoát artifact, không có Prisma CLI/Nest testing/seed/probe/operator/test/schema, và import Prisma PostgreSQL WASM/contracts. Integration test chuyển artifact sang thư mục mới, query PostgreSQL thực và boot API từ cwd mới. Operator deploy riêng với dev dependency Prisma CLI, chỉ copy các tool cần thiết.
 
+pnpm legacy có một self alias `node_modules/.pnpm/node_modules/@goease/api` trỏ về workspace. Prepare chỉ bỏ đúng alias này khi tên package, physical parent nằm trong artifact và target đúng source `apps/api`; link khác thoát ngoài bị từ chối. API không self-import bằng tên package. Khi chuyển artifact trên Windows, helper kiểm tra toàn bộ link rồi rebase junction nội bộ sang thư mục sibling mới; không sửa target ngoài. Catalog mẫu dùng module dữ liệu thuần `sample-catalog.js`, vì production không chứa operator `seed.js`.
+
 Images official được pin **OCI index digest kiểm tra registry ngày 11/10/2026**:
 
 | Image | Digest |
@@ -24,6 +26,8 @@ Images official được pin **OCI index digest kiểm tra registry ngày 11/10/
 | `postgres:18.6-trixie` | `sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
 
 Pin không tự chứng minh image không có CVE. Cập nhật pin cần review, test lại và ghi platform/digest thực. Runtime Prisma dùng JS/WASM với `adapter-pg`, không dựa vào migration engine của operator. Test container CI phải xác nhận image operator có thư viện TLS/OpenSSL cần thiết; local chưa chạy Docker.
+
+**Điều kiện trước kích hoạt ra ngoài:** Node24.15.0 hiện pin theo nền dự án, có trước các đợt security release June/July2026; chưa có assessment đầy đủ CVE Node và OS image. Owner/điều phối phải đối chiếu [Node security releases](https://nodejs.org/en/blog/vulnerability/), scan image thực và nâng bản được review khi cần trước external staging. Không gọi các pin này là security-clean; không bulk upgrade hay bỏ audit trong PR packaging.
 
 ## Điều kiện owner phải cung cấp
 
@@ -69,7 +73,7 @@ Grant tool chạy transaction: từ chối role nâng quyền/membership/ownersh
 
 ## Proxy, dữ liệu riêng và nghiệm thu staging
 
-Compose chạy non-root/read-only/drop ALL capabilities/no-new-privileges/tmpfs/pid-memory limits; chỉ proxy publish `127.0.0.1:<port>`. API/PG không có host port. Owner HTTPS ingress forward vào proxy này; cấu hình local HTTP không phải HTTPS staging. nginx giữ `/api` khi proxy_pass, tắt upstream retry/buffering/cache, API/deep-link HTML `no-store`, asset thiếu404, hostname không hợp lệ421. Assets hash có immutable cache. Body cap1536KiB; API vẫn dùng auth/CSRF/rate limit và cap theo route riêng.
+Compose chạy non-root/read-only/drop ALL capabilities/no-new-privileges/tmpfs/pid-memory limits; chỉ proxy publish `127.0.0.1:<port>`. API/PG không có host port. Owner HTTPS ingress forward vào proxy này; cấu hình local HTTP không phải HTTPS staging. nginx giữ `/api` khi proxy_pass, tắt upstream retry/buffering/cache, API/deep-link HTML `no-store`, asset thiếu404, hostname không hợp lệ421. Upstream dùng Docker DNS resolver, shared zone và `resolve` để cập nhật IP sau khi thay API container; CI giữ proxy nguyên và thay API sang IP khác để kiểm tra. Assets hash có immutable cache. Body cap1536KiB; API vẫn dùng auth/CSRF/rate limit và cap theo route riêng.
 
 Access log tắt, API error log không ghi URL riêng, operator lỗi cố định không in URL/SQL/credentials. Không dump `docker inspect`, `compose config` đầy đủ, env hoặc raw DB errors vào evidence. Health chỉ chứng minh tiến trình API (`api-only`), không chứng minh DB/Google/Maps/Gemini. Operator verify/actual query riêng mới kiểm tra DB.
 
@@ -95,4 +99,4 @@ Trước migration ghi backup/hash + image digests hiện tại + migration stat
 
 Tại Windows hiện Docker CLI có nhưng engine từ chối kết nối; **không start daemon/service hay chạy build local**. Trạng thái kết quả cụ thể ở [GE-M0-10](../verification/GE-M0-10.md).
 
-Nguồn chính thức, đối chiếu 11/10/2026: [pnpm deploy 10.x](https://pnpm.io/10.x/cli/deploy), [Node official image](https://hub.docker.com/_/node), [nginx official image](https://hub.docker.com/_/nginx), [Postgres official image](https://hub.docker.com/_/postgres), [nginx proxy_pass/retry/buffer](https://nginx.org/en/docs/http/ngx_http_proxy_module.html), [Compose secrets/file permissions](https://docs.docker.com/reference/compose-file/services/#secrets), [Docker port publishing](https://docs.docker.com/engine/network/port-publishing/), [PostgreSQL pgpass](https://www.postgresql.org/docs/18/libpq-pgpass.html), [GRANT](https://www.postgresql.org/docs/18/sql-grant.html), [REVOKE](https://www.postgresql.org/docs/18/sql-revoke.html), [pg_dump](https://www.postgresql.org/docs/18/app-pgdump.html), [pg_restore](https://www.postgresql.org/docs/18/app-pgrestore.html).
+Nguồn chính thức, đối chiếu 11/10/2026: [pnpm deploy 10.x](https://pnpm.io/10.x/cli/deploy), [Node official image](https://hub.docker.com/_/node), [nginx official image](https://hub.docker.com/_/nginx), [Postgres official image](https://hub.docker.com/_/postgres), [nginx proxy_pass/retry/buffer](https://nginx.org/en/docs/http/ngx_http_proxy_module.html), [nginx upstream resolve](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#resolve), [Docker container replacement networking](https://docs.docker.com/compose/how-tos/networking/#updating-containers-on-the-network), [Compose secrets/file permissions](https://docs.docker.com/reference/compose-file/services/#secrets), [Docker port publishing](https://docs.docker.com/engine/network/port-publishing/), [PostgreSQL pgpass](https://www.postgresql.org/docs/18/libpq-pgpass.html), [GRANT](https://www.postgresql.org/docs/18/sql-grant.html), [REVOKE](https://www.postgresql.org/docs/18/sql-revoke.html), [pg_dump](https://www.postgresql.org/docs/18/app-pgdump.html), [pg_restore](https://www.postgresql.org/docs/18/app-pgrestore.html).

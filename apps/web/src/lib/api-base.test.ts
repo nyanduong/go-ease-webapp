@@ -14,7 +14,7 @@ describe('same-origin staging API configuration', () => {
   });
   it('rejects HTTP, other origins, authority-relative, credentials, query/hash and backslash normalization', () => {
     for (const value of ['http://admin.test/api', 'https://other.test/api', '//admin.test/api', '//other.test/api',
-      'https://user:password@admin.test/api', '/api?private=value', '/api#x', '\\other.test\\api', ' /api']) {
+      'https://user:password@admin.test/api', '/api?private=value', '/api#x', '/api?', '/api#', '/ap\ni', '\\other.test\\api', ' /api']) {
       expect(() => resolveApiBase(value, 'https://admin.test')).toThrow();
     }
     expect(() => resolveApiBase('/api', 'http://admin.test')).toThrow();

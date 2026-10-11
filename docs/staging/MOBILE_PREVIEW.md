@@ -2,7 +2,7 @@
 
 Preview nội bộ cần JS/assets bundled, mở khi **Metro tắt**, HTTPS staging thật, cài trên **máy Android thật và iPhone thật** với ca riêng. Development APK/emulator, Metro export hoặc browser responsive không thay thế. Android/iOS vẫn song song; Windows không chứng minh iOS/signing/account/device đã đạt.
 
-`apps/mobile/eas.json` đã có profile `preview`: internal distribution, `developmentClient=false`, `GOEASE_BUILD_VARIANT=preview`, Android APK. Không có project ID giả. App config preview chặn API không HTTPS và tắt dev network exceptions. Chưa chạy EAS build/deploy/provider trong #10.
+`apps/mobile/eas.json` đã có profile `preview`: internal distribution, `developmentClient=false`, `GOEASE_APP_VARIANT=preview`, Android APK. Không có project ID giả. App config preview chặn API không HTTPS và tắt dev network exceptions. Chưa chạy EAS build/deploy/provider trong #10.
 
 Owner cần xác minh EAS account/project/quyền, quota/cost; Android signing/distribution + Google OAuth SHA1 đúng chứng chỉ preview; Apple team/signing/provisioning/thiết bị đăng ký; public Google client IDs/redirects/test users; Maps key native riêng restriction package/bundle+certificate; server key chỉ API. Simulator build không thay physical iPhone requirement và không tự chứng minh Apple paid membership.
 

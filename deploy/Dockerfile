@@ -14,7 +14,8 @@ RUN mkdir -p /artifacts/operator/dist/scripts/lib \
  && cp apps/api/dist/src/database/seed.js /artifacts/operator/dist/src/database/ \
  && cp apps/api/prisma7.config.ts /artifacts/operator/ \
  && cp -R apps/api/prisma /artifacts/operator/
-RUN node deploy/prepare-artifact.mjs /artifacts/api && node deploy/verify-artifact.mjs /artifacts/api
+RUN node deploy/prepare-artifact.mjs /artifacts/api && node deploy/verify-artifact.mjs /artifacts/api \
+ && node --input-type=module -e "import {isolateProjectLinks} from './deploy/prepare-artifact.mjs'; await isolateProjectLinks('/artifacts/operator')"
 
 FROM build AS web-build
 ARG VITE_GOOGLE_WEB_CLIENT_ID

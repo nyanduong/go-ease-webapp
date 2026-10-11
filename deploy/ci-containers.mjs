@@ -37,13 +37,17 @@ try {
   // container's non-root UID. No secret is sent in Docker arguments or image layers.
   await writeFile(clusterFile, clusterPassword, { mode: 0o444 });
   const migration = `postgresql://goease_ci_migrator:${migrationPassword}@database:5432/goease_ci`, runtime = `postgresql://goease_ci_app:${runtimePassword}@database:5432/goease_ci`;
-  await writeFile(apiFile, `DATABASE_URL=${runtime}\nWEB_ORIGINS=https://ci.goease.vn\n`, { mode: 0o444 });
+  // TEST_ONLY public client-shaped config exercises anonymous401 before Google;
+  // web has no client configured and no provider request/authentication occurs.
+  await writeFile(apiFile, `DATABASE_URL=${runtime}\nWEB_ORIGINS=https://ci.goease.vn\nGOOGLE_WEB_CLIENT_ID=123-test-only.apps.googleusercontent.com\n`, { mode: 0o444 });
   await writeFile(operatorFile, `DATABASE_MIGRATION_URL=${migration}\nDATABASE_URL=${runtime}\nRUNTIME_ROLE=goease_ci_app\n`, { mode: 0o444 });
   for (const target of ['api', 'operator', 'admin', 'pg-tools']) {
     const image = `${prefix}-${target}`; images.push(image);
+    console.info(`Building reviewed container target: ${target}`);
     await docker(['build', '--target', target, '-f', 'deploy/Dockerfile', '-t', image, '.']);
   }
   await docker(['network', 'create', network]);
+  console.info('Preparing owned private PostgreSQL fixture.');
   const pg = `${prefix}-db`; containers.push(pg);
   await docker(['run', '-d', '--name', pg, '--network', network, '--network-alias', 'database', '-e', 'POSTGRES_PASSWORD_FILE=/run/secrets/password', '-e', 'POSTGRES_DB=goease_ci', '--mount', `type=bind,src=${clusterFile},dst=/run/secrets/password,readonly`, '--tmpfs', '/var/lib/postgresql:rw,size=256m', 'postgres:18.6-trixie@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336']);
   await waitFor(async () => { try { await docker(['exec', pg, 'pg_isready', '-U', 'postgres', '-d', 'goease_ci']); return true; } catch { return false; } });
@@ -53,7 +57,10 @@ ALTER DATABASE goease_ci OWNER TO goease_ci_migrator;
 REVOKE ALL ON DATABASE goease_ci FROM PUBLIC;
 GRANT CONNECT ON DATABASE goease_ci TO goease_ci_app;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
-  for (const command of ['migrate', 'grants', 'seed-sample', 'verify']) await docker(['run', '--rm', '--network', network, '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=64m', '--mount', `type=bind,src=${operatorFile},dst=/run/secrets/operator_env,readonly`, `${prefix}-operator`, command]);
+  for (const command of ['migrate', 'grants', 'seed-sample', 'verify']) {
+    console.info(`Checking isolated operator command: ${command}`);
+    await docker(['run', '--rm', '--network', network, '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=64m', '--mount', `type=bind,src=${operatorFile},dst=/run/secrets/operator_env,readonly`, `${prefix}-operator`, command]);
+  }
   const backups = path.join(temp, 'backups'); await mkdir(backups, { mode: 0o777 });
   const { chmod } = await import('node:fs/promises'); await chmod(backups, 0o777);
   const passFile = path.join(temp, 'pg-pass');
@@ -64,6 +71,7 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   };
   const sourceService = await serviceFile('goease_ci');
   const pgTools = (service, command, label) => docker(['run', '--rm', '--network', network, '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=16m', '--mount', `type=bind,src=${service},dst=/run/secrets/pg_service,readonly`, '--mount', `type=bind,src=${passFile},dst=/run/secrets/pg_pass,readonly`, '--mount', `type=bind,src=${backups},dst=/backups`, `${prefix}-pg-tools`, command, label]);
+  console.info('Checking concurrent backup and fresh-only restore.');
   const results = await Promise.allSettled([pgTools(sourceService, 'backup', 'collision'), pgTools(sourceService, 'backup', 'collision')]);
   assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
   assert.equal(results.filter(result => result.status === 'rejected').length, 1);
@@ -77,10 +85,13 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   assert.equal(await docker(['exec', pg, 'psql', '-U', 'postgres', '-d', 'goease_restore', '-At', '-c', 'SELECT count(*) FROM "Place"']), '3');
   await assert.rejects(pgTools(restoreService, 'restore-fresh', 'collision'));
   const api = `${prefix}-api`, proxy = `${prefix}-proxy`; containers.push(api, proxy);
+  console.info('Checking non-root API and local HTTP proxy boundaries.');
   await docker(['run', '-d', '--name', api, '--network', network, '--network-alias', 'api', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=32m', '--mount', `type=bind,src=${apiFile},dst=/run/secrets/api_env,readonly`, `${prefix}-api`]);
   await waitFor(async () => { try { await docker(['exec', api, 'node', '-e', "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]); return true; } catch { return false; } });
+  await docker(['exec', api, 'node', '-e', 'if(process.getuid()===0)process.exit(1)']);
   await docker(['run', '-d', '--name', proxy, '--network', network, '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=32m', '-e', 'STAGING_HOST=ci.goease.vn', '-p', '127.0.0.1::8080', `${prefix}-admin`]);
   const address = await docker(['port', proxy, '8080/tcp']);
+  assert.notEqual(await docker(['exec', proxy, 'id', '-u']), '0');
   assert.match(address, /^127\.0\.0\.1:\d+$/);
   const base = `http://${address}`, headers = { Host: 'ci.goease.vn' };
   await waitFor(async () => { try { return (await fetch(base + '/api/health', { headers, signal: AbortSignal.timeout(1000) })).ok; } catch { return false; } });
@@ -98,18 +109,20 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   // Keep proxy running. Start a replacement while old IP is still allocated,
   // then remove the old API; DNS must recover without restarting nginx.
   const replacement = `${prefix}-api-replacement`; containers.push(replacement);
+  console.info('Checking private API replacement without proxy restart.');
   await docker(['run', '-d', '--name', replacement, '--network', network, '--network-alias', 'api', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=32m', '--mount', `type=bind,src=${apiFile},dst=/run/secrets/api_env,readonly`, `${prefix}-api`]);
   const ip = name => docker(['inspect', '--format', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', name]);
   assert.notEqual(await ip(api), await ip(replacement));
   await waitFor(async () => { try { await docker(['exec', replacement, 'node', '-e', "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]); return true; } catch { return false; } });
   await docker(['rm', '-f', api]);
   await waitFor(async () => { try { return (await fetch(base + '/api/health', { headers, signal: AbortSignal.timeout(1000) })).ok; } catch { return false; } });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP ci.goease.vn 127.0.0.1'] });
+  console.info('Checking static browser relative /api and refresh on local HTTP fixture.');
   try {
-    const page = await browser.newPage({ extraHTTPHeaders: headers }), errors = [], responses = [];
+    const page = await browser.newPage(), errors = [], responses = [], browserBase = `http://ci.goease.vn:${address.split(':').at(-1)}`;
     page.on('pageerror', error => errors.push(error.message));
     page.on('response', response => { if (response.url().endsWith('/api/health')) responses.push(response.status()); });
-    await page.goto(base + '/technical/health'); await page.getByText('API đang hoạt động', { exact: true }).waitFor({ timeout: 10_000 });
+    await page.goto(browserBase + '/technical/health'); await page.getByText('API đang hoạt động', { exact: true }).waitFor({ timeout: 10_000 });
     await page.reload(); await page.getByText('API đang hoạt động', { exact: true }).waitFor({ timeout: 10_000 });
     assert.ok(responses.length >= 2 && responses.every(status => status === 200)); assert.deepEqual(errors, []);
   } finally { await browser.close(); }

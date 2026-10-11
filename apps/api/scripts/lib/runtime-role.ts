@@ -21,6 +21,7 @@ async function safeRole(client: pg.Client, role: string, operator: boolean) {
     current_user = r.rolname AS same_role,
     EXISTS (SELECT 1 FROM pg_auth_members m WHERE m.member = r.oid) AS memberships,
     EXISTS (SELECT 1 FROM pg_class c WHERE c.relowner = r.oid) OR EXISTS (SELECT 1 FROM pg_namespace n WHERE n.nspowner = r.oid)
+      OR EXISTS (SELECT 1 FROM pg_proc p WHERE p.proowner = r.oid) OR EXISTS (SELECT 1 FROM pg_type t WHERE t.typowner = r.oid)
       OR EXISTS (SELECT 1 FROM pg_database d WHERE d.datdba = r.oid) AS owns_objects,
     has_database_privilege(r.oid, current_database(), 'CREATE') OR has_database_privilege(r.oid, current_database(), 'TEMP') AS database_ddl,
     has_schema_privilege(r.oid, 'public', 'CREATE') AS schema_ddl
