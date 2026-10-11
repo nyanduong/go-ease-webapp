@@ -51,7 +51,7 @@ PR #12 đã đưa workflow/templates bootstrap lên main sau merge. Nội dung �
 
 ## Mẫu nghiệm thu
 
-App khách **Android và iOS song song từ đầu**, một codebase **React Native + TypeScript + Expo**, dự kiến `apps/mobile`; hướng nghiệm thu development build. Web `apps/web` là quản trị React/Vite/TypeScript, backend `apps/api` NestJS dùng chung. Thư mục/lệnh mobile chưa tồn tại trong nền PR #12. Ưu tiên thư viện hỗ trợ cả hai và kiểm chứng trước chọn; chỉ tách phần đặc thù cần thiết.
+App khách **Android và iOS song song từ đầu**, một codebase **React Native + TypeScript + Expo**, dự kiến `apps/mobile`; development build cho dev/kiểm chứng, preview nội bộ cho nghiệm thu cuối. Web `apps/web` là quản trị React/Vite/TypeScript, backend `apps/api` NestJS dùng chung. Thư mục/lệnh mobile chưa tồn tại trong nền PR #12. Ưu tiên thư viện hỗ trợ cả hai và kiểm chứng trước chọn; chỉ tách phần đặc thù cần thiết.
 
 Bảng dưới là **mẫu chưa kiểm chứng**, không phải bằng chứng test đã chạy. Khi bàn giao, thay bằng commit/build ID/OS/thiết bị/env/ngày thực và link bằng chứng, ghi kết quả đạt/lỗi/bị chặn cho từng ca:
 

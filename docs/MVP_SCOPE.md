@@ -8,7 +8,7 @@ MVP dự kiến mở thử **một điểm đến tại Việt Nam**, chuyến *
 
 | Thành phần | Vai trò và hướng triển khai |
 | --- | --- |
-| App khách hàng | Android **và** iOS phát triển song song ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến `apps/mobile`; nghiệm thu bằng development build. Đăng nhập, nhập nhu cầu, tạo/chỉnh/lưu/mở lại chuyến, bản đồ, ngân sách nhóm, trải nghiệm và yêu cầu dịch vụ. |
+| App khách hàng | Android **và** iOS phát triển song song ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến `apps/mobile`; development build cho dev, preview nội bộ cho nghiệm thu cuối M0. Đăng nhập, nhập nhu cầu, tạo/chỉnh/lưu/mở lại chuyến, bản đồ, ngân sách nhóm, trải nghiệm và yêu cầu dịch vụ. |
 | Web quản trị | `apps/web`, React + Vite + TypeScript, Tailwind CSS + shadcn/ui. Quản lý dữ liệu tham chiếu/vận hành theo quyền; không xây thêm web lịch trình khách hàng. |
 | Backend chung | `apps/api`, NestJS + TypeScript: xác thực, ownership/quyền admin, nghiệp vụ, AI và tích hợp đối tác. PostgreSQL + Prisma dự kiến sau review thiết kế #2, trước migration #3. |
 

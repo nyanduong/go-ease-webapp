@@ -1,6 +1,6 @@
 # GoEase
 
-GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app Android và iOS**, nhân viên dùng **web quản trị/vận hành**, cùng một backend. Theo quyết định 09/10/2026, app phát triển song song hai nền tảng ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến trong `apps/mobile`, nghiệm thu bằng development build. Thư mục và lệnh mobile **chưa có**; các lệnh dưới đây chỉ chạy nền web/API đã merge ở [PR #12](https://github.com/nyanduong/go-ease-webapp/pull/12).
+GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app Android và iOS**, nhân viên dùng **web quản trị/vận hành**, cùng một backend. Theo quyết định 09/10/2026, app phát triển song song hai nền tảng ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến trong `apps/mobile`. Development build dùng cho dev/kiểm chứng; đợt M0 bàn giao preview nội bộ mở khi Metro tắt, gọi HTTPS staging trên thiết bị thật từng nền tảng. Thư mục và lệnh mobile **chưa có**; các lệnh dưới đây chỉ chạy nền web/API đã merge ở [PR #12](https://github.com/nyanduong/go-ease-webapp/pull/12).
 
 `apps/web` giữ React + Vite + TypeScript, Tailwind CSS + shadcn/ui để phát triển quản trị; `apps/api` giữ NestJS + TypeScript dùng chung. PostgreSQL + Prisma dự kiến sau khi [thiết kế dữ liệu #2](https://github.com/nyanduong/go-ease-webapp/issues/2) được review, trước migration ở #3. Chia sẻ contracts/logic phù hợp, không hứa dùng chung toàn bộ UI.
 
