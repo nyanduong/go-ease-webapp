@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#145c4c" />
+    <title>GoEase · Prototype M0 nội bộ</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./prototype.js" defer></script>
+  </head>
+  <body>
+    <header class="lab-header">
+      <a class="wordmark" href="./index.html" aria-label="GoEase prototype"><span class="brand-mark" aria-hidden="true">g</span>GoEase<span class="lab-tag">DESIGN / M0</span></a>
+      <p>Baseline nội bộ · chờ nyanduong nghiệm thu cuối</p>
+    </header>
+    <main class="lab-main">
+      <section class="workspace" aria-label="Không gian prototype">
+        <div class="workspace-toolbar">
+          <div class="segmented" role="group" aria-label="Bản thiết kế">
+            <button type="button" data-action="platform" data-value="android" data-test="platform-android" aria-pressed="true">Android</button>
+            <button type="button" data-action="platform" data-value="ios" data-test="platform-ios" aria-pressed="false">iOS</button>
+            <button type="button" data-action="platform" data-value="admin" data-test="platform-admin" aria-pressed="false">Quản trị</button>
+          </div>
+          <button class="text-button reset" type="button" data-action="reset" data-test="reset">Đặt lại bản mẫu</button>
+        </div>
+        <div class="preview-layout">
+          <div class="preview-stage" id="preview-stage">
+            <section id="mobile-preview" class="device android" aria-label="Prototype app Android">
+              <div class="device-status" aria-hidden="true"><span>9:41</span><span class="status-icons">▮▮▮  ◉  ▰</span></div>
+              <div id="mobile-screen" class="mobile-screen"></div>
+            </section>
+            <section id="admin-preview" class="admin-preview" aria-label="Prototype quản trị" hidden></section>
+          </div>
+          <aside class="scenario-panel" aria-label="Điều khiển ca thiết kế">
+            <span class="eyebrow">BẢNG THỬ PROTOTYPE</span>
+            <h1>Đi một chuyến nhỏ.<br />Thử hết các trạng thái.</h1>
+            <p class="muted">HTML bấm thử, không phải app native. Đăng nhập, lưu, bản đồ và mạng ở đây đều giả lập; không gọi API hay Google.</p>
+            <div class="scenario-group">
+              <h2>App khách hàng</h2>
+              <button type="button" data-action="network" data-test="toggle-network" aria-pressed="false"><span id="network-dot" class="dot"></span><span id="network-label">Mạng mẫu: đang kết nối</span></button>
+              <button type="button" data-action="fail-save" data-test="fail-next-save">Lần lưu tới báo lỗi</button>
+              <button type="button" data-action="reopen" data-test="reopen">Mở lại từ bản lưu mẫu</button>
+              <button type="button" data-action="location" data-value="denied" data-test="location-denied">Mô phỏng từ chối vị trí</button>
+              <button type="button" data-action="location" data-value="unavailable" data-test="location-unavailable">Mô phỏng không có GPS</button>
+              <button type="button" data-action="location" data-value="granted" data-test="location-granted">Mô phỏng cho phép vị trí</button>
+            </div>
+            <div class="scenario-group">
+              <h2>Quản trị</h2>
+              <button type="button" data-action="admin-customer" data-test="admin-customer">Phiên customer → 403</button>
+              <button type="button" data-action="admin-expired" data-test="admin-expired">Phiên admin hết hạn</button>
+            </div>
+            <div class="design-note"><strong>Ngày & tiền nhất quán</strong><p>1–5 ngày · 1–50 người · ngân sách cả nhóm VND. Chi phí chưa biết giữ nhãn “Chưa có”, không tự tính là 0.</p></div>
+            <p class="scenario-feedback" id="scenario-feedback" role="status" aria-live="polite">Chọn Android hoặc iOS để bắt đầu.</p>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <dialog id="prototype-dialog" aria-labelledby="dialog-title"></dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
