@@ -53,7 +53,9 @@ h1, h2, h3, p { margin-top: 0; }
 .avatar { border: 1px solid var(--line); background: #e9e5d8; color: var(--primary); border-radius: 50%; font-size: 13px; font-weight: 750; min-width: 44px; width: 44px; height: 44px; }
 .back { border: 0; background: none; padding: 4px 0; color: var(--primary); font-weight: 650; }
 .back span { font-size: 23px; line-height: 0; vertical-align: -2px; margin-right: 5px; }
-.ios .app-header.detail strong { text-align: center; font-size: 16px; flex: 1; }
+.ios .app-header.detail { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; }
+.ios .app-header.detail .back { justify-self: start; white-space: nowrap; }
+.ios .app-header.detail strong { text-align: center; font-size: 16px; }
 .screen-content { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 12px 20px 24px; scrollbar-width: thin; }
 .screen-content h1 { font-size: 27px; line-height: 1.2; letter-spacing: -.8px; margin-bottom: 10px; }
 .screen-content h2 { font-size: 20px; line-height: 1.3; letter-spacing: -.4px; }
@@ -126,7 +128,7 @@ h1, h2, h3, p { margin-top: 0; }
 .activity p { font-size: 12px; color: var(--muted); margin: 0 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .activity-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .activity-cost { font-size: 12px; font-weight: 650; }
-.activity .text-button { font-size: 12px; min-height: 40px; padding: 5px 8px; }
+.activity .text-button { font-size: 12px; min-height: 44px; padding: 5px 8px; }
 .day-empty { text-align: center; background: white; border: 1px dashed #bfcec1; border-radius: 16px; padding: 24px 16px; margin-bottom: 16px; }
 .day-empty p { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
 .save-strip { flex-shrink: 0; padding: 11px 16px; border-top: 1px solid var(--line); background: white; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
@@ -200,6 +202,9 @@ dialog::backdrop { background: #18372c80; backdrop-filter: blur(3px); }
 .device.android button { min-height: 48px; }
 .device.android .map-pin { width: 48px; height: 48px; }
 .device.ios .small-button { min-height: 44px; }
+#prototype-dialog[data-platform="android"] button { min-height: 48px; }
+#prototype-dialog[data-platform="android"] .icon-button { min-width: 48px; }
+#prototype-dialog[data-platform="ios"] button { min-height: 44px; }
 @media (max-width: 1120px) {
   .lab-header, .lab-main { padding-left: 18px; padding-right: 18px; }
   .preview-layout { grid-template-columns: minmax(0, 1fr) 250px; }

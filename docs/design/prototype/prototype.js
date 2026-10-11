@@ -107,6 +107,7 @@ function render() {
 }
 function openDialog(body) {
   dialogReturnFocus = prototypeDom.activeElement;
+  dialog.dataset.platform = state.platform;
   dialog.innerHTML = body;
   dialog.showModal();
 }
