@@ -1,4 +1,4 @@
-# API M0 — health, xác thực, chuyến và Maps
+# API M0 — health, xác thực, chuyến, admin và Maps
 
 REST prefix `/api`. `GET /health` chỉ kiểm tra tiến trình, vẫn hoạt động khi chưa có DB/OAuth; chưa có OpenAPI UI. Auth dùng contracts/runtime guards trong `@goease/contracts`. Lỗi giữ envelope `{error:{code,message,statusCode},path,timestamp}`, không trả JWT, SQL, credential hoặc stack. Auth/admin trả `Cache-Control: no-store`.
 
@@ -18,6 +18,9 @@ Web thực cần HTTPS vì cookie `__Host-` luôn Secure. Admin/API cần cùng 
 | `GET /auth/me` | Phiên hợp lệ → CurrentSessionResponse; không trả lại native accessToken |
 | `POST /auth/logout` | JSON `{}`; web thêm Origin + `X-CSRF-Token`, native dùng bearer → 204, revoke tại DB |
 | `GET /admin/access` | Phiên + role ADMIN hiện tại → AuthUser; ẩn danh 401, customer 403 |
+| `GET /admin/places` | Phiên + role ADMIN hiện tại → catalog Place mẫu tối đa100; không query parameters |
+
+`GET /api/admin/places` trả `{destinationCode:"VN-HANOI-SAMPLE",isSample:true,places:[...]}` theo strict runtime contract `AdminPlacesResponse`. Mỗi row chỉ có id/code/name/latitude/longitude/sourceUrl/attribution/isActive/isSample; giữ nhãn mẫu và nguồn Wikidata revision. Không projection/join/count User/Trip/Session hoặc quyền sửa chuyến cá nhân. Ẩn danh401, customer403, role bị thu hồi áp dụng ngay cùng phiên; native session vẫn qua guard tương ứng. Thiếu DB503 `ADMIN_NOT_CONFIGURED`; lỗi query/contract503 `ADMIN_CATALOG_UNAVAILABLE`, không lộ SQL. Query lạ400 `ADMIN_INVALID_REQUEST`; response no-store. Không CRUD/provider call/default admin. [Runbook admin](../admin/README.md) mô tả UI/quyền/cấu hình và phần OAuth HTTPS chưa kiểm chứng.
 
 Transport chỉ `web`/`native`, body không nhận field thừa, không nhận userId/ownerId/role. Native exchange trả `{transport:"native",user,expiresAt,accessToken}`; web trả `{transport:"web",user,expiresAt,csrfToken}` và cookie HttpOnly. Session web không có bearer trong JSON. Không có endpoint cấp admin, đọc chuyến riêng hay refresh token ở PR nền này.
 
