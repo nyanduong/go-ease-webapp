@@ -1,6 +1,6 @@
 # Chuyến mẫu M0 — REST API và lưu bền vững
 
-Ngày 11/10/2026, phạm vi [#5](https://github.com/nyanduong/go-ease-webapp/issues/5). Dữ liệu nằm trong PostgreSQL qua runtime role đã migrate/grant/seed theo [runbook DB](../database/RUNBOOK.md), không phải bộ nhớ API. `TripsModule` dùng auth #4 và contracts độc lập framework; điều phối tích hợp module vào `AppModule` trước kiểm tra root/PR cuối. Kết quả thực và SHA ở [GE-M0-05](../verification/GE-M0-05.md).
+Ngày 11/10/2026, phạm vi [#5](https://github.com/nyanduong/go-ease-webapp/issues/5). Dữ liệu nằm trong PostgreSQL qua runtime role đã migrate/grant/seed theo [runbook DB](../database/RUNBOOK.md), không phải bộ nhớ API. `TripsModule` dùng auth #4 và contracts độc lập framework, đã được tích hợp vào `AppModule`; HTTP tests dùng chính production registration này. Kết quả thực và SHA ở [GE-M0-05](../verification/GE-M0-05.md).
 
 ## API và quyền
 
@@ -60,6 +60,6 @@ node --test apps/api/dist/test/trip-contracts.test.js apps/api/dist/test/trips-r
 
 HTTP suite tạo cluster PostgreSQL riêng, migrate/grants/seed thật; login qua challenge/exchange auth đã review bằng **Google identity double TEST ONLY**, không bypass production và không gọi Google. Có A/B/admin/anonymous/expired/revoked/disabled, parser/CSRF/Origin, tiền/ngày/250 activities, ownership children, observed catalog lock và consistent GET, receipt races, permission fault sau CAS/delete và rollback, after-commit response loss, API+PG restart/replay. Fixture-only receipt trigger buộc hai aggregate đến INSERT trước commit; fixture-only middleware gây mất response sau real COMMIT. Không dùng các doubles này làm bằng chứng OAuth live hoặc native UI. Teardown đóng app/client rồi stop đúng cluster; giữ fixture private để chẩn đoán, không commit DB/password/logs.
 
-Parser chuyến cần **1536KiB (1.5MiB)** để nhận đầy đủ 250 activities × notes1000/title160 Unicode; auth giữ24KiB. Baseline256KiB không đủ cho DTO hợp lệ, điều phối sửa central parser trước kiểm tra cuối. Fixture HTTP có payload astral/multiline tối đa và oversize >1536KiB. Response với Place fields tối đa có thể lớn hơn request; review tính được mẫu hợp lệ4,434,247byte (~4.229MiB). #6 dự kiến reader cap6MiB; đây là điều kiện client được ghi nhận, **chưa có client Trip hoặc cap đã triển khai trong #5**.
+Parser chuyến **1536KiB (1.5MiB)** nhận đầy đủ 250 activities × notes1000/title160 Unicode; auth giữ24KiB. Baseline256KiB không đủ cho DTO hợp lệ đã được thay bằng trip-only limit này. Fixture HTTP payload astral/multiline tối đa và oversize >1536KiB đã PASS. Notes giữ LF/CR/TAB, từ chối controls khác và surrogate lỗi. Response với Place fields tối đa có thể lớn hơn request; review tính được mẫu hợp lệ4,434,247byte (~4.229MiB). #6 dự kiến reader cap6MiB; đây là điều kiện client được ghi nhận, **chưa có client Trip hoặc cap đã triển khai trong #5**.
 
 Bàn giao cuối vẫn cần root typecheck/lint/test/build, architecture hiện có, Quality Gate trên PR HEAD và review độc lập. #6 bổ sung app tạo/sửa/mở lại và trạng thái draft/save/retry; #10/#11 kiểm chứng staging HTTPS, preview và thiết bị Android/iOS riêng. API/PG pass không thay nghiệm thu UI/native/OAuth live.
