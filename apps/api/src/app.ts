@@ -6,6 +6,7 @@ import { ApiExceptionFilter } from './common/api-exception.filter.js';
 import type { Environment } from './config.js';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { Request, Response, NextFunction } from 'express';
+import { json } from 'express';
 
 export interface AppOptions {
   logging?: boolean;
@@ -29,14 +30,15 @@ export async function createApp({ logging = true, environment, closeWatchConnect
 export function configureApp(app: NestExpressApplication) {
   const config = app.get(ConfigService<Environment, true>);
   app.setGlobalPrefix('api');
-  app.use(['/api/auth', '/api/admin'], (_request: Request, response: Response, next: NextFunction) => {
+  app.use(['/api/auth', '/api/admin', '/api/trips'], (_request: Request, response: Response, next: NextFunction) => {
     response.setHeader('Cache-Control', 'no-store'); next();
   });
+  app.use('/api/trips', json({ limit: '256kb' }));
   app.useBodyParser('json', { limit: '24kb' });
   const webAuth = Boolean(config.get('DATABASE_URL', { infer: true }) && config.get('GOOGLE_WEB_CLIENT_ID', { infer: true }));
   app.enableCors({ origin: config.get('WEB_ORIGINS', { infer: true }), credentials: webAuth,
-    methods: webAuth ? ['GET', 'POST', 'OPTIONS'] : ['GET', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-GoEase-Auth-Proof', 'X-CSRF-Token'] });
+    methods: webAuth ? ['GET', 'POST', 'PUT', 'OPTIONS'] : ['GET', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-GoEase-Auth-Proof', 'X-CSRF-Token', 'Idempotency-Key'] });
   app.useGlobalFilters(new ApiExceptionFilter());
   app.enableShutdownHooks();
 }

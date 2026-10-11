@@ -9,6 +9,7 @@ export class SessionGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<AuthRequest>();
     request.auth = await this.auth.authenticate(request);
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) this.auth.assertMutation(request, request.auth);
     return true;
   }
 }
