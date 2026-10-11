@@ -15,7 +15,8 @@
     "test:unit": "pnpm --filter @goease/contracts build && pnpm --filter @goease/api test && pnpm --filter @goease/web test",
     "test:smoke": "pnpm --filter @goease/contracts build && pnpm --filter @goease/api build && playwright test",
     "test:dev": "node --test tests/dev/*.test.ts",
-    "test": "pnpm test:unit && pnpm test:smoke && pnpm test:dev",
+    "test:architecture": "node --test tests/architecture/*.test.ts && node scripts/check-architecture.ts",
+    "test": "pnpm test:architecture && pnpm test:unit && pnpm test:smoke && pnpm test:dev",
     "build": "pnpm -r build"
   },
   "devDependencies": {

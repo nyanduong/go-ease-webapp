@@ -1,6 +1,6 @@
 # GoEase
 
-GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app Android và iOS**, nhân viên dùng **web quản trị/vận hành**, cùng một backend. Theo quyết định 09/10/2026, app phát triển song song hai nền tảng ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến trong `apps/mobile`, nghiệm thu bằng development build. Thư mục và lệnh mobile **chưa có**; các lệnh dưới đây chỉ chạy nền web/API đã merge ở [PR #12](https://github.com/nyanduong/go-ease-webapp/pull/12).
+GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app Android và iOS**, nhân viên dùng **web quản trị/vận hành**, cùng một backend. Theo quyết định 09/10/2026, app phát triển song song hai nền tảng ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến trong `apps/mobile`. Development build dùng cho dev/kiểm chứng; đợt M0 bàn giao preview nội bộ mở khi Metro tắt, gọi HTTPS staging trên thiết bị thật từng nền tảng. Thư mục và lệnh mobile **chưa có**; các lệnh dưới đây chỉ chạy nền web/API đã merge ở [PR #12](https://github.com/nyanduong/go-ease-webapp/pull/12).
 
 `apps/web` giữ React + Vite + TypeScript, Tailwind CSS + shadcn/ui để phát triển quản trị; `apps/api` giữ NestJS + TypeScript dùng chung. PostgreSQL + Prisma dự kiến sau khi [thiết kế dữ liệu #2](https://github.com/nyanduong/go-ease-webapp/issues/2) được review, trước migration ở #3. Chia sẻ contracts/logic phù hợp, không hứa dùng chung toàn bộ UI.
 
@@ -60,7 +60,8 @@ pnpm build
 - UI: Vitest + Testing Library dùng fetch doubles để kiểm tra loading/success/error/retry, contract sai và hủy request.
 - Smoke: Playwright khởi động API thật port 3020 và web production port 4173; desktop/mobile Chromium, health network, retry, console và tràn ngang. Hai port này cần trống; test không tái sử dụng dịch vụ lạ đang chạy. Có thể chạy riêng `pnpm test:unit` hoặc `pnpm test:smoke`.
 - Dev: `pnpm test:dev` chạy `pnpm dev` trong fixture không có dist, tái sử dụng dependency đã install nhưng liên kết contracts riêng của fixture. Chromium xác minh runtime API và guard web, compile error không emit và phục hồi. Port 3031/5181 phải trống. Linux dùng SIGINT và xác minh tiến trình con/cổng đã dừng; Windows test tự dọn process tree, Ctrl+C còn được thử trực tiếp bằng PowerShell. Probe chỉ sửa fixture và được khôi phục byte-exact.
-- CI: PR vào main và push main đều chạy check **Quality Gate**, không cần secret/DB/dịch vụ AI. Job tuần tự chỉ thành công khi typecheck, lint, test và build đều đạt.
+- Kiến trúc: `pnpm test:architecture` kiểm tra AST import/re-export/require/import động, alias/relative, ranh giới workspace và vòng import local; fixture âm phải bị chặn. Chạy trong `pnpm test`, xem [phạm vi kiểm tra](docs/ARCHITECTURE.md#kiểm-tra-ranh-giới-tự-động).
+- CI: PR vào main và push main đều chạy check **Quality Gate**, không cần secret/DB/dịch vụ AI. Job tuần tự chỉ thành công khi typecheck, lint, test (gồm kiến trúc và regression hiện có) và build đều đạt.
 
 Sau build, có thể chạy API bằng `pnpm --filter @goease/api start` và web bằng `pnpm --filter @goease/web preview`. Preview mặc định port 4173; nếu dùng web preview cùng API mặc định, thêm `http://127.0.0.1:4173` vào WEB_ORIGINS rồi khởi động lại API. Đây là local preview, chưa phải staging.
 
@@ -90,6 +91,6 @@ Chưa có: `apps/mobile`, development build Android/iOS, schema/migration/DB, đ
 
 Android và iOS đã chốt song song; tài khoản/quyền/toolchain/build/ký/cài/phân phối và thiết bị mỗi nền tảng chưa xác minh. Ưu tiên thư viện hỗ trợ cả hai và kiểm chứng trước khi chọn ở #15/#8; chỉ tách phần đặc thù khi cần. Prototype, OAuth/Gemini/Maps key/quyền, staging và đường booking còn cần xác minh theo [bảng điều kiện](docs/WORKFLOW.md#điều-kiện-cần-xác-minh). Thiếu điều kiện chỉ chặn phần phụ thuộc, không loại iOS hoặc chặn PR tài liệu. Không tự mua dịch vụ, bật billing hay phát hành store.
 
-Quy trình: issue → branch → triển khai → test/CI → PR → **nyanduong kiểm tra và quyết định merge**, kể cả PR của mình. Required approvals = **0**; collaborator review được khuyến khích, không bắt buộc. “Chờ kiểm tra” là chờ leader; Codex chỉ merge khi có yêu cầu rõ ràng riêng. Leader vẫn duyệt nội dung/scope/prototype, agent không tự duyệt sản phẩm. PR và Quality Gate cùng các bảo vệ main vẫn bắt buộc theo [WORKFLOW](docs/WORKFLOW.md).
+Trong đợt M0 theo ủy quyền **11/10/2026**: issue → branch → triển khai → test/review nội bộ → PR/Quality Gate HEAD → điều phối **merge bằng browser** → xác minh main/board. Không cần chờ collaborator hoặc xác nhận từng PR; required approvals = **0**. Thiết kế/prototype là baseline nội bộ, **nyanduong nghiệm thu sản phẩm cuối ở #11**; #11 dùng `Refs`, giữ mở, milestone M0 vẫn mở. Partial/live bị chặn giữ issue mở. PR và các bảo vệ main vẫn bắt buộc theo [WORKFLOW](docs/WORKFLOW.md).
 
 Workflow và templates của PR #12 đã có trên main sau merge. Thay đổi tài liệu ở PR riêng chỉ áp dụng trên main khi được merge. Hiện trạng công việc xem trên [Project](https://github.com/users/nyanduong/projects/10), không theo checklist sao chép trong repo.
