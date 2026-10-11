@@ -19,14 +19,15 @@
     "test:smoke": "pnpm --filter @goease/contracts build && pnpm --filter @goease/api build && playwright test",
     "test:dev": "node --test tests/dev/*.test.ts",
     "test:architecture": "node --test tests/architecture/*.test.ts && node scripts/check-architecture.ts",
-    "test": "pnpm test:architecture && pnpm test:unit && pnpm test:smoke && pnpm test:dev",
+    "test:dependencies": "node --test tests/dependencies/*.test.ts",
+    "test": "pnpm test:architecture && pnpm test:dependencies && pnpm test:unit && pnpm test:smoke && pnpm test:dev",
     "build": "pnpm -r --workspace-concurrency=1 build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.0",
     "@types/node": "24.19.1",
-    "concurrently": "10.0.5",
+    "concurrently": "10.0.6",
     "eslint": "10.12.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",
