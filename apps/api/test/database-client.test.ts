@@ -115,15 +115,21 @@ test('database client UTC, URL override protection, statement/lock and pool boun
       const deadline = Date.now() + 2000;
       let observed = false;
       while (Date.now() < deadline) {
-        const state = await raw.query('SELECT 1 FROM pg_stat_activity WHERE usename=$1 AND wait_event_type=\'Lock\'', [env.runtime]);
-        if (state.rowCount) { observed = true; break; }
+        // A non-superuser can inspect full wait fields for its own role only.
+        // Observe from another runtime connection, not the separate migrator.
+        const state = await db.$queryRaw<Array<{ waiting: boolean }>>`SELECT EXISTS
+          (SELECT 1 FROM pg_stat_activity WHERE usename=current_user AND wait_event_type='Lock') AS waiting`;
+        if (state[0]?.waiting) { observed = true; break; }
         await new Promise(resolve => setTimeout(resolve, 25));
       }
       assert.equal(observed, true, 'The runtime connection genuinely waited on a PostgreSQL lock');
       bounded(await pending, 4500, 10_000);
     } finally {
       try { await locker.query('ROLLBACK'); }
-      finally { await locker.end(); if (pending) await pending; }
+      finally {
+        const cleanup = await Promise.allSettled([locker.end(), ...(pending ? [pending] : [])]);
+        assert.ok(cleanup.every(result => result.status === 'fulfilled'), 'Owned lock fixture cleanup succeeds');
+      }
     }
     assert.equal(await db.user.count(), 2);
   }));
