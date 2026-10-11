@@ -14,7 +14,8 @@ export function buildConfig(environment: Record<string, string | undefined>): Ex
     ios: { bundleIdentifier: development ? 'vn.goease.mobile.dev' : 'vn.goease.mobile.preview', supportsTablet: false,
       infoPlist: { NSAppTransportSecurity: { NSAllowsArbitraryLoads: development },
         ...(development ? { NSLocalNetworkUsageDescription: 'Kết nối API và Metro trong mạng phát triển GoEase.' } : {}) } },
-    plugins: ['expo-dev-client', ['./plugins/with-development-network.cjs', { allowHttp: development }]],
+    plugins: ['expo-dev-client', ['./plugins/with-development-network.cjs', { allowHttp: development }],
+      ['expo-splash-screen', { backgroundColor: '#f4f7f2' }]],
     extra: { appVariant: variant },
   };
 }

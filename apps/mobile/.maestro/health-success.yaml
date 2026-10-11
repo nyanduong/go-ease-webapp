@@ -3,6 +3,9 @@ appId: vn.goease.mobile.dev
 ---
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible: "Development Build"
+    timeout: 60000
 - openLink: ${DEV_CLIENT_URL}
 - extendedWaitUntil:
     visible: "API đang hoạt động"
