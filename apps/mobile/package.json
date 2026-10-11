@@ -8,6 +8,7 @@
     "dev": "expo start --dev-client --max-workers 1",
     "android": "expo run:android --no-bundler",
     "ios": "expo run:ios --no-bundler",
+    "eas-build-post-install": "pnpm --filter @goease/contracts build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "node --test test/*.test.ts",
     "check:expo": "expo install --check",

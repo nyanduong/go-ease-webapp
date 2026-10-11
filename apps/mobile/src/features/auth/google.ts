@@ -1,10 +1,10 @@
 import { isOpaqueToken } from '@goease/contracts';
+import { googleClientId } from '../../lib/google-client-id.ts';
 import { abortable, AuthFailure } from './client.ts';
 
+export { googleClientId } from '../../lib/google-client-id.ts';
+
 export interface GoogleConfig { webClientId: string; iosClientId?: string }
-export function googleClientId(value: string | undefined): string | undefined {
-  return value && /^[0-9]+-[a-z0-9-]+\.apps\.googleusercontent\.com$/.test(value) ? value : undefined;
-}
 export function googleConfig(web: string | undefined, ios: string | undefined, platform: string): GoogleConfig {
   const webClientId = googleClientId(web), iosClientId = googleClientId(ios);
   if (!webClientId || platform !== 'android' && platform !== 'ios' || platform === 'ios' && !iosClientId) throw new AuthFailure('configuration');
