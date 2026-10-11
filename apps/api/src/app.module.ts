@@ -5,6 +5,7 @@ import { HealthController } from './health/health.controller.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { TripsModule } from './modules/trips/trips.module.js';
 import { MapsModule } from './modules/maps/maps.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
 
 @Module({
   controllers: [HealthController],
@@ -18,6 +19,6 @@ export class AppModule {
         isGlobal: true, ignoreEnvFile: true, validatePredefined: false, skipProcessEnv: true,
         load: [() => validateEnvironment(environment)],
       });
-    return { module: AppModule, imports: [config, AuthModule, TripsModule, MapsModule] };
+    return { module: AppModule, imports: [config, AuthModule, TripsModule, MapsModule, AdminModule] };
   }
 }
