@@ -1,6 +1,6 @@
-# Gemini M0 qua backend
+# Gemini và Maps M0 qua backend
 
-Baseline kỹ thuật #7, ngày **11/10/2026**. Spike là module backend và CLI nội bộ, chưa có endpoint AI công khai hoặc UI gọi AI. App/web không nhận key. Maps native thuộc #8; tài liệu này chỉ ghi phần AI.
+Baseline kỹ thuật #7/#8, ngày **11/10/2026**. Gemini là module backend và CLI nội bộ, chưa có endpoint AI công khai hoặc UI gọi AI. App/web không nhận key server. Maps có panel native Google Maps, danh mục mẫu từ DB và endpoint Routes chỉ cho phiên native, mặc định tắt; chi tiết cấu hình, hạn mức, attribution và điều kiện từng nền tảng ở [runbook Maps](../maps/README.md), kết quả ở [GE-M0-08](../verification/GE-M0-08.md). Cả Gemini và Maps chưa gọi live; nội dung dưới đây trình bày adapter Gemini.
 
 ## API và model đã đối chiếu
 
