@@ -1,6 +1,10 @@
 # GoEase
 
-Nền web/API cho GoEase — hỗ trợ hành trình Việt Nam của cả nhóm. Bootstrap GE-M0-01 có React/Vite và NestJS trong pnpm workspace, màn gọi health API thật, test và CI. Xem [phạm vi MVP](docs/MVP_SCOPE.md), [kiến trúc](docs/ARCHITECTURE.md), [quy trình GitHub](docs/WORKFLOW.md) và [hướng dẫn agent](AGENTS.md).
+GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app Android và iOS**, nhân viên dùng **web quản trị/vận hành**, cùng một backend. Theo quyết định 09/10/2026, app phát triển song song hai nền tảng ngay từ đầu bằng **một codebase React Native + TypeScript + Expo**, dự kiến trong `apps/mobile`, nghiệm thu bằng development build. Thư mục và lệnh mobile **chưa có**; các lệnh dưới đây chỉ chạy nền web/API đã merge ở [PR #12](https://github.com/nyanduong/go-ease-webapp/pull/12).
+
+`apps/web` giữ React + Vite + TypeScript, Tailwind CSS + shadcn/ui để phát triển quản trị; `apps/api` giữ NestJS + TypeScript dùng chung. PostgreSQL + Prisma dự kiến sau khi [thiết kế dữ liệu #2](https://github.com/nyanduong/go-ease-webapp/issues/2) được review, trước migration ở #3. Chia sẻ contracts/logic phù hợp, không hứa dùng chung toàn bộ UI.
+
+MVP gồm chuyến 1–5 ngày, ngân sách tổng nhóm VND, trải nghiệm địa phương và khách sạn/vé máy bay qua đối tác; một điểm đến mở thử tại Việt Nam chưa chốt. Gemini online qua backend, Ollama chỉ thử nghiệm; bản đồ khách hàng là native trong app, SDK chưa chọn. M0 kiểm chứng nền/tích hợp, chưa phải toàn bộ MVP. Xem [phạm vi MVP](docs/MVP_SCOPE.md), [kiến trúc](docs/ARCHITECTURE.md), [quy trình GitHub](docs/WORKFLOW.md) và [hướng dẫn agent](AGENTS.md).
 
 ## Cài và chạy trên Windows/Linux
 
@@ -80,8 +84,12 @@ TypeScript 6 được chọn vì peer range của typescript-eslint 8.71.1 chưa
 
 ## Đã có và chưa có
 
-Đã có: workspace web/API/contracts, health API-only với loading/success/error/retry, CORS/env, error envelope, responsive UI, test, Quality Gate và tài liệu/template tiếng Việt.
+Đã có sau PR #12: workspace web/API/contracts, health API-only với loading/success/error/retry, CORS/env, error envelope, màn kỹ thuật responsive, test, Quality Gate và tài liệu/template tiếng Việt. Màn health chưa phải prototype/nhận diện sản phẩm được leader duyệt; Chromium viewport mobile chỉ kiểm tra web, chưa chứng minh app native.
 
-Chưa có: schema/migration/DB, đăng nhập/quyền chuyến, lưu chuyến mẫu, Gemini, Maps, booking live, admin và staging. Các phần này nằm ở issue riêng trong [Project](https://github.com/users/NhanDuong21/projects/10); M0 cần nghiệm thu các đầu ra đó, không hoàn thành ở PR bootstrap.
+Chưa có: `apps/mobile`, development build Android/iOS, schema/migration/DB, đăng nhập/ownership/quyền admin, chuyến mẫu, tích hợp Gemini/Maps, booking live, shell admin và staging. Backend sẽ xác thực và cấp quyền; biết URL hoặc sửa role phía client không cấp admin, admin không mặc nhiên truy cập mọi chuyến riêng. Không có bằng chứng quyền API đối tác, hợp đồng, tồn chỗ hoặc booking thật.
 
-Workflow và templates ở `.github` chỉ áp dụng trên default branch sau khi PR được merge. Hiện trạng công việc xem trên GitHub board, không theo checklist sao chép trong repo.
+Android và iOS đã chốt song song; tài khoản/quyền/toolchain/build/ký/cài/phân phối và thiết bị mỗi nền tảng chưa xác minh. Ưu tiên thư viện hỗ trợ cả hai và kiểm chứng trước khi chọn ở #15/#8; chỉ tách phần đặc thù khi cần. Prototype, OAuth/Gemini/Maps key/quyền, staging và đường booking còn cần xác minh theo [bảng điều kiện](docs/WORKFLOW.md#điều-kiện-cần-xác-minh). Thiếu điều kiện chỉ chặn phần phụ thuộc, không loại iOS hoặc chặn PR tài liệu. Không tự mua dịch vụ, bật billing hay phát hành store.
+
+Quy trình: issue → branch → triển khai → test/CI → PR → **nyanduong kiểm tra và quyết định merge**, kể cả PR của mình. Required approvals = **0**; collaborator review được khuyến khích, không bắt buộc. “Chờ kiểm tra” là chờ leader; Codex chỉ merge khi có yêu cầu rõ ràng riêng. Leader vẫn duyệt nội dung/scope/prototype, agent không tự duyệt sản phẩm. PR và Quality Gate cùng các bảo vệ main vẫn bắt buộc theo [WORKFLOW](docs/WORKFLOW.md).
+
+Workflow và templates của PR #12 đã có trên main sau merge. Thay đổi tài liệu ở PR riêng chỉ áp dụng trên main khi được merge. Hiện trạng công việc xem trên [Project](https://github.com/users/nyanduong/projects/10), không theo checklist sao chép trong repo.
