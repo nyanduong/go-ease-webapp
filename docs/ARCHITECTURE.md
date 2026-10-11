@@ -2,7 +2,7 @@
 
 ## Cấu trúc hiện tại và dự kiến
 
-Workspace kế thừa PR #12/#17, đã bổ sung mobile Expo, PostgreSQL/Prisma, auth/session/quyền server, API chuyến, shell admin và adapter Gemini/Maps. Sơ đồ mô tả code hiện có cùng dịch vụ phụ thuộc; Google live, iOS native, preview/staging chưa đạt. Luồng chuyến app còn ở #6; xem receipt từng phần thay vì suy nghiệm thu từ cây code.
+Workspace kế thừa PR #12/#17, đã bổ sung mobile Expo, PostgreSQL/Prisma, auth/session/quyền server, API chuyến, shell admin và adapter Gemini/Maps. Sơ đồ mô tả code hiện có cùng dịch vụ phụ thuộc; Google live, iOS native, preview/staging chưa đạt. Luồng chuyến app #6 đã có client/store/editor/map, native CRUD chưa kiểm chứng; xem receipt từng phần thay vì suy nghiệm thu từ cây code.
 
 Cây code đang có (không tạo thư mục dự kiến rỗng):
 
@@ -11,7 +11,7 @@ apps/api/src/           # bootstrap/config, health, database, modules/auth/ai/tr
 apps/api/prisma/        # schema và migration; seed/operator ở backend
 apps/api/test/          # HTTP/config/env và PostgreSQL integration
 apps/web/src/           # admin shell/pages, catalog/auth client, components/ui, lib, test
-apps/mobile/            # App.tsx; src/features/auth/maps, health; native config
+apps/mobile/            # App.tsx; src/features/auth/maps/trips, health; native config
 packages/contracts/src/# type và runtime guard giao tiếp
 scripts/               # kiểm tra AST dependency
 tests/                 # architecture, dependency, smoke, dev regression
