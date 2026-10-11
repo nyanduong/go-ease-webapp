@@ -7,7 +7,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
-import { chromium, expect, type Browser } from '@playwright/test';
+import { chromium, expect, type Browser, type Locator, type Page } from '@playwright/test';
 
 const run = promisify(execFile);
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -26,6 +26,18 @@ async function eventually(check: () => Promise<boolean>, message: string, timeou
 
 async function listening(url: string) {
   try { return (await fetch(url, { signal: AbortSignal.timeout(700) })).ok; } catch { return false; }
+}
+
+async function retryHealthUntil(page: Page, expected: Locator, message: string) {
+  // A successful API probe can precede another tsc/Node-watch restart. The UI
+  // deliberately needs user retry after a connection failure; wait via that UI.
+  await eventually(async () => {
+    if (await expected.isVisible()) return true;
+    const retry = page.getByRole('button', { name: /^(Kiểm tra lại|Thử lại)$/ });
+    if (await retry.isVisible() && await retry.isEnabled()) await retry.click();
+    return false;
+  }, message);
+  await expect(expected).toBeVisible();
 }
 
 async function createFixture() {
@@ -54,6 +66,18 @@ async function createFixture() {
   }
   const webPackage = join(cwd, 'apps/web/package.json');
   await writeFile(webPackage, (await readFile(webPackage, 'utf8')).replace('--port 5173', '--port 5181'));
+  // A fixture-only startup barrier survives concurrent tsc emits. Hold it only
+  // for the forced restart so browser downtime does not depend on CI speed.
+  const apiMain = join(cwd, 'apps/api/src/main.ts');
+  const startupBarrier = `import { existsSync as fixtureGateExists } from 'node:fs';
+const fixtureGate = ${JSON.stringify(join(cwd, '.restart-gate'))};
+const fixtureDeadline = Date.now() + 60000;
+while (fixtureGateExists(fixtureGate)) {
+  if (Date.now() > fixtureDeadline) throw new Error('Fixture restart gate was not released.');
+  await new Promise(resolve => setTimeout(resolve, 50));
+}
+`;
+  await writeFile(apiMain, startupBarrier + await readFile(apiMain, 'utf8'));
   return cwd;
 }
 
@@ -79,6 +103,7 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
   const source = join(cwd, 'packages/contracts/src/index.ts');
   const original = await readFile(source);
   const dist = join(cwd, 'packages/contracts/dist/index.js');
+  const restartGate = join(cwd, '.restart-gate');
   await assert.rejects(access(dist));
   const pnpm = process.env.npm_execpath;
   assert.ok(pnpm, 'Chạy bằng pnpm test:dev để dùng CLI cùng toolchain.');
@@ -94,7 +119,7 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
     await eventually(async () => await listening(apiUrl) && await listening(webUrl), 'Dev không khởi động.');
     const page = await browser.newPage();
     await page.goto(webUrl);
-    await expect(page.getByRole('heading', { name: 'API đang hoạt động', exact: true })).toBeVisible();
+    await retryHealthUntil(page, page.getByRole('heading', { name: 'API đang hoạt động', exact: true }), 'Web không nhận API sau khi dev khởi động.');
     const probe = original.toString().replace("'goease-api' as const", "'goease-api-dev-probe' as const")
       .replace("health.scope === 'api-only'", "health.scope === 'dev-probe'");
     assert.notEqual(probe, original.toString());
@@ -102,8 +127,20 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
     await eventually(async () => {
       try { return (await (await fetch(apiUrl)).json() as { service: string }).service === 'goease-api-dev-probe'; } catch { return false; }
     }, 'API không nhận runtime contracts mới.');
-    await page.getByRole('button', { name: 'Kiểm tra lại', exact: true }).click();
-    await expect(page.getByText('Phản hồi API chưa đúng định dạng health.', { exact: true })).toBeVisible();
+    // Reproduce a later watcher restart after the readiness sample, using the
+    // real fixture process (no network mock). Hold startup until the browser has
+    // demonstrably observed downtime before exercising explicit retry.
+    const mainDist = join(cwd, 'apps/api/dist/src/main.js');
+    const compiledMain = await readFile(mainDist, 'utf8');
+    await writeFile(restartGate, 'Hold fixture startup until network failure is verified.');
+    await writeFile(mainDist, `${compiledMain}\n// Force a watcher restart after a successful readiness probe.\n`);
+    await eventually(async () => !await listening(apiUrl), 'Không thấy API dừng trong watcher restart.');
+    const failedRequest = page.waitForEvent('requestfailed', { predicate: request => request.url() === apiUrl });
+    await page.getByRole('button', { name: /^(Kiểm tra lại|Thử lại)$/ }).click();
+    await failedRequest;
+    await expect(page.getByText('Chưa nhận được phản hồi. Kiểm tra API và kết nối mạng, rồi thử lại.', { exact: true })).toBeVisible();
+    await rm(restartGate, { force: true });
+    await retryHealthUntil(page, page.getByText('Phản hồi API chưa đúng định dạng health.', { exact: true }), 'Web không nhận guard contracts mới sau khi API khởi động lại.');
     const validDist = await readFile(dist);
     const checkpoint = logs.length;
     await writeFile(source, probe + '\nconst compileProbe: string = 42;\n');
@@ -113,12 +150,12 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
     await eventually(async () => {
       try { return (await (await fetch(apiUrl)).json() as { service: string }).service === 'goease-api'; } catch { return false; }
     }, 'API không phục hồi sau khi sửa compile error.');
-    await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'API đang hoạt động', exact: true })).toBeVisible();
+    await retryHealthUntil(page, page.getByRole('heading', { name: 'API đang hoạt động', exact: true }), 'Web không phục hồi sau khi contracts hợp lệ và API khởi động lại.');
     assert.deepEqual(await readFile(source), original);
   } catch (error) {
     throw new Error(`Dev regression thất bại.\n${logs}`, { cause: error });
   } finally {
+    await rm(restartGate, { force: true });
     await browser?.close();
     await writeFile(source, original);
     assert.ok(dev.pid);
