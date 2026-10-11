@@ -4,7 +4,9 @@ import { AiError } from './errors.js';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const text = (value: unknown, max: number): value is string => typeof value === 'string'
-  && value.trim().length > 0 && [...value].length <= max && !/[\u0000-\u001f\u007f-\u009f]/u.test(value);
+  && value.trim().length > 0 && [...value].length <= max && ![...value].some(character => {
+    const code = character.charCodeAt(0); return code <= 31 || code >= 127 && code <= 159;
+  });
 
 function validSource(value: unknown) {
   if (typeof value !== 'string' || value.length > 2048) return false;

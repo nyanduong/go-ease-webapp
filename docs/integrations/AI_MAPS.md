@@ -20,7 +20,7 @@ Model chỉ nhận JSON `{durationDays,candidates:[{placeId,name}]}` tối đa 8
 
 Title, tọa độ, sourceUrl, attribution lấy từ Place canonical; model không cung cấp các field này. Mỗi `estimatedCostVnd:null`; `knownSubtotalVnd:0` là JSON number nguyên an toàn, `unknownCostCount` đếm hoạt động thật, `estimatedTotalVnd:null`. Đây là **chi phí chưa biết**, không phải chuyến miễn phí. Không suy opening hours, khoảng cách/khả năng di chuyển, tồn chỗ, booking hoặc điểm đến launch đã chốt từ validation này.
 
-CLI chỉ đọc ba seed Wikidata có code/source revision/attribution/tọa độ khớp [provenance #3](../database/SEED_PROVENANCE.md), destination `VN-HANOI-SAMPLE`. UUID lấy từ DB thật; không hardcode UUID giả hoặc tạo Place mới. `isSample:true` riêng lẻ không chứng minh giấy phép CC0. UUID/response của test doubles chỉ tồn tại trong test, không là kết quả live.
+CLI chỉ đọc ba seed Wikidata có code/tên/source revision/attribution/tọa độ khớp [provenance #3](../database/SEED_PROVENANCE.md), destination `VN-HANOI-SAMPLE`. Tên bị sửa cũng bị từ chối trước network để không gửi nhãn có thể chứa dữ liệu riêng. UUID lấy từ DB thật; không hardcode UUID giả hoặc tạo Place mới. `isSample:true` riêng lẻ không chứng minh giấy phép CC0. UUID/response của test doubles chỉ tồn tại trong test, không là kết quả live.
 
 ## Giới hạn, lỗi và kiểm thử
 

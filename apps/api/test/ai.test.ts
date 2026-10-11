@@ -6,6 +6,8 @@ import { AiError, type AiErrorCode } from '../src/modules/ai/errors.js';
 import { GEMINI_INTERACTIONS_URL, MAX_GEMINI_BODY_BYTES, generateGeminiSchedule, readGeminiConfig } from '../src/modules/ai/gemini.js';
 import { aiModelInput, aiResponseSchema, prepareAiRequest, requestFromCatalog, validateAiSchedule } from '../src/modules/ai/schedule.js';
 import { runAiProbe } from '../src/modules/ai/probe.js';
+import { validateApprovedSampleRows } from '../src/modules/ai/catalog.js';
+import { samplePlaces } from '../src/database/seed.js';
 
 // Test-only UUIDs and fetch doubles. Coordinates retain the public CC0 sample;
 // none of these responses, identities, token counts or IDs are Gemini live evidence.
@@ -198,6 +200,21 @@ test('Gemini whole deadline includes delayed headers and a stalled response body
   await delay(0); assert.equal(cancelled, true);
 });
 
+test('Gemini does not reset its deadline after headers even when a valid body would arrive later', async () => {
+  let cancelled = false;
+  await assert.rejects(run(async () => {
+    await delay(50);
+    let bodyTimer: ReturnType<typeof setTimeout>;
+    return new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        bodyTimer = setTimeout(() => { controller.enqueue(new TextEncoder().encode(JSON.stringify(interaction()))); controller.close(); }, 50);
+      },
+      cancel() { clearTimeout(bodyTimer); cancelled = true; },
+    }));
+  }, { timeoutMs: 75 }), rejected('AI_TIMEOUT', 1));
+  assert.equal(cancelled, true);
+});
+
 test('Gemini body byte bound handles streaming, content-length and invalid UTF-8 without repair', async () => {
   const oversize = new TextEncoder().encode('ă'.repeat(MAX_GEMINI_BODY_BYTES / 2 + 1));
   let cancelled = false;
@@ -235,16 +252,34 @@ test('Gemini deadline bounds fetch itself and backoff with at most one attempted
 });
 
 const liveFlags = ['--live', '--authorize-live-spend', '--project-reference=test-project', '--quota-reference=test-quota', '--budget-reference=test-approval'];
+test('approved catalog rejects a modified seed label before any outbound probe call', async () => {
+  const rows = samplePlaces.map((seed, index) => ({ id: ids[index]!, code: seed.code, destinationCode: 'VN-HANOI-SAMPLE', name: seed.name as string,
+    latitude: { toNumber: () => Number(seed.latitude) }, longitude: { toNumber: () => Number(seed.longitude) },
+    sourceUrl: `https://www.wikidata.org/w/index.php?title=${seed.entity}&oldid=${seed.revision}`,
+    attribution: `Wikidata contributors · CC0-1.0 · ${seed.entity} P625 revision ${seed.revision}; retrieved 2026-10-11; source precision ${seed.precision}°; approximate sample point, no price/availability.`,
+    active: true, isSample: true }));
+  assert.equal(validateApprovedSampleRows(rows)[0]?.name, samplePlaces[0].name);
+  rows[0]!.name = 'TEST_ONLY_PII_LABEL';
+  let calls = 0;
+  const result = await runAiProbe(liveFlags, { DATABASE_URL: 'TEST_ONLY_DATABASE_URL', GEMINI_API_KEY: config.apiKey, GEMINI_MODEL: config.model }, {
+    loadCatalog: async () => validateApprovedSampleRows(rows), fetch: async () => { calls++; return response(); },
+  });
+  assert.equal(result.exitCode, 1); assert.ok('code' in result.receipt);
+  assert.equal(result.receipt.code, 'AI_INVALID_INPUT'); assert.equal(calls, 0);
+  assert.equal(JSON.stringify(result).includes('TEST_ONLY_PII_LABEL'), false);
+});
+
 test('AI probe rejects missing/ambiguous spend authorization before catalog or network access', async () => {
   let loads = 0, calls = 0;
   const dependencies = { loadCatalog: async () => { loads++; return catalog(); }, fetch: (async () => { calls++; return response(); }) as typeof globalThis.fetch };
   for (const flags of [[], ['--live'], ['--live', '--authorize-live-spend'], [...liveFlags, '--days=2'], [...liveFlags, '--dry-run'],
     [...liveFlags, '--live'], [...liveFlags, '--unexpected'], [...liveFlags, '--project-reference=duplicate'], ['--dry-run', '--authorize-live-spend']]) {
     const result = await runAiProbe(flags, { DATABASE_URL: 'TEST_ONLY_DATABASE_URL', GEMINI_API_KEY: config.apiKey, GEMINI_MODEL: config.model }, dependencies);
-    assert.equal(result.exitCode, 1); assert.equal(result.receipt.status, 'failed'); assert.equal(result.receipt.attempts, 0);
+    assert.equal(result.exitCode, 1); assert.equal(result.receipt.status, 'failed'); assert.ok('attempts' in result.receipt);
+    assert.equal(result.receipt.attempts, 0);
   }
   const missing = await runAiProbe(liveFlags, { DATABASE_URL: 'TEST_ONLY_DATABASE_URL' }, dependencies);
-  assert.equal(missing.receipt.code, 'AI_NOT_CONFIGURED');
+  assert.ok('code' in missing.receipt); assert.equal(missing.receipt.code, 'AI_NOT_CONFIGURED');
   assert.equal(loads, 0); assert.equal(calls, 0);
 });
 
@@ -264,12 +299,14 @@ test('AI probe live-mode mechanics use a single test double call, bounded tokens
       calls++; assert.deepEqual((JSON.parse(init?.body as string) as { generation_config: unknown }).generation_config, { max_output_tokens: 1024 }); return response();
     },
   });
-  assert.equal(result.exitCode, 0); assert.equal(calls, 1); assert.equal(result.receipt.attempts, 1);
+  assert.equal(result.exitCode, 0); assert.equal(calls, 1); assert.ok('attempts' in result.receipt);
+  assert.equal(result.receipt.attempts, 1); assert.ok('chargedCostUsd' in result.receipt); assert.ok('costStatus' in result.receipt);
   assert.equal(result.receipt.chargedCostUsd, null); assert.equal(result.receipt.costStatus, 'unavailable');
   const failure = await runAiProbe(liveFlags, { DATABASE_URL: 'TEST_ONLY_DATABASE_URL', GEMINI_API_KEY: config.apiKey, GEMINI_MODEL: config.model }, {
     loadCatalog: async () => catalog(), fetch: async () => { calls++; return new Response(`PRIVATE ${config.apiKey}`, { status: 429 }); },
   });
-  assert.equal(failure.exitCode, 1); assert.equal(failure.receipt.attempts, 1); assert.equal(calls, 2);
+  assert.equal(failure.exitCode, 1); assert.ok('attempts' in failure.receipt);
+  assert.equal(failure.receipt.attempts, 1); assert.equal(calls, 2);
   assert.equal(JSON.stringify(failure).includes(config.apiKey), false);
   assert.equal(JSON.stringify(failure).includes('TEST_ONLY_DATABASE_URL'), false);
 });
