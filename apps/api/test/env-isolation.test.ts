@@ -13,13 +13,14 @@ const tempRoot = resolve(tmpdir());
 const cases = [
   { name: 'không có env file', file: undefined, runtime: {} },
   { name: 'env file local hợp lệ khác mặc định', file: 'NODE_ENV=development\nPORT=3019\nWEB_ORIGINS=http://127.0.0.1:5173\n', runtime: {} },
-  { name: 'runtime env hợp lệ khác mặc định', file: undefined, runtime: { NODE_ENV: 'production', PORT: '3018', WEB_ORIGINS: 'https://local.example' } },
+  { name: 'runtime env hợp lệ khác mặc định', file: undefined, runtime: { NODE_ENV: 'production', PORT: '3018', WEB_ORIGINS: 'https://local.example',
+    DATABASE_URL: 'TEST-ONLY-invalid-personal-env', GOOGLE_WEB_CLIENT_ID: 'TEST-ONLY-invalid-client' } },
   { name: 'file và runtime env không hợp lệ', file: 'NODE_ENV=preview\nPORT=invalid\nWEB_ORIGINS=*\n', runtime: { NODE_ENV: 'preview', PORT: 'invalid', WEB_ORIGINS: '*' } },
 ];
 
 function cleanEnvironment() {
   const env = { ...process.env };
-  for (const key of ['NODE_ENV', 'PORT', 'WEB_ORIGINS']) delete env[key];
+  for (const key of ['NODE_ENV', 'PORT', 'WEB_ORIGINS', 'DATABASE_URL', 'GOOGLE_WEB_CLIENT_ID']) delete env[key];
   // A fresh Node test runner must not inherit the parent's child-runner marker.
   delete env.NODE_TEST_CONTEXT;
   return env;

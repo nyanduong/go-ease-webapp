@@ -1,3 +1,5 @@
+export * from './auth.js';
+
 export const API_SERVICE = 'goease-api' as const;
 
 export * from './ai.js';

@@ -91,10 +91,23 @@ model Session {
   userId String @db.Uuid
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   tokenHash String @unique @db.Char(64)
+  transport String @default("NATIVE") @db.VarChar(6)
+  csrfTokenHash String? @db.Char(64)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   expiresAt DateTime @db.Timestamptz(3)
   revokedAt DateTime? @db.Timestamptz(3)
   @@index([userId, expiresAt])
+}
+
+model AuthChallenge {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transport String @db.VarChar(6)
+  nonceHash String @unique @db.Char(64)
+  proofHash String @db.Char(64)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  consumedAt DateTime? @db.Timestamptz(3)
+  @@index([expiresAt])
 }
 
 model IdempotencyRecord {

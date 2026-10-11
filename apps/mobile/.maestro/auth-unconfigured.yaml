@@ -1,0 +1,29 @@
+# Real installed Android development binary + Metro + real local health API.
+# Leave OAuth public IDs unset. This proves blocked configuration/health, never Google login.
+appId: vn.goease.mobile.dev
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Development Build"
+    timeout: 60000
+- openLink: ${DEV_CLIENT_URL}
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 60000
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Reload"
+    timeout: 10000
+- back
+- extendedWaitUntil:
+    visible: "Đăng nhập Google chưa được cấu hình cho bản app này."
+    timeout: 120000
+- assertNotVisible: "Đăng nhập bằng Google"
+- takeScreenshot: auth-unconfigured
+- scrollUntilVisible:
+    element: "API đang hoạt động"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Đã nhận phản hồi health hợp lệ từ máy chủ."
+- takeScreenshot: auth-unconfigured-health

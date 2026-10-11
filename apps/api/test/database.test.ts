@@ -171,10 +171,15 @@ test('PostgreSQL: fresh/upgrade migrations, constraints, seed, privilege, concur
     try {
       const user = await upgraded.user.create({ data: { googleSubject: 'TEST-ONLY-upgrade' } });
       const original = await upgraded.trip.create({ data: { ownerId: user.id, title: 'Giữ nguyên dữ liệu', destinationCode: 'VN-HANOI-SAMPLE', isSample: true, startDate: new Date('2028-02-28Z'), durationDays: 3, groupSize: 1, days: { create: [{ dayNumber: 1 }, { dayNumber: 2 }, { dayNumber: 3 }] } } });
+      await upgraded.$executeRaw`INSERT INTO "Session" ("userId", "tokenHash", "expiresAt") VALUES (${user.id}::uuid, ${'b'.repeat(64)}, now() + interval '1 day')`;
       assert.equal(await upgraded.$queryRaw<Array<unknown>>`SELECT 1 FROM _prisma_migrations`.then(rows => rows.length), 1);
       await migrate(upgrade.migrationUrl);
-      assert.equal(await upgraded.$queryRaw<Array<unknown>>`SELECT 1 FROM _prisma_migrations`.then(rows => rows.length), 2);
+      assert.equal(await upgraded.$queryRaw<Array<unknown>>`SELECT 1 FROM _prisma_migrations`.then(rows => rows.length), 3);
       assert.equal((await upgraded.trip.findUniqueOrThrow({ where: { id: original.id } })).title, original.title);
+      const retainedSession = await upgraded.session.findFirstOrThrow({ where: { userId: user.id } });
+      assert.equal(retainedSession.transport, 'NATIVE');
+      assert.equal(retainedSession.csrfTokenHash, null);
+      assert.ok(retainedSession.revokedAt, 'sessions from the pre-auth baseline are revoked on upgrade');
       await assert.rejects(upgraded.trip.update({ where: { id: original.id }, data: { groupSize: 0 } }));
     } finally { await upgraded.$disconnect(); }
   });

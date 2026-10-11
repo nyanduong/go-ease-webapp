@@ -1,4 +1,5 @@
 import { ConnectionPanel } from '@/components/connection-panel';
+import { AuthPanel } from '@/components/auth-panel';
 
 export function HomePage() {
   return (
@@ -21,6 +22,7 @@ export function HomePage() {
           </section>
           <ConnectionPanel />
         </div>
+        <AuthPanel />
         <section aria-labelledby="journey-title" className="journey-section">
           <div className="journey-heading"><h2 id="journey-title">Điều chúng mình đang xây dựng</h2><p>Hướng đi của MVP · các tính năng chưa mở</p></div>
           <div className="feature-grid">

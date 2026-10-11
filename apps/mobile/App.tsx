@@ -4,6 +4,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { apiBaseUrl } from './src/lib/config';
 import { createHealthClient } from './src/lib/health';
 import { createHealthStore } from './src/features/health/store';
+import { AuthPanel } from './src/features/auth/panel';
 
 function HealthScreen() {
   const setup = useMemo(() => {
@@ -25,7 +26,8 @@ function HealthScreen() {
         <Text style={styles.brand}>GoEase</Text>
         <Text style={styles.eyebrow}>KIỂM TRA KỸ THUẬT M0</Text>
         <Text style={styles.heading}>Nền app cho những chuyến đi</Text>
-        <Text style={styles.description}>Một codebase Android và iOS. Màn này chỉ kiểm tra kết nối tới API, chưa có đăng nhập hay lịch trình.</Text>
+        <Text style={styles.description}>Một codebase Android và iOS. Màn kỹ thuật kiểm tra đăng nhập và kết nối API; chưa có lịch trình.</Text>
+        <AuthPanel />
         <View style={styles.card} accessibilityLiveRegion="polite">
           {state.kind === 'loading' && <ActivityIndicator size="large" color="#12604b" accessibilityLabel="Đang kiểm tra kết nối" />}
           <Text style={styles.title} accessibilityRole="header">{title}</Text>
@@ -38,7 +40,7 @@ function HealthScreen() {
             <Text style={styles.buttonText}>{state.kind === 'loading' ? 'Đang kiểm tra…' : 'Thử lại'}</Text>
           </Pressable>
         </View>
-        <Text style={styles.note}>Development build phục vụ kiểm chứng native. Bản preview cuối cần HTTPS staging, mở được khi Metro đã tắt. Chưa kiểm chứng DB, Google login, AI hoặc bản đồ.</Text>
+        <Text style={styles.note}>Development build phục vụ kiểm chứng native. Bản preview cuối cần HTTPS staging, mở được khi Metro đã tắt. Google login thật, AI và bản đồ cần bằng chứng riêng.</Text>
       </ScrollView>
     </SafeAreaView>
   );
