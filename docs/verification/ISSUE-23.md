@@ -8,4 +8,4 @@ Dev script truyền `--dev-watch`, bootstrap bật `forceCloseConnections` chỉ
 
 Regression mới dùng TCP loopback thật xác minh app đóng socket và nhả port. Dev fixture giữ thêm socket thật qua contracts edit và xác minh socket cũ đóng; vẫn kiểm tra runtime/API/web, downtime/retry qua Chromium, compile lỗi không emit, phục hồi và dọn toàn bộ process/port. Không network mock hoặc skip.
 
-Kết quả root checks, source SHA, review và CI HEAD được ghi sau khi chạy; tài liệu này chưa tuyên bố CI đạt.
+Source `a35cc256659404a8992f9d415284b4f031f367ef`: Windows/Node 24.15.0/pnpm 10.34.6, frozen offline install và bốn root checks đạt. Tổng 47 test: kiến trúc 25, API 13 (gồm shutdown thật), web 6, Chromium smoke 2, dev regression 1; không skip. Dev fixture hoàn thành khoảng 12 giây và xác minh tiến trình/port dừng. Review nội bộ và CI HEAD được ghi bằng receipt GitHub sau khi có kết quả; local pass chưa chứng minh Linux CI đạt.
