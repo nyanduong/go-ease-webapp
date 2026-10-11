@@ -61,7 +61,36 @@ Android debug key do toolchain sinh chỉ cho local, không thay key preview/rel
 
 Ghi commit/build ID, OS, loại thiết bị và môi trường riêng Android/iOS theo WORKFLOW. Mỗi nền tảng: cài development build; thấy loading rồi health `api-only` thành công từ API thực; dừng API hoặc ngắt mạng thấy error; khởi động lại bấm Thử lại thấy success; kiểm tra timeout và payload sai; đọc log/network và thử layout/scroll/safe area trên thiết bị. Payload sai có thể dùng fixture riêng nhưng ghi rõ test double, không ghi live. Không dùng Metro export/browser responsive/Android để suy iOS đạt.
 
-Các flow native tại `apps/mobile/.maestro` dùng Maestro local: `health-success.yaml` mở development client qua `DEV_CLIENT_URL`, `health-network-error.yaml` chạy khi API test đã dừng, `health-recovery.yaml` sau khi API thực sẵn sàng; timeout/contract có tên `*-fixture.yaml` và phải dùng fixture local riêng được ghi rõ. Không thao tác backend/thiết bị khác. [Maestro Windows/Java17+](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli) và [release2.11.0](https://github.com/mobile-dev-inc/Maestro/releases/tag/cli-2.11.0) đã kiểm chứng CLI thực; không cần cloud/account cho `maestro test`. Chỉ cài ZIP ở thư mục test riêng, verify hash release, dùng biến process-local tắt analytics/update, không sửa PATH global. Lần đầu health assertion fail và có log missing SplashScreenManager bị Expo catch; nguyên nhân đang kiểm tra, các flow còn lại **chưa chạy**. Không coi flow file là kết quả pass.
+Các flow native tại `apps/mobile/.maestro` dùng Maestro local: `health-success.yaml` mở development client qua `DEV_CLIENT_URL`, `health-network-error.yaml` chạy khi API test đã dừng, `health-recovery.yaml` sau khi API thực sẵn sàng; timeout/contract có tên `*-fixture.yaml` và phải dùng fixture local riêng được ghi rõ. Không thao tác backend/thiết bị khác. [Maestro Windows/Java17+](https://docs.maestro.dev/maestro-cli/how-to-install-maestro-cli) và [release2.11.0](https://github.com/mobile-dev-inc/Maestro/releases/tag/cli-2.11.0) đã kiểm chứng CLI thực; không cần cloud/account cho `maestro test`. Chỉ cài ZIP ở thư mục test riêng, verify hash release, dùng biến process-local tắt analytics/update, không sửa PATH global. Bản Android cuối đã **5/5 flow pass** trên emulator; xem [receipt](../verification/GE-M0-14.md) để phân biệt 3 ca API thật và 2 fixture. Flow `clearState` chờ launcher, xử lý tutorial SDK57 và dùng Android back đóng menu; không dùng flow Android để suy iOS chạy. Lịch sử health fail trước sửa vẫn giữ trong receipt.
+
+Tái lập từng flow với `maestro --device <thiết-bị-test> test -e DEV_CLIENT_URL=<deep-link-development-client> apps/mobile/.maestro/health-success.yaml`; giữ báo cáo JUnit/debug và ảnh ngoài repo. Dừng đúng API test, xác nhận port đã nhả trước network-error; bật lại và kiểm tra GET health thật trước recovery. Timeout fixture là HTTP server loopback nhận request không trả response; contract fixture trả HTTP200 JSON sai schema health. Dừng fixture trước khởi động API thật, không đổi production API để giả lỗi. Tên flow hoặc file báo cáo tự nó không chứng minh ca đã chạy.
+
+Nguồn fixture dưới đây tương ứng harness local `native-health-fixture.mjs` đã dùng trong receipt. Tạo file tạm riêng bằng PowerShell khi port3000 của API test đã nhả; chạy một mode trong terminal riêng, rồi chạy flow tương ứng từ terminal Maestro. Chỉ dừng process fixture/terminal do mình mở trước khi đổi mode hoặc bật lại API:
+
+```powershell
+$nativeFixturePath = Join-Path ([IO.Path]::GetTempPath()) ('goease-health-fixture-' + [guid]::NewGuid() + '.mjs')
+@'
+import http from 'node:http';
+const mode = process.argv[2];
+if (!['timeout', 'contract'].includes(mode)) throw new Error('Choose timeout or contract fixture');
+let requests = 0;
+const server = http.createServer((request, response) => {
+  requests++;
+  console.log(`fixture=${mode} request=${requests} method=${request.method} health=${request.url === '/api/health'}`);
+  if (mode === 'contract') {
+    response.writeHead(200, {'Content-Type': 'application/json'});
+    response.end(JSON.stringify({status: 'ok', scope: 'invalid-contract'}));
+  }
+});
+server.listen(3000, '127.0.0.1', () => console.log(`fixture=${mode} listening=loopback:3000`));
+process.on('SIGTERM', () => { server.closeAllConnections(); server.close(() => process.exit(0)); });
+'@ | Set-Content -LiteralPath $nativeFixturePath
+node --max-old-space-size=64 $nativeFixturePath timeout
+# Sau khi dừng fixture timeout, cùng file chạy mode contract:
+# node --max-old-space-size=64 $nativeFixturePath contract
+```
+
+Với fixture đang chạy, dùng `maestro --device <thiết-bị-test> test apps/mobile/.maestro/health-timeout-fixture.yaml` hoặc `health-contract-fixture.yaml`. API URL của app vẫn trỏ tới host test qua emulator alias/reverse đã chọn. Đây là test doubles HTTP, không chứng minh dịch vụ live.
 
 Trước bàn giao #10/#11 còn cần preview trên Android thật và iPhone thật, mở khi Metro tắt, gọi HTTPS staging. Thiếu điều kiện thì giữ #15 mở và ghi ca bị chặn; không đánh dấu M0 hoàn tất.
 
@@ -73,8 +102,8 @@ Splash plugin dùng ảnh PNG trong suốt trung tính tại `assets/splash.png`
 
 | Nhóm / nguồn đối chiếu 11/10/2026 | Android | iOS |
 | --- | --- | --- |
-| Expo/RN/React theo metadata SDK 57 | Metro export và APK debug x86_64 build/cài pass; health chưa mở, nguyên nhân đang kiểm tra | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
-| [expo-dev-client SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/dev-client/) | Maestro launch/deeplink đã chạy; thêm splash57.0.9/plugin theo [SDK57](https://docs.expo.dev/versions/v57.0.0/sdk/splash-screen/), cần build lại và kiểm tra Metro/deep link | Có hỗ trợ theo SDK; cần đường build/cài thực, không dùng Expo Go thay thế |
-| [safe-area-context SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/safe-area-context/) | Kotlin/Java/C++ build pass sau checkout ngắn; notch/edge-to-edge chưa thử trên app | Có hỗ trợ theo SDK; bundle pass, safe area trên simulator/iPhone chưa thử |
+| Expo/RN/React theo metadata SDK 57 | Metro export, APK debug x86_64 build/cài và health/error/retry API local thật trên emulator pass | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
+| [expo-dev-client SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/dev-client/) | Splash57.0.9/plugin/ảnh theo [SDK57](https://docs.expo.dev/versions/v57.0.0/sdk/splash-screen/); build mới và Maestro launcher→Metro→health pass | Có hỗ trợ theo SDK; cần đường build/cài thực, không dùng Expo Go thay thế |
+| [safe-area-context SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/safe-area-context/) | Build pass; đã xem ảnh/layout và thử scroll/retry trên emulator Pixel4/API35. Notch/font-scale/điện thoại khác chưa thử | Có hỗ trợ theo SDK; bundle pass, safe area trên simulator/iPhone chưa thử |
 
 Nguồn tương thích và bundle thành công không thay native acceptance; cập nhật bảng và receipt khi build/runtime thực có kết quả.
