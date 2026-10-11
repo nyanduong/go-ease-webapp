@@ -69,6 +69,8 @@ Trước bàn giao #10/#11 còn cần preview trên Android thật và iPhone th
 
 Expo `57.0.27`, React Native `0.86.3`, React `19.2.3`, dev-client `57.0.19`, safe-area-context `5.7.0` theo metadata SDK 57. Safe area xử lý notch/edge-to-edge trên hai nền tảng; không dùng router hoặc Maps SDK trong issue này. `react-dom@19.2.3` chỉ là **dev peer cho công cụ Expo CLI**: cài strict ban đầu tự chọn DOM `19.3.0` của web gây mismatch; pin peer đúng React mobile giữ strict install. App native không import DOM, web giữ React/DOM `19.3.0`; chỉ contracts thuần được chia sẻ. Không hoist toàn bộ hoặc override React chung. [Expo monorepo](https://docs.expo.dev/guides/monorepos/), [SDK 57 metadata](https://registry.npmjs.org/expo/57.0.27).
 
+Splash plugin dùng ảnh PNG trong suốt trung tính tại `assets/splash.png` trên cả hai nền tảng. Với SDK57.0.9, cấu hình chỉ màu nền đã tạo style Android tham chiếu `splashscreen_logo` nhưng không sinh drawable và làm native build fail; ảnh rõ ràng tránh tài nguyên thiếu. Đây là tài nguyên kỹ thuật, chưa phải branding hoặc nghiệm thu splash preview.
+
 | Nhóm / nguồn đối chiếu 11/10/2026 | Android | iOS |
 | --- | --- | --- |
 | Expo/RN/React theo metadata SDK 57 | Metro export và APK debug x86_64 build/cài pass; health chưa mở, nguyên nhân đang kiểm tra | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
