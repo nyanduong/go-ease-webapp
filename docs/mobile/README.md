@@ -1,6 +1,6 @@
 # Nền mobile M0
 
-`apps/mobile` dùng Expo development build, React Native và TypeScript cho **Android + iOS**. Màn health là kiểm tra kỹ thuật, chưa phải UI nghiệp vụ/prototype được nghiệm thu. [Bằng chứng #15](../verification/GE-M0-14.md), [toolchain](../verification/READINESS.md) và [điều kiện bên ngoài](../verification/EXTERNAL_RESOURCES.md) ghi kết quả từng nền tảng.
+`apps/mobile` dùng Expo development build, React Native và TypeScript cho **Android + iOS**. [Luồng chuyến #6](TRIPS.md) mở từ Chuyến đi, có tạo/detail/editor/bản nháp/retry và map theo ngày; OAuth/native runtime của luồng này vẫn chưa nghiệm thu. Màn health ở **Kiểm tra kỹ thuật**, có nút quay lại; health không thay UI nghiệp vụ. [Bằng chứng #15](../verification/GE-M0-14.md), [toolchain](../verification/READINESS.md) và [điều kiện bên ngoài](../verification/EXTERNAL_RESOURCES.md) ghi kết quả từng nền tảng.
 
 ## Chạy local
 

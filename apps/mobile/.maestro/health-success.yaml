@@ -18,6 +18,10 @@ appId: vn.goease.mobile.dev
     timeout: 10000
 - back
 - extendedWaitUntil:
+    visible: "Kiểm tra kỹ thuật"
+    timeout: 120000
+- tapOn: "Kiểm tra kỹ thuật"
+- extendedWaitUntil:
     visible: "API đang hoạt động"
     timeout: 120000
 - assertVisible: "Đã nhận phản hồi health hợp lệ từ máy chủ."

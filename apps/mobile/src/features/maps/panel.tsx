@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import type { TripActivity } from '@goease/contracts';
 import { apiBaseUrl } from '../../lib/config';
 import { useNativeAuth } from '../auth/context';
 import { AuthFailure } from '../auth/client';
@@ -9,8 +10,9 @@ import { createMapsClient, MapFailure } from './client';
 import { createLocationStore } from './location';
 import { foregroundLocation } from './location-runtime';
 import { createMapsStore } from './store';
+import { routeablePlaces } from './pins';
 
-export function MapsPanel() {
+export function MapsPanel({ activities, dayLabel }: { activities?: TripActivity[]; dayLabel?: string }) {
   const { store: auth, state: session } = useNativeAuth();
   const configured = (Platform.OS === 'android' || Platform.OS === 'ios') && Constants.expoConfig?.extra?.nativeMapsConfigured?.[Platform.OS] === true;
   const [active, setActive] = useState(AppState.currentState === 'active');
@@ -46,29 +48,35 @@ export function MapsPanel() {
     synchronize(); return auth.subscribe(synchronize);
   }, [store, auth]);
   useEffect(() => { if (active && state.catalogStatus === 'ready') store.retryMap(); }, [store, active, state.catalogStatus]);
-  const places = state.catalog?.places ?? [];
+  const pins = activities?.filter(activity => activity.place !== null) ?? [];
+  const pinIdentity = activities?.map(activity => `${activity.id}:${activity.place?.id ?? ''}`).join('|') ?? '';
+  useEffect(() => { store.retryMap(); setOrigin(''); setDestination(''); }, [store, pinIdentity]);
+  const places = routeablePlaces(state.catalog, activities);
   const originId = places.some(place => place.id === origin) ? origin : places[0]?.id ?? '';
   const destinationId = places.some(place => place.id === destination) ? destination : places[1]?.id ?? '';
   const route = session.kind === 'signedIn' && state.result?.kind === 'route' ? state.result : undefined;
-  const routeReady = active && session.kind === 'signedIn' && state.map === 'loaded' && state.catalogStatus === 'ready' && originId !== destinationId;
+  const routeReady = active && session.kind === 'signedIn' && state.map === 'loaded' && state.catalogStatus === 'ready' && Boolean(originId) && Boolean(destinationId) && originId !== destinationId;
   function chooseOrigin(id: string) { store.cancelRoute(); setOrigin(id); }
   function chooseDestination(id: string) { store.cancelRoute(); setDestination(id); }
   return <View style={styles.card} accessibilityLiveRegion="polite">
-    <Text style={styles.heading} accessibilityRole="header">Bản đồ mẫu Hà Nội</Text>
-    <Text style={styles.text}>Kiểm chứng kỹ thuật: ba địa điểm có nguồn CC0. Chưa phải lịch trình hoặc điểm đến mở thử đã chốt.</Text>
+    <Text style={styles.heading} accessibilityRole="header">{activities ? `Bản đồ chuyến · ${dayLabel}` : 'Bản đồ mẫu Hà Nội'}</Text>
+    <Text style={styles.text}>{activities ? 'Pin thuộc hoạt động ngày đang xem. Hoạt động tự nhập không có địa điểm sẽ không có pin. Địa điểm cũ ngừng dùng vẫn được ghi rõ; chỉ chọn tuyến từ danh mục đang hoạt động đã đọc.' : 'Kiểm chứng kỹ thuật: ba địa điểm có nguồn CC0. Chưa phải lịch trình hoặc điểm đến mở thử đã chốt.'}</Text>
     <Text style={styles.text}>{state.catalogMessage}</Text>
     {state.catalogStatus === 'error' && <Pressable accessibilityRole="button" style={styles.button} onPress={() => { void store.loadCatalog(); }}><Text style={styles.buttonText}>Đọc danh mục lại</Text></Pressable>}
     {!configured && <Text style={styles.text}>Bản build chưa có cấu hình Google Maps cho {Platform.OS}. Danh mục mẫu vẫn xem được; chưa tải SDK bản đồ.</Text>}
-    {configured && active && state.catalogStatus === 'ready' && <MapView key={state.revision} provider={PROVIDER_GOOGLE} style={styles.map}
-      initialRegion={{ latitude: 21.028611, longitude: 105.845556, latitudeDelta: 0.035, longitudeDelta: 0.035 }}
+    {configured && active && (activities !== undefined || state.catalogStatus === 'ready') && <MapView key={`${state.revision}:${pinIdentity}`} provider={PROVIDER_GOOGLE} style={styles.map}
+      initialRegion={{ latitude: pins[0]?.place?.latitude ?? places[0]?.latitude ?? 21.028611, longitude: pins[0]?.place?.longitude ?? places[0]?.longitude ?? 105.845556, latitudeDelta: 0.035, longitudeDelta: 0.035 }}
       showsUserLocation={false} showsMyLocationButton={false} toolbarEnabled={false}
-      onMapReady={() => store.sdkReady(state.revision)} onMapLoaded={() => store.mapLoaded(state.revision)} accessibilityLabel="Bản đồ Google với ba pin mẫu">
-      {places.map(place => <Marker key={place.id} coordinate={place} title={place.name} description="Địa điểm mẫu có nguồn Wikidata; không xác nhận giờ mở cửa/giá." />)}
+      onMapReady={() => store.sdkReady(state.revision)} onMapLoaded={() => store.mapLoaded(state.revision)} accessibilityLabel={activities ? 'Bản đồ Google với pin từ hoạt động ngày đã chọn' : 'Bản đồ Google với ba pin mẫu'}>
+      {activities ? pins.map(activity => <Marker key={activity.id} coordinate={activity.place!} title={activity.title} description={activity.place!.active ? activity.place!.name : `${activity.place!.name} · Địa điểm cũ đã ngừng dùng`} />)
+        : places.map(place => <Marker key={place.id} coordinate={place} title={place.name} description="Địa điểm mẫu có nguồn Wikidata; không xác nhận giờ mở cửa/giá." />)}
       {position.fix && <Marker coordinate={position.fix.coords} title="Một vị trí vừa nhận" pinColor="#2761a4" />}
       {route && <Polyline coordinates={route.coordinates} strokeColor="#12604b" strokeWidth={4} />}
     </MapView>}
     {configured && <Text style={styles.text}>{state.map === 'loaded' ? 'Bản đồ đã báo tải tiles.' : state.map === 'error' ? 'Bản đồ chưa tải xong trong thời gian cho phép. Kiểm tra mạng/cấu hình key hoặc thử lại.' : state.sdkReady ? 'SDK sẵn sàng; đang chờ bản đồ tải tiles…' : 'Đang chờ bản đồ native…'}</Text>}
     {configured && state.map === 'error' && <Pressable accessibilityRole="button" style={styles.button} onPress={store.retryMap}><Text style={styles.buttonText}>Tải bản đồ lại</Text></Pressable>}
+    {activities && pins.length === 0 && <Text style={styles.text}>Ngày này chưa có địa điểm gắn bản đồ. Không tạo tọa độ cho hoạt động tự nhập.</Text>}
+    {activities && pins.map(activity => <View key={activity.id} style={styles.place}><Text style={styles.title}>{activity.title}</Text><Text style={styles.small}>{activity.place!.name}{activity.place!.active ? '' : ' · Đã ngừng dùng; không tạo tuyến mới'}</Text><Text style={styles.small}>{activity.place!.attribution}</Text><Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(activity.place!.sourceUrl).catch(() => {}); }}><Text style={styles.link}>Nguồn địa điểm của hoạt động</Text></Pressable></View>)}
     {places.map(place => <View key={place.id} style={styles.place}>
       <Text style={styles.title}>{place.name}</Text><Text style={styles.small}>{place.attribution}</Text>
       <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(place.sourceUrl).catch(() => {}); }}><Text style={styles.link}>Nguồn Wikidata và revision</Text></Pressable>

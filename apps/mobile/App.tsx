@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { ActivityIndicator, BackHandler, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { apiBaseUrl } from './src/lib/config';
 import { createHealthClient } from './src/lib/health';
@@ -7,8 +7,9 @@ import { createHealthStore } from './src/features/health/store';
 import { AuthPanel } from './src/features/auth/panel';
 import { NativeAuthProvider } from './src/features/auth/context';
 import { MapsPanel } from './src/features/maps/panel';
+import { TripsPanel } from './src/features/trips/panel';
 
-function HealthScreen() {
+function HealthScreen({ onBack }: { onBack: () => void }) {
   const setup = useMemo(() => {
     try {
       const url = apiBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL, __DEV__ ? 'development' : 'preview');
@@ -22,13 +23,14 @@ function HealthScreen() {
   useEffect(() => { void setup.store.retry(); return setup.store.cancel; }, [setup]);
   const title = state.kind === 'loading' ? 'Đang kết nối API…' : state.kind === 'success' ? 'API đang hoạt động' : 'Chưa kết nối được API';
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.brand}>GoEase</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Về chuyến đi" onPress={onBack} style={styles.button}><Text style={styles.buttonText}>Về chuyến đi</Text></Pressable>
         <Text style={styles.eyebrow}>KIỂM TRA KỸ THUẬT M0</Text>
         <Text style={styles.heading}>Nền app cho những chuyến đi</Text>
-        <Text style={styles.description}>Một codebase Android và iOS. Màn kỹ thuật kiểm tra đăng nhập và kết nối API; chưa có lịch trình.</Text>
+        <Text style={styles.description}>Một codebase Android và iOS. Màn này kiểm tra đăng nhập và kết nối API; lịch trình ở mục Chuyến đi.</Text>
         <AuthPanel />
         <View style={styles.card} accessibilityLiveRegion="polite">
           {state.kind === 'loading' && <ActivityIndicator size="large" color="#12604b" accessibilityLabel="Đang kiểm tra kết nối" />}
@@ -45,10 +47,16 @@ function HealthScreen() {
         <MapsPanel />
         <Text style={styles.note}>Development build phục vụ kiểm chứng native. Bản preview cuối cần HTTPS staging, mở được khi Metro đã tắt. Google login thật, AI và bản đồ cần bằng chứng riêng.</Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
-export default function App() { return <SafeAreaProvider><NativeAuthProvider><HealthScreen /></NativeAuthProvider></SafeAreaProvider>; }
+function AppScreens() {
+  const [technical, setTechnical] = useState(false);
+  useEffect(() => { const subscription = BackHandler.addEventListener('hardwareBackPress', () => { if (!technical) return false; setTechnical(false); return true; }); return () => subscription.remove(); }, [technical]);
+  // Keep the trip RAM bucket mounted while visiting technical checks.
+  return <SafeAreaView style={styles.safe}><View style={[styles.safe, technical && { display: 'none' }]}><TripsPanel active={!technical} onTechnical={() => setTechnical(true)} /></View>{technical && <HealthScreen onBack={() => setTechnical(false)} />}</SafeAreaView>;
+}
+export default function App() { return <SafeAreaProvider><NativeAuthProvider><AppScreens /></NativeAuthProvider></SafeAreaProvider>; }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f4f7f2' },
