@@ -65,7 +65,7 @@ export function isAiDraftRequest(value: unknown): value is AiDraftRequest {
   if (!objectWithKeys(value, ['durationDays', 'candidatePlaceIds'])
     || !integer(value.durationDays, 1, 5) || !Array.isArray(value.candidatePlaceIds)
     || value.candidatePlaceIds.length < 1 || value.candidatePlaceIds.length > 10
-    || !value.candidatePlaceIds.every(placeId)) return false;
+    || !Array.from(value.candidatePlaceIds).every(placeId)) return false;
   return new Set(value.candidatePlaceIds.map(id => id.toLowerCase())).size === value.candidatePlaceIds.length;
 }
 
@@ -73,10 +73,10 @@ export function isAiDraftRequest(value: unknown): value is AiDraftRequest {
 export function isAiScheduleDraft(value: unknown): value is AiScheduleDraft {
   if (!objectWithKeys(value, ['days']) || !Array.isArray(value.days)
     || value.days.length < 1 || value.days.length > 5) return false;
-  return value.days.every(day => {
+  return Array.from(value.days).every(day => {
     if (!objectWithKeys(day, ['dayNumber', 'activities']) || !integer(day.dayNumber, 1, 5)
       || !Array.isArray(day.activities) || day.activities.length < 1 || day.activities.length > 10) return false;
-    return day.activities.every(activity => objectWithKeys(activity, ['placeId', 'startMinute', 'endMinute'])
+    return Array.from(day.activities).every(activity => objectWithKeys(activity, ['placeId', 'startMinute', 'endMinute'])
       && placeId(activity.placeId) && integer(activity.startMinute, 0, 1439)
       && integer(activity.endMinute, 1, 1440) && activity.startMinute < activity.endMinute);
   });
