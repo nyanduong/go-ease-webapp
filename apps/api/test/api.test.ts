@@ -44,10 +44,13 @@ test('route lạ trả lỗi thống nhất, không lộ stack hoặc query', as
   assert.ok(Number.isFinite(Date.parse(body.timestamp)));
 });
 
-test('CORS chỉ cấp phép cho origin cấu hình, không bật credentials', async () => {
+test('CORS chưa bật credentials khi auth chưa cấu hình; auth fail closed', async () => {
   const allowed = await fetch(`${baseUrl}/api/health`, { headers: { Origin: 'http://localhost:5173' } });
   assert.equal(allowed.headers.get('access-control-allow-origin'), 'http://localhost:5173');
   assert.equal(allowed.headers.get('access-control-allow-credentials'), null);
   const denied = await fetch(`${baseUrl}/api/health`, { headers: { Origin: 'https://untrusted.example' } });
   assert.equal(denied.headers.get('access-control-allow-origin'), null);
+  const auth = await fetch(`${baseUrl}/api/auth/me`);
+  assert.equal(auth.status, 503);
+  assert.equal((await auth.json() as { error: { code: string } }).error.code, 'AUTH_NOT_CONFIGURED');
 });
