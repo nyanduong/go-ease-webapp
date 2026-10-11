@@ -8,7 +8,7 @@ Ngày đối chiếu 11/10/2026 · **Refs #11**. Đã triển khai và merge cá
 
 PR #12 và #17 thực sự đã merge, lần lượt `ac1feabd90118e841504befcebdcd7b78206aa5f` và `ef24b4cca6ca64209b93dae69b5e8ee90f0d49c7`; không triển khai lại scaffold. Luồng chuyến mobile PR36 merge thành `5111d474cb4bb6a1258aa0793405c1599e2e99d7`; packaging PR37 kế thừa nền này, merge thành `162d93739aca05a067836bbe26c66883ce8fe64c`, main CI gồm container SUCCESS. Source product/gates của từng receipt có thể cũ hơn PR HEAD do commit cuối chỉ thêm tài liệu; bảng trong [M0_REPORT](M0_REPORT.md) ghi **HEAD CI thật**, không gán artifact cũ cho HEAD mới.
 
-Các run trong M0_REPORT đã đọc lại từ GitHub, Quality Gate job SUCCESS và SHA khớp HEAD/merge. Thành công CI không xác nhận native/live. PR12 GitGuardian lịch sử **NEUTRAL**, không có nghĩa sạch; PR17–37 scanner SUCCESS. Các receipt có chữ “chờ CI/merge” là mốc trước khi PR được tạo; dùng bảng và GitHub để đọc kết quả sau đó, không viết lại lịch sử thất bại thành thành công.
+Các run trong M0_REPORT đã đọc lại từ GitHub, Quality Gate job SUCCESS và SHA khớp HEAD/merge. Thành công CI không xác nhận native/live. PR12 GitGuardian lịch sử **NEUTRAL**, không có nghĩa sạch; scanner SUCCESS ở các PR được liệt kê từ17 đến39. Các receipt có chữ “chờ CI/merge” là mốc trước khi PR được tạo; dùng bảng và GitHub để đọc kết quả sau đó, không viết lại lịch sử thất bại thành thành công.
 
 [Báo cáo M0](M0_REPORT.md) ghi traceability issue/tiêu chí/PR HEAD/merge/CI, các fix và giới hạn. [Runbook bàn giao](RUNBOOK.md) dẫn lệnh local/build/ký/cài/deploy/migrate/seed/backup/restore/rollback.
 
@@ -34,6 +34,16 @@ Các run trong M0_REPORT đã đọc lại từ GitHub, Quality Gate job SUCCESS
 Bộ tài liệu kế thừa actual main **`e3f7f73251023fe318a9b61a855580b1177f0f20`** sau PR39; runtime product source **`317a84d69d5fbe8f5f1bed5491aef11392750490`** có Node/image mới và staging/API đã merge. Diff bàn giao chỉ Markdown, không đổi app/API/contracts/schema/lock/CI. Mobile tree vẫn `1df75e0ab267df17eb997fafddeaec84c1a28011` bằng source build5111d474; APK dưới đây giữ SHA nguồn/toolchain lịch sử, không đổi nhãn thành binary của main mới.
 
 Node24.21 portable được dùng cho root checks cuối, không thay cài đặt hệ thống Node24.15 của host; dùng pin trong README khi tái lập. Expo exports có chạy Metro Bundler một lần để tạo JS/assets; khác với khởi động Metro development server đã bị automatic approval review chặn. Receipt kiểm tra bộ tài liệu được bổ sung sau khi chạy, CI/main của PR bàn giao ghi sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), không yêu cầu commit tự ghi chính SHA của nó.
+
+### Kết quả kiểm tra cuối bộ tài liệu
+
+Ngày11/10/2026, source kiểm tra **`903469bc3266f7f819858acae26aa918f706fa33`**, kế thừa actual main e3f7f732. Frozen install → `pnpm typecheck` → `pnpm lint` → `pnpm test` → `pnpm build` → Expo config check tuần tự **tất cả PASS**. Dùng portable Node24.21.0/OpenSSL3.5.8/Undici7.29.1 và Corepack pnpm10.34.6; xác nhận cả child pnpm thực thi Node portable. Không thay runtime global của host.
+
+Root **300PASS/0skip** =26architecture+2dependency+135API+49web+69mobile+14deploy+4browser+1dev; architecture96source/0violations. Có actual private PG/HTTP/operator/backup/restore và proxy/Host regression; Windows Docker daemon không chạy. `pnpm build` export Android687modules và iOS689modules ra JS/assets, không là native hoặc preview. PR39 [PR CI](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149399569) và [main CI](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149782339) đều SUCCESS từng bước, gồm bốn Docker images; PR bàn giao vẫn phải qua CI riêng trên HEAD của nó.
+
+Root lock SHA256 `BDABAF6F97FFD5AEB419A4AAFA72868520093F160FCCFA74CF04E9A410305925` không đổi; mobile tree vẫn1df75e0a. Review độc lập tại903469b:45Markdown/260links và fragments,0broken/0fallback, đủ8đầu ra/12UAT; cập nhật receipt này không đổi code. Không còn tiến trình Node/PostgreSQL/Java thuộc checkout bàn giao sau suite cleanup, không có provider probe.
+
+Private logs `goease-issue11-final-root-gates-20261011`, SHA256: test `BF047F73CBBADEC28F53E87D2FBDF4F8F5DC15AE2B9443A66F4A5ABE7C988D67`; build `AA5F1382E8279B73000C9D21F10373E9D4CFD6536FB5BDE44C9CCBD5613BE4F9`; Expo `097491A812973B52FF0E10D9AA0D4A3A028B92015F48ECD0AB1509530A9A6264`; runtime `75CBF6F7B3133BAE2F8AAD84D97D39073A4EB8F1FB52090A29E190127393E228`. Logs ở máy này, không là artifact phân phối. Receipt CI/merge cuối ghi ở issue11; không đánh dấu live/native PASS từ root checks.
 
 ## Artifact native lịch sử
 

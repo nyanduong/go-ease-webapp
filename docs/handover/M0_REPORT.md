@@ -21,7 +21,7 @@ Ngày đối chiếu 11/10/2026 · **Refs #11; M0 chưa hoàn tất**. Đây là
 
 ## PR HEAD → merge main → Quality Gate
 
-Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt cũ có thể ghi “chờ CI/merge” tại mốc tạo tài liệu; không xóa lịch sử đó. CI pass không là native/live. PR12 scanner lịch sử NEUTRAL không chứng minh sạch; các PR17–37 scanner SUCCESS.
+Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt cũ có thể ghi “chờ CI/merge” tại mốc tạo tài liệu; không xóa lịch sử đó. CI pass không là native/live. PR12 scanner lịch sử NEUTRAL không chứng minh sạch; scanner SUCCESS ở các PR được liệt kê từ17 đến39.
 
 | PR / phạm vi | HEAD CI | Merge main | Quality Gate PR / main |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt c
 | [35 — admin, Refs #16](https://github.com/nyanduong/go-ease-webapp/pull/35) | bad25ca3 | 97a82100 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140000308) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140243392) |
 | [36 — mobile chuyến, Refs #6](https://github.com/nyanduong/go-ease-webapp/pull/36) | 9c1d380d | 5111d474 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141287122) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141577313) |
 | [37 — staging packaging, Refs #10](https://github.com/nyanduong/go-ease-webapp/pull/37) | 656a941f | 162d9373 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148538687) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148950694) |
-| [39 — fix Node #38](https://github.com/nyanduong/go-ease-webapp/pull/39) | 49a5e6e5 | e3f7f732 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149399569) / [main PENDING](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149782339) |
+| [39 — fix Node #38](https://github.com/nyanduong/go-ease-webapp/pull/39) | 49a5e6e5 | e3f7f732 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149399569) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149782339) |
 
 Source product, source dùng build/test và commit tài liệu có thể khác nhau; đọc receipt từng phần. APK Android cuối compile từ main5111d474, mobile tree/checksum ở [index](README.md); không gán binary lịch sử cho source mới. PR của báo cáo này được xác minh trên HEAD và receipt sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), tránh vòng commit tự ghi chính SHA của mình.
 
