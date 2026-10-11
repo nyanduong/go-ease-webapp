@@ -21,6 +21,7 @@ appId: vn.goease.mobile.dev
     timeout: 120000
 - assertNotVisible: "Đăng nhập bằng Google"
 - takeScreenshot: auth-unconfigured
+- tapOn: "Kiểm tra kỹ thuật"
 - scrollUntilVisible:
     element: "API đang hoạt động"
     direction: DOWN
