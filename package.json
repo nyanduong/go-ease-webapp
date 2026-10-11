@@ -19,7 +19,8 @@
     "test:smoke": "pnpm --filter @goease/contracts build && pnpm --filter @goease/api build && playwright test",
     "test:dev": "node --test tests/dev/*.test.ts",
     "test:architecture": "node --test tests/architecture/*.test.ts && node scripts/check-architecture.ts",
-    "test": "pnpm test:architecture && pnpm test:unit && pnpm test:smoke && pnpm test:dev",
+    "test:dependencies": "node --test tests/dependencies/*.test.ts",
+    "test": "pnpm test:architecture && pnpm test:dependencies && pnpm test:unit && pnpm test:smoke && pnpm test:dev",
     "build": "pnpm -r --workspace-concurrency=1 build"
   },
   "devDependencies": {
