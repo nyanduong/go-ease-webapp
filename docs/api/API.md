@@ -1,4 +1,4 @@
-# API M0 — health, xác thực và Maps
+# API M0 — health, xác thực, chuyến và Maps
 
 REST prefix `/api`. `GET /health` chỉ kiểm tra tiến trình, vẫn hoạt động khi chưa có DB/OAuth; chưa có OpenAPI UI. Auth dùng contracts/runtime guards trong `@goease/contracts`. Lỗi giữ envelope `{error:{code,message,statusCode},path,timestamp}`, không trả JWT, SQL, credential hoặc stack. Auth/admin trả `Cache-Control: no-store`.
 
@@ -44,6 +44,25 @@ Auth test xác minh profile A/B tách biệt và lớp bảo vệ customer/admin
 Android cần OAuth Android client khớp package + SHA-1 bản ký thực; iOS cần iOS client/bundle/reversed URL scheme khớp từng variant; cả hai cần Web client ID server audience. Web dùng Google Identity Services với authorized JS origin HTTPS chính xác; chọn redirect flow thì đăng ký exact redirect URI. Không tự tạo URL callback OAuth native từ suy đoán. Library native miễn phí/both-platform cần build/runtime kiểm chứng trên Expo development build Android **và** iOS trước chốt; không chọn tính năng Credential Manager trả phí.
 
 Tài khoản, OAuth client types/test users/permissions chưa xác minh. Backend tests dùng identity double qua Nest testing override và Google crypto fixture offline, không gọi Google. Web login live và native Google login/logout/cancel/error/expired chưa đạt; #4 giữ mở với `Refs #4`. Xem [receipt](../verification/GE-M0-04.md) và [điều kiện ngoài](../WORKFLOW.md#điều-kiện-cần-xác-minh).
+
+## Chuyến mẫu #5
+
+`TripsModule` cung cấp POST/GET `/api/trips`, GET/PUT `/api/trips/:id`, đã được tích hợp vào production `AppModule`. Shared DTO/guards tại `packages/contracts/src/trips.ts`; [runbook chuyến](../trips/README.md) mô tả payload, giới hạn và retry. Mọi route cần phiên #4; mutation web cần Origin + CSRF. Owner luôn từ phiên, admin không override ownership, không nhận owner/role trong body. Chuyến khác chủ và ID không tồn tại cùng trả 404; response không chứa owner/subject/token và có no-store.
+
+POST nhận `{title,destinationCode,startDate,durationDays,groupSize,budgetVnd}` với destination `VN-HANOI-SAMPLE`, date lịch thật 2000…2099 (kể cả ngày cuối), 1…5 ngày, nhóm 1…50, ngân sách tổng nhóm VND number nguyên 0…10¹² hoặc null. Server tạo một core-template Activity từ catalog active/sample mỗi ngày, không gọi AI, Maps hoặc booking; trả 201. PUT nhận `{expectedVersion,title,groupSize,budgetVnd,days}`; days đủ dãy hiện tại, tối đa50 activities/ngày. Activity gồm `{id,placeId,title,notes,startMinute,endMinute,estimatedCostVnd}`, id null cho mới; vị trí lấy từ array, Day IDs giữ nguyên, id cũ phải thuộc chuyến. Không thay startDate/duration/owner/destination. Time cặp null hoặc phút nguyên `0 <= start < end <= 1440`; giao nhau lưu kèm warning. Place mới/thay đổi phải active/sample/cùng destination; cùng placeId inactive chỉ được giữ trên chính activity cũ.
+
+POST/PUT bắt buộc một header `Idempotency-Key` UUID. Cùng key/canonical body replay snapshot/status gốc, khác body409. Receipt và children cùng transaction; CAS version trước child replacement, rollback toàn bộ khi lỗi. Replay kiểm tra auth/owner hiện tại rồi trả receipt trước kiểm tra động version/Place/child, nên replay cũ sau edit vẫn hợp lệ; client GET canonical mới trước edit tiếp. JSON tiền dùng number/null, server cộng BigInt rồi chuyển an toàn; unknown khác zero, đổi số người không nhân tiền. GET list query `limit` mặc định20 tối đa50, cursor gồm `cursorUpdatedAt` ISO UTC ms + `cursorId` UUID; order updatedAt DESC/id ASC, chỉ list của mình. GET dùng REPEATABLE READ cho response nhất quán.
+
+| Mã lỗi chuyến | HTTP / ý nghĩa |
+| --- | --- |
+| `TRIP_INVALID_REQUEST` | 400: DTO/key/query/child sai hoặc field lạ |
+| `TRIP_NOT_FOUND` | 404: không tồn tại hoặc không thuộc owner |
+| `TRIP_IDEMPOTENCY_CONFLICT` | 409: cùng key khác canonical body |
+| `TRIP_VERSION_CONFLICT`, `TRIP_VERSION_LIMIT` | 409: stale version hoặc cạn version |
+| `TRIP_PLACE_UNAVAILABLE` | 409: eligibility của Place mới/thay đổi không còn phù hợp |
+| `TRIP_TEMPLATE_UNAVAILABLE` | 503: chưa có catalog mẫu phù hợp |
+
+Parser chuyến1536KiB (1.5MiB) nhận DTO hợp lệ tối đa; auth giữ24KiB. Notes cho LF/CR/TAB, không controls khác hoặc surrogate lỗi. Malformed JSON400/oversize413 dùng envelope an toàn/no-store; duplicate Idempotency-Key bị từ chối400. Response có thể >4MiB khi Place/text đạt giới hạn; reader cap6MiB là yêu cầu cho #6, chưa có trip client trong #5. [GE-M0-05](../verification/GE-M0-05.md) phân biệt actual PostgreSQL/HTTP với test identity, OAuth live và native UI chưa kiểm chứng.
 
 Nguồn chính thức đọc 11/10/2026: [Google ID-token verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token), [GIS JS nonce/popup](https://developers.google.com/identity/gsi/web/reference/js-reference), [Expo Google authentication](https://docs.expo.dev/guides/google-authentication/), [SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/), [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html). Public docs không chứng minh GoEase đã có OAuth quyền/client configuration.
 ## Maps mẫu

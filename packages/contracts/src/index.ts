@@ -1,4 +1,5 @@
 export * from './auth.js';
+export * from './trips.js';
 
 export const API_SERVICE = 'goease-api' as const;
 

@@ -108,7 +108,12 @@ test('Maps HTTP protects paid native Routes using actual PostgreSQL sessions and
       assert.deepEqual(new Set(catalog.places.map(place => place.id)), new Set(loaded.map(place => place.id)));
       await fault(await s.post('maps/sample-route', pair), 401, 'SESSION_REQUIRED');
       await fault(await s.post('maps/sample-route', { ...pair, role: 'ADMIN', ownerId: randomUUID() }, { Authorization: 'Bearer invalid', 'X-Role': 'ADMIN' }), 401, 'SESSION_REQUIRED');
-      const web = await s.login('web'); await fault(await s.post('maps/sample-route', pair, web.headers), 403, 'MAPS_NATIVE_REQUIRED');
+      const web = await s.login('web');
+      await fault(await s.post('maps/sample-route', pair, web.headers), 403, 'ORIGIN_FORBIDDEN');
+      assert.equal(web.body.transport, 'web');
+      if (web.body.transport !== 'web') throw new Error('Expected TEST ONLY web session.');
+      await fault(await s.post('maps/sample-route', pair, { ...web.headers, Origin: origin,
+        'X-CSRF-Token': web.body.csrfToken }), 403, 'MAPS_NATIVE_REQUIRED');
       assert.equal(s.provider.calls, 0);
     } finally { await s.close(); }
   }));
