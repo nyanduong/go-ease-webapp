@@ -21,6 +21,7 @@
     "test:architecture": "node --test tests/architecture/*.test.ts && node scripts/check-architecture.ts",
     "test:dependencies": "node --test tests/dependencies/*.test.ts",
     "test:deploy": "pnpm exec node --test --test-concurrency=1 deploy/*.test.mjs",
+    "deploy:artifact": "node deploy/locked-deploy.mjs",
     "test": "pnpm test:architecture && pnpm test:dependencies && pnpm test:unit && pnpm test:deploy && pnpm test:smoke && pnpm test:dev",
     "build": "pnpm -r --workspace-concurrency=1 build"
   },

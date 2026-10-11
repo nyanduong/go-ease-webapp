@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
+import { redactedContainerFailure } from './container-error.mjs';
 const execute = promisify(execFile), prefix = `goease-ci-${randomBytes(6).toString('hex')}`;
 const containers = [], images = [], network = `${prefix}-net`;
 async function docker(args, input) {
@@ -23,7 +24,7 @@ async function docker(args, input) {
       }); return '';
     }
     return (await execute('docker', args, { timeout: args[0] === 'build' ? 360_000 : 30_000, maxBuffer: 1024 * 1024 })).stdout.trim();
-  } catch { throw new Error(`Container ${args[0]} failed; raw environment and SQL are not logged`); }
+  } catch (error) { throw redactedContainerFailure(args[0], error); }
 }
 async function waitFor(check) {
   for (let attempt = 0; attempt < 90; attempt++) { if (await check()) return; await new Promise(resolve => setTimeout(resolve, 500)); }

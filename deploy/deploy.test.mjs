@@ -10,6 +10,17 @@ import { verifyArtifact } from './verify-artifact.mjs';
 import { immutableImage, privateFile, stagingPreflight } from './preflight.mjs';
 import { redactedPnpmFailure } from './pnpm-error.mjs';
 import { assertArtifactDependencies } from './dependency-graph.mjs';
+import { redactedContainerFailure } from './container-error.mjs';
+
+test('container diagnostics retain bounded build phase and identifiers without exposing child output', () => {
+  const failure = redactedContainerFailure('build', {
+    stderr: '#14 [build 7/11] RUN SECRET=TEST_ONLY_PRIVATE command\nIsolated dependency graph verification failed (SOURCE_CLOSURE_INCOMPLETE)\npostgresql://TEST_ONLY_SECRET@private.invalid/db',
+  });
+  assert.match(failure.message, /Container build failed \(build 7\/11, SOURCE_CLOSURE_INCOMPLETE\)/);
+  assert.doesNotMatch(failure.message + failure.stack, /TEST_ONLY|postgresql|private\.invalid|SECRET=/);
+  assert.equal(failure.cause, undefined);
+  assert.match(redactedContainerFailure('unsafe PRIVATE_COMMAND', { stderr: 'secret only' }).message, /^Container command failed \(COMMAND_FAILED\)/);
+});
 
 test('deployed versions must belong to the reachable frozen API graph, including scoped workspace contracts', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'goease-dependency-source-'));

@@ -12,7 +12,7 @@ const execute = promisify(execFile), root = path.resolve(path.dirname(fileURLToP
 export async function deployFromFrozenGraph(stage, target, source = root) {
   if (!['production', 'operator'].includes(stage)) throw new Error('Invalid deployment stage');
   const cli = process.env.npm_execpath;
-  if (!cli || !/\.(?:c?js)$/.test(cli)) throw new Error('Run deployment through pinned pnpm exec');
+  if (!cli || !/\.(?:c?js)$/.test(cli)) throw new Error('Run deployment through the pinned pnpm script');
   const lockfile = path.join(source, 'pnpm-lock.yaml'), before = await readFile(lockfile);
   let failure;
   try {
@@ -31,6 +31,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try { await deployFromFrozenGraph(process.argv[2], process.argv[3]); console.info('Isolated dependency graph matches frozen API installation; root lockfile unchanged.'); }
   catch (error) {
     const safe = /^Isolated (?:production|operator) deploy failed \((?:ERR_PNPM_[A-Z0-9_]{1,64}|ETIMEDOUT|COMMAND_FAILED)\); raw child output is not logged$/.test(error.message);
-    console.error(safe ? error.message : 'Isolated dependency graph verification failed; raw details are not logged.'); process.exitCode = 1;
+    const identifiers = new Map([
+      ['Run deployment through the pinned pnpm script', 'PNPM_SCRIPT_REQUIRED'],
+      ['Frozen API dependency closure is incomplete', 'SOURCE_CLOSURE_INCOMPLETE'],
+      ['Deployed dependency version is outside the frozen API graph', 'ARTIFACT_VERSION_OUTSIDE_GRAPH'],
+      ['Root lockfile changed during isolated deployment', 'ROOT_LOCK_CHANGED'],
+    ]);
+    console.error(safe ? error.message : `Isolated dependency graph verification failed (${identifiers.get(error.message) ?? 'GRAPH_FAILED'}); raw details are not logged.`); process.exitCode = 1;
   }
 }

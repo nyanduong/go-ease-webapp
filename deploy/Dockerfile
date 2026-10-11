@@ -6,8 +6,8 @@ RUN corepack enable && corepack prepare pnpm@10.34.6 --activate
 COPY . .
 RUN pnpm install --frozen-lockfile --filter goease --filter @goease/api... --filter @goease/web...
 RUN pnpm --filter @goease/contracts build && pnpm --filter @goease/api build
-RUN pnpm exec node deploy/locked-deploy.mjs production /artifacts/api \
- && pnpm exec node deploy/locked-deploy.mjs operator /artifacts/operator
+RUN pnpm run deploy:artifact production /artifacts/api \
+ && pnpm run deploy:artifact operator /artifacts/operator
 # Operator tools never enter the runtime allowlist or image.
 RUN mkdir -p /artifacts/operator/dist/scripts/lib \
  && cp apps/api/dist/scripts/staging-operator.js /artifacts/operator/dist/scripts/ \
