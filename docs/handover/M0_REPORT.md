@@ -43,6 +43,7 @@ Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt c
 | [35 — admin, Refs #16](https://github.com/nyanduong/go-ease-webapp/pull/35) | bad25ca3 | 97a82100 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140000308) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140243392) |
 | [36 — mobile chuyến, Refs #6](https://github.com/nyanduong/go-ease-webapp/pull/36) | 9c1d380d | 5111d474 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141287122) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141577313) |
 | [37 — staging packaging, Refs #10](https://github.com/nyanduong/go-ease-webapp/pull/37) | 656a941f | 162d9373 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148538687) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148950694) |
+| [39 — fix Node #38](https://github.com/nyanduong/go-ease-webapp/pull/39) | 49a5e6e5 | e3f7f732 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149399569) / [main PENDING](https://github.com/nyanduong/go-ease-webapp/actions/runs/38149782339) |
 
 Source product, source dùng build/test và commit tài liệu có thể khác nhau; đọc receipt từng phần. APK Android cuối compile từ main5111d474, mobile tree/checksum ở [index](README.md); không gán binary lịch sử cho source mới. PR của báo cáo này được xác minh trên HEAD và receipt sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), tránh vòng commit tự ghi chính SHA của mình.
 
@@ -54,10 +55,11 @@ Source product, source dùng build/test và commit tài liệu có thể khác n
 | #23 — dev watcher socket cleanup | PR24; [receipt](../verification/ISSUE-23.md) | HTTP keep-alive không giữ dev restart/Ctrl+C; regression thực, không đổi drain mặc định production. |
 | #27 — adapter UTC/pool/timeout | PR28; [receipt](../verification/GE-M0-27.md) | UTC/instant và giới hạn kết nối/query actual PG, không đổi timezone role/DB/hệ thống. |
 | #31 — shell-quote injection | PR34; [audit](../verification/ISSUE-31.md) | concurrently/shell-quote vá và hai regression; residual audit0critical/4high/2moderate có ngoại lệ giới hạn, không báo security-clean. |
+| #38 — Node security baseline | PR39; [assessment](../verification/ISSUE-38.md) | Node24.21 LTS/images đồng bộ, portable root300PASS/0skip và Docker PR CI; không đổi npm graph/native source hoặc suy image/OS sạch. |
 
 Lỗi trong branch chưa merge được sửa trong chính PR, không tạo issue trùng. Các receipt giữ finding/fix và lần test thất bại. Không có bằng chứng để gọi luồng sản phẩm “sẵn sàng nghiệm thu” khi native/live chưa chạy; những phần đó là BLOCKED, không được chuyển thành PASS bằng doubles.
 
-Điều kiện còn thiếu tập trung tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md): OAuth clients/test users; Gemini key/model/quota/ngân sách probe; restricted Maps keys/billing được phép; HTTPS/cloud DB; EAS/Apple signing và Android/iPhone thật. Automatic approval review đã chặn Metro; Docker engine Windows chưa kết nối được. Node/image/OS phải đánh giá trước kích hoạt ngoài. Không suy tài khoản không tồn tại chỉ vì chưa xác minh, không in secret hoặc tự bật billing.
+Điều kiện còn thiếu tập trung tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md): OAuth clients/test users; Gemini key/model/quota/ngân sách probe; restricted Maps keys/billing được phép; HTTPS/cloud DB; EAS/Apple signing và Android/iPhone thật. Automatic approval review đã chặn Metro development server; Docker engine Windows chưa kết nối được, Docker CI Linux đã PASS. Node đã vá ở #38; image/OS scan và residual advisory assessment vẫn cần trước kích hoạt ngoài. Không suy tài khoản không tồn tại chỉ vì chưa xác minh, không in secret hoặc tự bật billing.
 
 ## Ngoài M0
 

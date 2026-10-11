@@ -27,6 +27,13 @@ Các run trong M0_REPORT đã đọc lại từ GitHub, Quality Gate job SUCCESS
 | Native/toolchain | [mobile](../mobile/README.md), [readiness](../verification/READINESS.md), [receipt issue15](../verification/GE-M0-14.md) | Health emulator lịch sử khác auth/Maps compile; iOS không native; GE-M0-14.md là issue15, không suy số issue từ tên file. |
 | Staging/preview | [runbook](../staging/README.md), [preview](../staging/MOBILE_PREVIEW.md), [receipt #10](../verification/GE-M0-10.md) | PR37/main CI bốn container/private PG/operator/backup/restore/proxy/browser PASS local HTTP; chưa public HTTPS hoặc preview hai thiết bị thật. |
 | Dependency/security | [audit #31](../verification/ISSUE-31.md), [architecture](../ARCHITECTURE.md) | shell-quote đã vá/regression thực; residual audit0critical/4high/2moderate có ngoại lệ giới hạn, không báo sạch hoặc tắt scanner. |
+| Node runtime #38 | [assessment/receipt](../verification/ISSUE-38.md) | PR39 đã merge main e3f7f732, Node24.21.0 và ba Docker stages đồng bộ; portable root300PASS/0skip và PR Docker CI SUCCESS. OS/image scan vẫn là điều kiện trước kích hoạt ngoài. |
+
+## Source và kiểm chứng bộ bàn giao
+
+Bộ tài liệu kế thừa actual main **`e3f7f73251023fe318a9b61a855580b1177f0f20`** sau PR39; runtime product source **`317a84d69d5fbe8f5f1bed5491aef11392750490`** có Node/image mới và staging/API đã merge. Diff bàn giao chỉ Markdown, không đổi app/API/contracts/schema/lock/CI. Mobile tree vẫn `1df75e0ab267df17eb997fafddeaec84c1a28011` bằng source build5111d474; APK dưới đây giữ SHA nguồn/toolchain lịch sử, không đổi nhãn thành binary của main mới.
+
+Node24.21 portable được dùng cho root checks cuối, không thay cài đặt hệ thống Node24.15 của host; dùng pin trong README khi tái lập. Expo exports có chạy Metro Bundler một lần để tạo JS/assets; khác với khởi động Metro development server đã bị automatic approval review chặn. Receipt kiểm tra bộ tài liệu được bổ sung sau khi chạy, CI/main của PR bàn giao ghi sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), không yêu cầu commit tự ghi chính SHA của nó.
 
 ## Artifact native lịch sử
 
