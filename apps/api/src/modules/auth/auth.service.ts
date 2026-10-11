@@ -127,6 +127,12 @@ export class AuthService {
     const shared = { user: context.user, expiresAt: context.expiresAt.toISOString() };
     return context.transport === 'web' ? { transport: 'web', ...shared, csrfToken: csrfFor(context.token) } : { transport: 'native', ...shared };
   }
+  assertMutation(request: Request, context: AuthContext) {
+    if (context.transport !== 'web') return;
+    this.origin(request);
+    const csrf = oneHeader(request, 'x-csrf-token');
+    if (!isOpaqueToken(csrf) || !context.csrfTokenHash || !equalHash(hash(csrf), context.csrfTokenHash)) throw new ApiFault('CSRF_INVALID', 403);
+  }
   async logout(request: Request, response: Response) {
     // Origin is mandatory for cookie POST even when the cookie is absent/expired.
     if (oneHeader(request, 'authorization') === undefined) this.origin(request);
@@ -136,10 +142,7 @@ export class AuthService {
       if (!(error instanceof ApiFault) || error.code !== 'SESSION_REQUIRED') throw error;
       clearCookie(response, SESSION_COOKIE); clearCookie(response, LOGIN_COOKIE); return;
     }
-    if (context.transport === 'web') {
-      const csrf = oneHeader(request, 'x-csrf-token');
-      if (!isOpaqueToken(csrf) || !context.csrfTokenHash || !equalHash(hash(csrf), context.csrfTokenHash)) throw new ApiFault('CSRF_INVALID', 403);
-    }
+    this.assertMutation(request, context);
     await this.database.db.session.updateMany({ where: { id: context.id, revokedAt: null }, data: { revokedAt: new Date() } });
     clearCookie(response, SESSION_COOKIE); clearCookie(response, LOGIN_COOKIE);
   }
