@@ -20,8 +20,16 @@ function requestHash(operation: string, tripId: string | null, dto: unknown) {
 /** A different unique violation must never be mistaken for a successful retry. */
 export function isReceiptRace(error: unknown) {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002' || error.meta?.['modelName'] !== 'IdempotencyRecord') return false;
-  const target = error.meta['target'];
-  return Array.isArray(target) && target.length === 3 && ['userId', 'operation', 'key'].every(field => target.includes(field));
+  // Pinned adapter-pg 7.10 reports the native PG index descriptor, not
+  // meta.target. Never inspect provider message/detail (which contains binds).
+  const driver = error.meta['driverAdapterError'];
+  if (typeof driver !== 'object' || driver === null || !('cause' in driver)) return false;
+  const cause = driver.cause;
+  if (typeof cause !== 'object' || cause === null || !('kind' in cause) || cause.kind !== 'UniqueConstraintViolation'
+    || !('table' in cause) || cause.table !== 'IdempotencyRecord' || !('constraint' in cause)) return false;
+  const constraint = cause.constraint;
+  return typeof constraint === 'object' && constraint !== null && Object.keys(constraint).length === 1
+    && 'index' in constraint && constraint.index === 'IdempotencyRecord_pkey';
 }
 async function lockPlaces(tx: Prisma.TransactionClient, ids: string[]) {
   const ordered = [...new Set(ids)].sort();

@@ -18,6 +18,8 @@ import { LOGIN_COOKIE, SESSION_COOKIE } from '../src/modules/auth/http.js';
 import { ApiFault } from '../src/common/api-fault.js';
 import { createDatabaseClient } from '../src/database/client.js';
 import { seedCatalog } from '../src/database/seed.js';
+import { isReceiptRace } from '../src/modules/trips/trips.service.js';
+import type { Prisma } from '../src/generated/prisma/client.js';
 import { createIsolatedDatabase, fixtureDirectory, grantRuntime, LocalPostgres, runTool } from './helpers/postgres.js';
 
 const origin = 'https://admin.test.example';
@@ -275,6 +277,21 @@ test('Trips HTTP: real PostgreSQL, reviewed auth with identity doubles, atomic r
       const fresh = editable(trip); fresh.days[0]!.activities = [activity({ placeId })];
       await fault(await put(trip.id, fresh), 409, 'TRIP_PLACE_UNAVAILABLE');
     } finally { await op!.place.update({ where: { id: placeId }, data: { active: true } }); }
+  });
+  await t.test('actual pinned PG adapter receipt P2002 is recognized; actual child unique violation is not', async () => {
+    const key = randomUUID();
+    const trip = await detail(await post(create({ durationDays: 1 }), key), 201);
+    const record = await op!.idempotencyRecord.findUniqueOrThrow({ where: { userId_operation_key: { userId: a.body.user.id, operation: 'trip.create', key } } });
+    let receiptCollision: unknown, childCollision: unknown;
+    try { await op!.idempotencyRecord.create({ data: { ...record, responseBody: record.responseBody as Prisma.InputJsonValue } }); }
+    catch (error) { receiptCollision = error; }
+    assert.equal(isReceiptRace(receiptCollision), true, 'real PG23505 receipt descriptor must be recognized without reading its message');
+    try { await op!.tripDay.create({ data: { tripId: trip.id, dayNumber: 1 } }); }
+    catch (error) { childCollision = error; }
+    assert.ok(childCollision, 'real child unique violation must occur');
+    assert.equal(isReceiptRace(childCollision), false, 'a different actual PG unique violation must never replay a receipt');
+    assert.equal(await op!.idempotencyRecord.count({ where: { key } }), 1);
+    assert.deepEqual(await detail(await api.get(`trips/${trip.id}`, a.headers)), trip);
   });
   await t.test('empty template fails without writes; original create replays before current catalog availability', async () => {
     const key = randomUUID(), body = create({ durationDays: 1 });
