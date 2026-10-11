@@ -19,6 +19,9 @@ test('container diagnostics retain bounded build phase and identifiers without e
   assert.match(failure.message, /Container build failed \(build 7\/11, SOURCE_CLOSURE_INCOMPLETE\)/);
   assert.doesNotMatch(failure.message + failure.stack, /TEST_ONLY|postgresql|private\.invalid|SECRET=/);
   assert.equal(failure.cause, undefined);
+  const sqlFailure = redactedContainerFailure('exec', { stderr: 'ERROR:  57P03\nSQL TEST_ONLY_SECRET postgresql://private.invalid' });
+  assert.match(sqlFailure.message, /Container exec failed \(57P03\)/);
+  assert.doesNotMatch(sqlFailure.message + sqlFailure.stack, /TEST_ONLY|postgresql|private\.invalid/);
   assert.match(redactedContainerFailure('unsafe PRIVATE_COMMAND', { stderr: 'secret only' }).message, /^Container command failed \(COMMAND_FAILED\)/);
 });
 

@@ -16,10 +16,12 @@ async function docker(args, input) {
     if (input !== undefined) {
       const { spawn } = await import('node:child_process');
       await new Promise((resolve, reject) => {
-        const child = spawn('docker', args, { stdio: ['pipe', 'ignore', 'ignore'] });
+        const child = spawn('docker', args, { stdio: ['pipe', 'ignore', 'pipe'] });
+        let stderr = '';
+        child.stderr.on('data', chunk => { stderr = (stderr + chunk.toString()).slice(-65_536); });
         const timer = setTimeout(() => { child.kill(); reject(new Error('Container command timed out')); }, 30_000);
         child.once('error', () => { clearTimeout(timer); reject(new Error('Container command unavailable')); });
-        child.once('exit', code => { clearTimeout(timer); if (code === 0) resolve(); else reject(new Error('Container command failed')); });
+        child.once('exit', code => { clearTimeout(timer); if (code === 0) resolve(); else reject({ stderr }); });
         child.stdin.end(input);
       }); return '';
     }
@@ -51,8 +53,11 @@ try {
   console.info('Preparing owned private PostgreSQL fixture.');
   const pg = `${prefix}-db`; containers.push(pg);
   await docker(['run', '-d', '--name', pg, '--network', network, '--network-alias', 'database', '-e', 'POSTGRES_PASSWORD_FILE=/run/secrets/password', '-e', 'POSTGRES_DB=goease_ci', '--mount', `type=bind,src=${clusterFile},dst=/run/secrets/password,readonly`, '--tmpfs', '/var/lib/postgresql:rw,size=256m', 'postgres:18.6-trixie@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336']);
-  await waitFor(async () => { try { await docker(['exec', pg, 'pg_isready', '-U', 'postgres', '-d', 'goease_ci']); return true; } catch { return false; } });
-  await docker(['exec', '-i', pg, 'psql', '-U', 'postgres', '-d', 'goease_ci', '-v', 'ON_ERROR_STOP=1'], `CREATE ROLE goease_ci_migrator LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${migrationPassword}';
+  // The image's initialization server accepts Unix sockets before initialization
+  // finishes. TCP readiness only becomes available on the final server.
+  await waitFor(async () => { try { await docker(['exec', pg, 'pg_isready', '-h', '127.0.0.1', '-p', '5432', '-U', 'postgres', '-d', 'goease_ci']); return true; } catch { return false; } });
+  console.info('Creating least-privilege roles on the final PostgreSQL server.');
+  await docker(['exec', '-i', pg, 'psql', '-U', 'postgres', '-d', 'goease_ci', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=sqlstate'], `CREATE ROLE goease_ci_migrator LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${migrationPassword}';
 CREATE ROLE goease_ci_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${runtimePassword}';
 ALTER DATABASE goease_ci OWNER TO goease_ci_migrator;
 REVOKE ALL ON DATABASE goease_ci FROM PUBLIC;
