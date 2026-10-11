@@ -1,6 +1,6 @@
 # Bàn giao kiểm chứng M0
 
-Ngày đối chiếu 11/10/2026 · **Refs #11**. Đã triển khai và merge các phần nền có thể kiểm tra độc lập; **M0 chưa hoàn tất**. Chưa xác minh được tài nguyên HTTPS staging/preview Android+iOS/OAuth/Maps/Gemini; chưa có bằng chứng live hoặc thiết bị thật hai nền tảng. #11 và milestone M0 giữ mở, nyanduong nghiệm thu sản phẩm cuối. Đây là snapshot bằng chứng, không thay backlog trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
+Ngày đối chiếu 11/10/2026 · **Refs #11**. Đã triển khai và merge các phần nền có thể kiểm tra độc lập; **M0 chưa hoàn tất**. Chưa xác minh được HTTPS staging/preview Android+iOS/Maps/Gemini hoặc OAuth runtime; client Console đã được cấu hình ở lượt tiếp theo theo receipt #4, chưa có bằng chứng login live hoặc thiết bị thật hai nền tảng. #11 và milestone M0 giữ mở, nyanduong nghiệm thu sản phẩm cuối. Đây là snapshot bằng chứng, không thay backlog trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
 [UAT-01–12](UAT.md) là hướng dẫn thử và kết quả riêng Android/iOS/admin/API. Owner thực hiện các thao tác cấp quyền/tài nguyên tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md); không gửi secret vào chat/Issue/PR. URL admin/API staging và bản cài preview: **chưa có bản đã kiểm chứng để bàn giao**.
 
@@ -33,7 +33,7 @@ Các run trong M0_REPORT đã đọc lại từ GitHub, Quality Gate job SUCCESS
 
 Bộ tài liệu kế thừa actual main **`e3f7f73251023fe318a9b61a855580b1177f0f20`** sau PR39; runtime product source **`317a84d69d5fbe8f5f1bed5491aef11392750490`** có Node/image mới và staging/API đã merge. Diff bàn giao chỉ Markdown, không đổi app/API/contracts/schema/lock/CI. Mobile tree vẫn `1df75e0ab267df17eb997fafddeaec84c1a28011` bằng source build5111d474; APK dưới đây giữ SHA nguồn/toolchain lịch sử, không đổi nhãn thành binary của main mới.
 
-Node24.21 portable được dùng cho root checks cuối, không thay cài đặt hệ thống Node24.15 của host; dùng pin trong README khi tái lập. Expo exports có chạy Metro Bundler một lần để tạo JS/assets; khác với khởi động Metro development server đã bị automatic approval review chặn. Receipt kiểm tra bộ tài liệu được bổ sung sau khi chạy, CI/main của PR bàn giao ghi sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), không yêu cầu commit tự ghi chính SHA của nó.
+Node24.21 portable được dùng cho root checks cuối, không thay cài đặt hệ thống Node24.15 của host; dùng pin trong README khi tái lập. Expo exports có chạy Metro Bundler một lần để tạo JS/assets; khác với yêu cầu khởi động Metro development server bị từ chối `blocked by policy`, lớp gây chặn chưa xác định. Receipt kiểm tra bộ tài liệu được bổ sung sau khi chạy, CI/main của PR bàn giao ghi sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), không yêu cầu commit tự ghi chính SHA của nó. Lượt Console sau bàn giao đã lưu Web/Android development/iOS development/iOS preview clients theo [receipt #4](../verification/GE-M0-04.md#cấu-hình-google-console-thực-tế--11102026); chưa Google runtime, B, Android preview certificate hoặc HTTPS origin.
 
 ### Kết quả kiểm tra cuối bộ tài liệu
 
@@ -61,11 +61,11 @@ Source **`5111d474cb4bb6a1258aa0793405c1599e2e99d7`**, mobile tree `1df75e0ab267
 
 Artifact **C:/ge6/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk**,70.774.787byte, SHA256 **`1496D027039E809E826CAEE75B2A58D62B1CCD5F65983FCF4031C363182C382A`**. `apksigner verify` PASS; public debug certificate SHA1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625`, SHA256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`. Package `vn.goease.mobile.dev`,0.1.0/code1,min24/target36,x86_64.
 
-Profile **development/debug**, public API config `http://10.0.2.2:3000/api` cho emulator local; không OAuth/Maps key. ZIP có **0 JS `.bundle` entries**: đây không phải preview đóng gói JS/assets hoặc bản dùng điện thoại/staging. Chưa cài/runtime Trips/health/auth/Maps trên APK này; automatic approval Metro blocker vẫn còn. iOS không native build/cài/runtime. Compile không đánh dấu UAT-01…10/12 native PASS.
+Profile **development/debug**, public API config `http://10.0.2.2:3000/api` cho emulator local; không OAuth/Maps key. ZIP có **0 JS `.bundle` entries**: đây không phải preview đóng gói JS/assets hoặc bản dùng điện thoại/staging. Chưa cài/runtime Trips/health/auth/Maps trên APK này; blocker Metro `blocked by policy` vẫn còn, lớp gây chặn chưa xác định. iOS không native build/cài/runtime. Compile không đánh dấu UAT-01…10/12 native PASS.
 
 Private logs `%TEMP%/goease-issue11-native-20261011`; assemble-debug.log SHA256 `A3C9690B2CF86108DA99EEC4A29EC724E4B6DBB810B9701C0094CDDA905526E9`, apk-metadata.txt `DE4B8E23C8478D3CC94670FA544155D3C9FAA4F9087157F3F9CA41AC7A0D2C5F`. Có warnings deprecated SDK/Kotlin/C++ và Gradle10 incompatibility warning; không báo log sạch. Build không khởi động Metro/emulator/API/PG và không còn process riêng của checkout này sau kết thúc.
 
-Android và iOS runtime/live vẫn chặn theo UAT; automatic approval review từ chối khởi động Metro với lý do **blocked by policy**, không chạy biến thể để vượt chặn. Không tự bật billing, tạo hosting công khai, đăng ký/nhận terms hoặc chạy probe có chi phí. Thiếu điều kiện không làm mất phần code/test độc lập đã merge.
+Android và iOS runtime/live vẫn chặn theo UAT; công cụ từ chối yêu cầu tạo tiến trình Metro với **blocked by policy**, lớp gây chặn chưa xác định; không chạy lại hoặc đổi cách thực thi để vượt chặn, chỉ tiếp tục khi có đường cấp quyền hợp lệ. Không tự bật billing, tạo hosting công khai, đăng ký/nhận terms hoặc chạy probe có chi phí. Thiếu điều kiện không làm mất phần code/test độc lập đã merge.
 
 ## Tiếp tục nghiệm thu
 

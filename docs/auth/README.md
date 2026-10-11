@@ -4,7 +4,7 @@
 
 ## Cấu hình được phép
 
-Owner chuẩn bị trong [Google Auth Platform](https://console.cloud.google.com/auth/clients), gồm consent/audience/test users. Không cần client secret cho flow ID-token này. Không đặt key server, cookie, ID token hoặc opaque session token trong `EXPO_PUBLIC_*`, `VITE_*`, Git hay tài liệu.
+Owner cấp tài khoản/quyền trong [Google Auth Platform](https://console.cloud.google.com/auth/clients), gồm consent/audience/test users; trạng thái Console đã lưu ngày11/10/2026 ở phần bên dưới. Không cần client secret cho flow ID-token này. Không đặt key server, cookie, ID token hoặc opaque session token trong `EXPO_PUBLIC_*`, `VITE_*`, Git hay tài liệu.
 
 | Tên | Nơi / yêu cầu |
 | --- | --- |
@@ -21,6 +21,22 @@ Android OAuth client đăng ký **package + SHA-1 của chứng chỉ đang ký 
 iOS OAuth client phải khớp bundle identifier của variant. App config chỉ thêm Nitro plugin khi có iOS client ID hợp lệ, tạo reversed scheme `com.googleusercontent.apps.<client-prefix>` từ ID đó; không dùng ID giả để vượt plugin. Plugin được pin yêu cầu `iosUrlScheme` ngay cả khi chạy Android prebuild; thiếu iOS ID thì bỏ plugin Google, Android dùng native autolinking cần build kiểm chứng, iOS auth bị chặn trước challenge/SDK interaction. Sau cấp cấu hình cần prebuild/new native binary và kiểm tra URL scheme/Pods thực. [Google iOS setup](https://developers.google.com/identity/sign-in/ios/start-integrating), [SDK repository](https://github.com/react-native-nitro-google-sign-in/google-signin) (đã đọc source package 2.3.0 được pin)
 
 Web dùng popup/callback GIS, không dùng redirect flow, nên chưa có callback URI tự tạo. Đăng ký authorized JavaScript origin HTTPS chính xác. `webAuthConfig` từ chối API khác origin, kể cả HTTPS: M0 dùng reverse proxy cùng origin để bảo đảm điều kiện cookie, chưa hỗ trợ sibling-domain deployment. API vẫn kiểm tra Origin/CSRF/quyền. Khi thực tế host được cấp, cần kiểm tra CSP/FedCM/popup và cookie trên browser được hỗ trợ. [GIS setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
+
+## Cấu hình Console đã lưu — 11/10/2026
+
+Đã dùng browser với tài khoản owner chỉ định, tạo duy nhất project **GoEase-Development**, ID `goease-development`. Branding tên **GoEase**, support/contact là tài khoản được owner cho phép; Audience **External / Testing**, đúng một test user A được chỉ định, chưa có B. Data Access chỉ `openid`, `https://www.googleapis.com/auth/userinfo.email`, `https://www.googleapis.com/auth/userinfo.profile`; không publish/gửi verification. Homepage/privacy/domain chưa có nên không điền giả; không liên kết billing/trial, đổi IAM hoặc bật API của Gemini/Maps.
+
+| Client Console | Loại / variant | Dữ kiện đã lưu | Giới hạn |
+| --- | --- | --- | --- |
+| GoEase M0 Web Audience | Web application, audience chung API/mobile/admin | Một Web ID thật, cùng giá trị trong ba biến Web ID bên trên | Origins/redirects để trống; chưa có HTTPS admin được cấp. Không lưu/dùng client secret tự sinh bởi Console. |
+| GoEase Android Development Debug | Android development | `vn.goease.mobile.dev`; SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25` từ APK/debug certificate thật | Chỉ đúng chứng chỉ development đã đối chiếu; chưa Google runtime. |
+| Chưa tạo Android preview | Android preview | Package dự kiến `vn.goease.mobile.preview` | Chứng chỉ/SHA-1 preview chưa xác minh; không dùng fingerprint debug thay thế. |
+| GoEase iOS Development | iOS development | Bundle `vn.goease.mobile.dev`, iOS ID thật | Local đang chọn ID development; cần native binary mới có reversed scheme/plugin. |
+| GoEase iOS Preview | iOS preview | Bundle `vn.goease.mobile.preview`, iOS ID thật riêng | Client đã lưu; chưa đặt làm active local development ID hoặc EAS environment; signing/build/cài iPhone chưa xác minh. |
+
+Loader thực tế: API đọc **process environment hoặc `.env` tại cwd API** (`apps/api/.env` khi chạy workspace package); **không tự đọc `.env.local`** do công cụ DB tạo. Mobile đọc `apps/mobile/.env.local`; web Vite đọc `apps/web/.env.local`. Local đã lưu chỉ các public OAuth ID tương ứng; giữ các biến khác, không thêm DB URL/origin/API URL giả. EAS environment phải cấu hình riêng khi có project/quyền được phép; không suy local env được upload. Khi đổi variant iOS, chọn ID đúng bundle trước khi tạo binary; không dùng iOS development ID cho preview.
+
+Console lưu cấu hình không chứng minh Google login PASS. [Receipt #4](../verification/GE-M0-04.md) ghi bằng chứng/reload và đính chính Metro: phản hồi gốc là `blocked by policy`, lớp chặn chưa xác định, chưa đủ bằng chứng quy cho Auto-review. Không chạy lại hành động đó tới khi có đường cấp quyền hợp lệ. Android/iOS/web live, HTTPS, preview và UAT vẫn chưa đạt.
 
 ## Luồng và giới hạn
 
