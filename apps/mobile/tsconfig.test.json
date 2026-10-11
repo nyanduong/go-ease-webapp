@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node", "react", "react-native"] },
+  "include": ["app.config.ts", "test/**/*.ts", "src/**/*.ts"]
+}

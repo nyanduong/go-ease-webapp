@@ -12,6 +12,16 @@ playwright-report/
 .idea/
 .vscode/
 .codex/
+.expo/
+apps/mobile/android/
+apps/mobile/ios/
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore
+*.mobileprovision
+*.p12
 .local/
 .database-upgrade-test/
 apps/api/src/generated/prisma/

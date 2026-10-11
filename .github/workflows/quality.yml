@@ -35,9 +35,11 @@ jobs:
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
+      - name: Kiểm tra tương thích Expo và dependency mobile
+        run: pnpm check:mobile
       - name: Test kiến trúc, API, UI, web–API và dev regression
         run: pnpm test
-      - name: Build
+      - name: Build web/API và Metro JavaScript Android + iOS (không phải native build)
         run: pnpm build
       # Một job tuần tự: không continue-on-error, không skip bước bắt buộc,
       # không path filter. Chỉ xanh khi toàn bộ kiểm tra thành công.

@@ -1,0 +1,19 @@
+# Native test double: a local fixture accepts the health request without responding.
+# This proves loading/timeout UI, not a live service result.
+appId: vn.goease.mobile.dev
+---
+- scrollUntilVisible:
+    element: "Kiểm tra lại kết nối API"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Kiểm tra lại kết nối API"
+- scrollUntilVisible:
+    element: "Đang kết nối API…"
+    direction: UP
+    timeout: 5000
+- assertVisible: "Đang chờ phản hồi. Không tự gửi lại vô hạn."
+- takeScreenshot: health-loading-fixture
+- extendedWaitUntil:
+    visible: "API phản hồi quá lâu. Vui lòng thử lại."
+    timeout: 20000
+- takeScreenshot: health-timeout-fixture
