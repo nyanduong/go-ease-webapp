@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/test-results/**', '**/playwright-report/**', '**/.expo/**', 'apps/mobile/android/**', 'apps/mobile/ios/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/test-results/**', '**/playwright-report/**', '**/.expo/**', 'apps/mobile/android/**', 'apps/mobile/ios/**', '**/src/generated/prisma/**', '**/.local/**', '**/.database-upgrade-test/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

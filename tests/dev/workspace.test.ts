@@ -51,7 +51,7 @@ async function createFixture() {
     await cp(source, join(cwd, folder), {
       recursive: true,
       filter: (path) => !relative(source, path).split(/[\\/]/).some(part =>
-        part === 'node_modules' || part === 'dist' || part.startsWith('.env')),
+        part === 'node_modules' || part === 'dist' || part === '.local' || part === '.database-upgrade-test' || part.startsWith('.env')),
     });
   }
   // Reuse installed external packages; contracts always resolves to the fixture.
