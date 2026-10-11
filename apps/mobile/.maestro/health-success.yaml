@@ -7,6 +7,11 @@ appId: vn.goease.mobile.dev
     visible: "Development Build"
     timeout: 60000
 - openLink: ${DEV_CLIENT_URL}
+# clearState also resets the SDK57 development-menu introduction.
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 60000
+- tapOn: "Continue"
 - extendedWaitUntil:
     visible: "API đang hoạt động"
     timeout: 120000
