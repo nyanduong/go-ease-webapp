@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  moduleFormat = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleSubject String @unique @db.VarChar(255)
+  displayName String? @db.VarChar(120)
+  role String @default("CUSTOMER") @db.VarChar(16)
+  disabledAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  trips Trip[]
+  sessions Session[]
+  receipts IdempotencyRecord[]
+}
+
+model Trip {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId String @db.Uuid
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  title String @db.VarChar(160)
+  destinationCode String @db.VarChar(64)
+  isSample Boolean
+  startDate DateTime @db.Date
+  durationDays Int @db.SmallInt
+  timeZone String @default("Asia/Ho_Chi_Minh") @db.VarChar(32)
+  groupSize Int @db.SmallInt
+  budgetVnd BigInt?
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  days TripDay[]
+  receipts IdempotencyRecord[]
+  @@unique([id, ownerId])
+  @@index([ownerId, updatedAt(sort: Desc), id])
+}
+
+model TripDay {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tripId String @db.Uuid
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  dayNumber Int @db.SmallInt
+  activities Activity[]
+  @@unique([tripId, dayNumber])
+}
+
+model Activity {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tripDayId String @db.Uuid
+  tripDay TripDay @relation(fields: [tripDayId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  placeId String? @db.Uuid
+  place Place? @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  position Int @db.SmallInt
+  title String @db.VarChar(160)
+  notes String? @db.VarChar(1000)
+  startMinute Int? @db.SmallInt
+  endMinute Int? @db.SmallInt
+  estimatedCostVnd BigInt?
+  @@unique([tripDayId, position])
+  @@index([placeId])
+}
+
+model Place {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code String @unique @db.VarChar(64)
+  destinationCode String @db.VarChar(64)
+  name String @db.VarChar(160)
+  latitude Decimal @db.Decimal(9,6)
+  longitude Decimal @db.Decimal(9,6)
+  sourceUrl String @db.VarChar(2048)
+  attribution String @db.VarChar(1000)
+  isSample Boolean
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  activities Activity[]
+  @@index([destinationCode, active, code])
+}
+
+model Session {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  tokenHash String @unique @db.Char(64)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  @@index([userId, expiresAt])
+}
+
+model IdempotencyRecord {
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  operation String @db.VarChar(64)
+  key String @db.Uuid
+  requestHash String @db.Char(64)
+  tripId String @db.Uuid
+  trip Trip @relation(fields: [tripId, userId], references: [id, ownerId], onDelete: Restrict, onUpdate: Restrict)
+  statusCode Int @db.SmallInt
+  responseBody Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@id([userId, operation, key])
+  @@index([tripId])
+}

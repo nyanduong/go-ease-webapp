@@ -12,3 +12,6 @@ playwright-report/
 .idea/
 .vscode/
 .codex/
+.local/
+.database-upgrade-test/
+apps/api/src/generated/prisma/

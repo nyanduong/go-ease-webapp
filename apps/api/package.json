@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "pnpm build && concurrently --raw -k -n compiler,server \"tsc -p tsconfig.json --watch --preserveWatchOutput\" \"node --watch dist/src/main.js\"",
     "start": "node dist/src/main.js",
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm build && node --test dist/test/*.test.js"
+    "build": "pnpm db:generate && tsc -p tsconfig.json",
+    "typecheck": "pnpm db:generate && tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && node --test dist/test/*.test.js",
+    "db:generate": "prisma generate --config prisma7.config.ts",
+    "db:migrate": "node --env-file-if-exists=.env.local node_modules/prisma/build/index.js migrate deploy --config prisma7.config.ts",
+    "db:seed": "node --env-file-if-exists=.env.local dist/src/database/seed.js",
+    "db:local": "node dist/scripts/db-local.js",
+    "db:check": "pnpm build && node --test dist/test/database.test.js"
   },
   "dependencies": {
     "@goease/contracts": "workspace:*",
@@ -16,8 +21,11 @@
     "@nestjs/config": "12.0.1",
     "@nestjs/core": "12.1.2",
     "@nestjs/platform-express": "12.1.2",
+    "@prisma/client": "7.10.0",
+    "@prisma/adapter-pg": "7.10.0",
+    "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
-  "devDependencies": { "@types/express": "5.0.6" }
+  "devDependencies": { "@types/express": "5.0.6", "@types/pg": "8.23.1", "prisma": "7.10.0" }
 }
