@@ -9,11 +9,12 @@ import { createIsolatedDatabase, fixtureDirectory, grantRuntime, LocalPostgres, 
 
 // Driver errors can contain SQL/URLs. Never let them become test-runner output.
 async function sanitized(work: () => Promise<void>) {
-  try { await work(); }
-  catch (error) {
-    if (error instanceof assert.AssertionError) throw error;
-    throw new Error('Owned database-client fixture failed; inspect private fixture logs locally.');
-  }
+  let caught: unknown;
+  try { await work(); return; }
+  catch (error) { caught = error; }
+  if (caught instanceof assert.AssertionError) throw caught;
+  // Keep the private driver exception out of both message and Error.cause.
+  throw new Error('Owned database-client fixture failed; inspect private fixture logs locally.');
 }
 async function outcome(work: () => PromiseLike<unknown>) {
   const start = Date.now();
