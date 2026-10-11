@@ -28,7 +28,7 @@ Toàn bộ fetch, đọc body và backoff dùng **một deadline** mặc định
 
 Adapter tối đa một retry (hai lượt HTTP) và chỉ cho 408/429/5xx, backoff jitter 100–200 ms trong deadline. Không tin Retry-After vô hạn, không retry lỗi mạng/4xx/contract/timeout/cancel. [Troubleshooting chính thức](https://ai.google.dev/gemini-api/docs/troubleshooting) là nguồn phân loại lỗi; giới hạn retry nhỏ là quyết định của spike. CLI luôn **0 retry, tối đa 1 lượt**. Các mã lỗi an toàn: `AI_NOT_CONFIGURED`, `AI_INVALID_INPUT`, `AI_TIMEOUT`, `AI_CANCELLED`, `AI_PROVIDER_FAILURE`, `AI_INVALID_OUTPUT`, `AI_LIVE_NOT_AUTHORIZED`; không kèm raw body, prompt, key, connection URL hoặc cause từ SDK/provider.
 
-CI `apps/api/test/ai.test.ts` dùng fetch/stream/catalog doubles có nhãn TEST ONLY: schema/ID/ngày/giờ/field thừa/sparse arrays, canonical snapshot, raw REST/incomplete, token thiếu/sai, config và cờ chi tiêu trước network, transient/permanent/redirect, body treo/quá lớn/UTF-8 sai, timeout/cancel/backoff, dry-run và một lượt probe. Đây không phải HTTP endpoint AI hoặc Gemini live.
+CI `apps/api/test/ai.test.ts` dùng fetch/stream/catalog doubles có nhãn TEST ONLY: schema/ID/ngày/giờ/field thừa/sparse arrays, canonical snapshot, raw REST/incomplete, token thiếu/sai, config và cờ chi tiêu trước network, transient/permanent/redirect, body treo/quá lớn/UTF-8 sai, timeout/cancel/backoff, dry-run và một lượt probe. `ai-database.test.ts` dùng cluster PostgreSQL riêng, migrate/grants/ba seed thật để kiểm tra loader và tiến trình CLI `--dry-run`; tên/provenance/tọa độ bị sửa hoặc row inactive/non-sample phải bị chặn. Fetch observer/guard trong ca DB chỉ phát hiện gọi ngoài ngoài ý muốn, không trả kết quả Gemini giả. Trạng thái chạy thực ghi ở receipt. Đây không phải HTTP endpoint AI hoặc Gemini live.
 
 ## CLI nội bộ và điều kiện live
 
@@ -38,7 +38,7 @@ Sau frozen install và build từ root, có thể kiểm tra request/schema bằ
 node --env-file-if-exists=apps/api/.env.local apps/api/dist/src/modules/ai/probe.js --dry-run --days=1
 ```
 
-Dry-run cần `DATABASE_URL` role runtime và đọc catalog; không cần AI key, không gọi provider, không sinh lịch trình giả. Không có mode mặc định khi thiếu cờ. CLI không được Nest bootstrap import hay expose qua HTTP.
+Dry-run cần `DATABASE_URL` role runtime và đọc catalog; không cần AI key, không gọi provider, không sinh lịch trình giả. Runtime client kế thừa [#27](https://github.com/nyanduong/go-ease-webapp/issues/27) đã merge thật tại main `6ea141474c747afe47fb4447a3fca17a95acada5`: UTC mỗi connection, pool5/connect-acquire3s/statement-query5s/idle10s theo [runbook DB](../database/RUNBOOK.md). Không có mode mặc định khi thiếu cờ. CLI không được Nest bootstrap import hay expose qua HTTP.
 
 Live chỉ chạy khi người phụ trách đã xác nhận project/quyền model/quota/ngân sách cụ thể bên ngoài; key tồn tại không tự là quyền chi tiêu. Cấu hình server-only: `GEMINI_API_KEY`, `GEMINI_MODEL`, `DATABASE_URL`. Không đặt trong `VITE_*`, `EXPO_PUBLIC_*`, app/web, argv hoặc commit env thật. Chuẩn bị các reference không chứa secret cho quyết định đã có; các cờ dưới chỉ là lời xác nhận của operator, không kiểm tra/bật billing hay quota với Google:
 
