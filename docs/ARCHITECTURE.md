@@ -2,19 +2,19 @@
 
 ## Cấu trúc hiện tại và dự kiến
 
-Workspace kế thừa PR #12/#17, đã bổ sung mobile Expo, PostgreSQL/Prisma, auth/session/quyền server và adapter Gemini/Maps. Sơ đồ mô tả code hiện có cùng dịch vụ phụ thuộc; Google live, iOS native, preview/staging chưa đạt. Shell admin và luồng chuyến app còn ở các issue riêng; xem receipt từng phần thay vì suy nghiệm thu từ cây code.
+Workspace kế thừa PR #12/#17, đã bổ sung mobile Expo, PostgreSQL/Prisma, auth/session/quyền server, API chuyến, shell admin và adapter Gemini/Maps. Sơ đồ mô tả code hiện có cùng dịch vụ phụ thuộc; Google live, iOS native, preview/staging chưa đạt. Luồng chuyến app còn ở #6; xem receipt từng phần thay vì suy nghiệm thu từ cây code.
 
 Cây code đang có (không tạo thư mục dự kiến rỗng):
 
 ```text
-apps/api/src/           # bootstrap/config, health, database, modules/auth/ai/maps
+apps/api/src/           # bootstrap/config, health, database, modules/auth/ai/trips/maps/admin
 apps/api/prisma/        # schema và migration; seed/operator ở backend
 apps/api/test/          # HTTP/config/env và PostgreSQL integration
-apps/web/src/           # pages, components/ui, auth client, lib, test
+apps/web/src/           # admin shell/pages, catalog/auth client, components/ui, lib, test
 apps/mobile/            # App.tsx; src/features/auth/maps, health; native config
 packages/contracts/src/# type và runtime guard giao tiếp
 scripts/               # kiểm tra AST dependency
-tests/                 # architecture, smoke, dev regression
+tests/                 # architecture, dependency, smoke, dev regression
 docs/                  # scope, workflow, kiến trúc và kiểm chứng
 ```
 
@@ -33,11 +33,13 @@ App khách Android và iOS phát triển **song song ngay từ đầu** bằng *
 
 ## Phần đang chạy từ GE-M0-01
 
-`apps/web` là React/Vite SPA: pages bố trí màn hình, components hiển thị, lib chứa fetch và tiện ích. Tailwind v4 dùng Vite plugin; Button từ shadcn/ui Radix new-york được điều chỉnh token GoEase. Màn kết nối không cần dịch vụ ngoài, là màn kỹ thuật chưa phải prototype/nhận diện cuối được leader duyệt; shell admin sẽ theo baseline prototype review nội bộ ở #14/#16 theo ủy quyền 11/10/2026.
+`apps/web` là React/Vite SPA: pages bố trí màn hình, components hiển thị, lib chứa fetch và tiện ích. Tailwind v4 dùng Vite plugin; Button từ shadcn/ui Radix new-york được điều chỉnh token GoEase. Shell admin theo baseline prototype review nội bộ #14/#16, chờ nyanduong nghiệm thu cuối. `/` và `/admin/catalog` là catalog có cổng phiên/quyền; `/admin/requests` ghi rõ phạm vi sau M0; `/technical/health` giữ kiểm tra kỹ thuật; URL lạ là 404. AuthProvider duy nhất chia sẻ AuthStore, không lưu role ở localStorage. Đổi identity/restore/logout ẩn dữ liệu và hủy request; backend kiểm tra quyền trên mỗi request.
 
 `apps/api` là NestJS ESM trên Node 24, một backend REST chia theo chức năng, prefix `/api`, có health, auth/session/admin access và Maps HTTP. Bootstrap ConfigModule đọc `.env`/runtime và validate lúc khởi động; production bắt buộc WEB_ORIGINS hợp lệ. `createApp` nhận cấu hình explicit đã validate trong test, bỏ qua env file/runtime cá nhân. Filter chung trả `{ error: { code, message, statusCode }, path, timestamp }`; lỗi nội bộ không lộ stack/query. CORS dùng origin allowlist; khi auth cấu hình đủ, credentials và các method/header hợp lệ được bật theo [API](api/API.md). Web dùng cookie Secure/HttpOnly + Origin/CSRF; native dùng opaque bearer + SecureStore. Role hiện tại luôn do server xác minh.
 
-`packages/contracts` xuất type/error envelope và runtime guards health/auth/AI/Maps, độc lập framework/DB/UI. Phản hồi `GET /api/health`:
+AppModule production nối AuthModule, TripsModule, MapsModule, AdminModule. Trips giữ owner/CAS/idempotency theo [runbook](trips/README.md); catalog admin chỉ projection Place mẫu có nguồn, không join/count Trip/User/Session. HTTP test admin chỉ import AppModule thật để bắt lỗi thiếu wiring.
+
+`packages/contracts` xuất type/error envelope và runtime guards health/auth/AI/Maps/Trips/admin, độc lập framework/DB/UI. Phản hồi `GET /api/health`:
 
 ```json
 {"status":"ok","service":"goease-api","scope":"api-only","timestamp":"2026-10-08T08:00:00.000Z"}
