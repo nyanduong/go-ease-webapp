@@ -12,7 +12,7 @@ Regression `tests/dependencies/shell-quote.test.ts` resolve hai đường depend
 
 ## Audit còn tồn tại
 
-`pnpm audit --json` và `pnpm audit --prod --json` sau frozen install đều trả **0 critical, 4 high, 2 moderate**; `shell-quote` không còn trong advisory. Audit có finding nên exit khác 0 là kết quả được ghi nhận, không phải audit sạch. `--prod` vẫn chứa CLI qua optional dependency Prisma và tooling Expo trong graph; nhãn production không tự chứng minh đường chạy HTTP khai thác được, cũng không miễn đánh giá tooling.
+`pnpm audit --json` và `pnpm audit --prod --json` sau frozen install đều trả **0 critical, 4 high, 2 moderate**; `shell-quote` không còn trong advisory. Audit có finding nên exit khác 0 là kết quả được ghi nhận, không phải audit sạch. `--prod` vẫn chứa CLI qua optional peer Prisma và tooling Expo trong graph; nhãn production không tự chứng minh đường chạy HTTP khai thác được, cũng không miễn đánh giá tooling.
 
 | Dependency / advisory | Đường dùng đã đọc và rủi ro | Điều kiện bản vá / quyết định giới hạn |
 | --- | --- | --- |
@@ -29,4 +29,5 @@ Các ngoại lệ trên chỉ áp dụng graph/caller/config M0 hiện được 
 - Frozen install `pnpm install --frozen-lockfile --prefer-offline`: PASS; giữ chính sách pnpm ignore build scripts, không approve script toàn cục. Explicit Prisma generate theo script dự án.
 - JSON audit riêng ở `%TEMP%/goease-issue31-audit-full-20261011.json` và `goease-issue31-audit-prod-20261011.json`; install log `goease-issue31-install-20261011.log`. Không commit log cá nhân hoặc secret.
 - Review độc lập dependency/test: CLEAR trên delta từ `95f25d7`, xác minh installed resolution cả hai là 1.12.0 và đọc caller; chưa thay kết quả root gates/CI.
-- Tiếp tục tích hợp main Trips đã merge, chạy typecheck/lint/test/build/Expo check và ghi SHA/count/CI cuối trước PR merge. Android/iOS JavaScript exports không thay native runtime; bản vá Node tooling này không chứng minh native/live đạt.
+- Nguồn tích hợp cuối **`a71b70302555d82fc36b86a96df3973dcb4a45b2`** đã kế thừa main Trips `84b898383063628f20b4268a7891d91bd4f09eda`. Frozen install, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm check:mobile`: **PASS**. Tổng **222 test, 0 fail/skip**: architecture26 + dependency2 + API126 + web21 + mobile44 + smoke2 + dev1; architecture80source/0violation. Logs ngoài repo `%TEMP%/goease-issue31-gates-20261011/`.
+- Review độc lập source và receipt trên `a71b703`: **CLEAR**. HEAD tiếp theo chỉ cập nhật receipt này; Quality Gate/GitGuardian vẫn phải thành công trên HEAD PR cuối trước browser merge. Android/iOS JavaScript exports đều PASS, không thay native runtime; bản vá Node tooling này không chứng minh native/live đạt.
