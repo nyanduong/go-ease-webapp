@@ -52,7 +52,7 @@ async function fault(response: Response, status: number, code?: string) {
 }
 async function rawHttp(url: string, headers: string[], body?: string) {
   return new Promise<{ status: number | undefined; body: string; cacheControl: string | undefined }>((resolve, reject) => {
-    const request = httpRequest(url, { headers, method: body === undefined ? 'GET' : 'POST' }, response => {
+    const request = httpRequest(url, { headers: ['Host', new URL(url).host, ...headers], method: body === undefined ? 'GET' : 'POST' }, response => {
       const parts: Buffer[] = [];
       response.on('data', (part: Buffer) => parts.push(part));
       response.on('end', () => resolve({ status: response.statusCode, body: Buffer.concat(parts).toString(), cacheControl: response.headers['cache-control'] }));
@@ -70,8 +70,9 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
   const apps = new Set<NestExpressApplication>();
   t.after(async () => {
     try {
-      await Promise.allSettled([...apps].map(app => app.close()));
-      await Promise.allSettled([operator?.$disconnect(), runtime?.$disconnect()]);
+      const closedApps = await Promise.allSettled([...apps].map(app => app.close()));
+      const closedClients = await Promise.allSettled([operator?.$disconnect(), runtime?.$disconnect()]);
+      assert.ok([...closedApps, ...closedClients].every(result => result.status === 'fulfilled'), 'owned auth fixture cleanup must succeed');
     } finally { await cluster.stopIfRunning(); }
   });
   await cluster.start();
@@ -113,6 +114,28 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
     };
     return { app, verifier, url, post, get, challenge, exchange, login, close: async () => { await app.close(); apps.delete(app); } };
   }
+
+  await t.test('runtime UTC is enforced over URL options; non-UTC raw operator timestamps roundtrip as the same instant', async () => {
+    const input = new URL(database.runtimeUrl); input.searchParams.set('options', '-c timezone=Asia/Bangkok -c application_name=goease_auth_utc_fixture');
+    const bounded = createDatabaseClient(input.toString());
+    const rawUrl = new URL(database.migrationUrl); rawUrl.searchParams.set('options', '-c timezone=Asia/Bangkok');
+    const raw = new pg.Client({ connectionString: rawUrl.toString() });
+    try {
+      await raw.connect();
+      assert.equal((await raw.query('SHOW TimeZone')).rows[0].TimeZone, 'Asia/Bangkok');
+      assert.equal((await bounded.$queryRaw<Array<{ TimeZone: string }>>`SHOW TimeZone`)[0]?.TimeZone, 'UTC');
+      assert.equal((await bounded.$queryRaw<Array<{ application_name: string }>>`SHOW application_name`)[0]?.application_name, 'goease_auth_utc_fixture');
+      const now = new Date(), expiresAt = new Date(now.getTime() + 300_000);
+      const inserted = await raw.query('INSERT INTO "AuthChallenge" (transport,"nonceHash","proofHash","createdAt","expiresAt") VALUES (\'NATIVE\',$1,$2,$3::timestamptz,$4::timestamptz) RETURNING id',
+        [hash(opaque()), hash(opaque()), now.toISOString(), expiresAt.toISOString()]);
+      const read = await bounded.authChallenge.findUniqueOrThrow({ where: { id: inserted.rows[0].id as string } });
+      assert.equal(read.createdAt.toISOString(), now.toISOString()); assert.equal(read.expiresAt.toISOString(), expiresAt.toISOString());
+      const written = await bounded.authChallenge.create({ data: { transport: 'NATIVE', nonceHash: hash(opaque()), proofHash: hash(opaque()), createdAt: now, expiresAt } });
+      const verified = await raw.query('SELECT "createdAt","expiresAt" FROM "AuthChallenge" WHERE id=$1', [written.id]);
+      assert.equal((verified.rows[0].createdAt as Date).toISOString(), now.toISOString());
+      assert.equal((verified.rows[0].expiresAt as Date).toISOString(), expiresAt.toISOString());
+    } finally { await raw.end(); await bounded.$disconnect(); }
+  });
 
   await t.test('A/B identity separation, opaque hashes only, current role and disabled flags, no default admin', async () => {
     const s = await server();
