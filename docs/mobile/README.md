@@ -26,14 +26,32 @@ HTTP chỉ được app chấp nhận với loopback/private IPv4 trong developm
 
 Sau khi nyanduong cấp đường build/tài khoản thực: xác minh Expo identity/quyền project bằng EAS CLI tương thích, liên kết project thật bằng `eas init`; với dynamic config, thêm owner/project ID thực do CLI hướng dẫn, không dùng giá trị mẫu. Giữ signing credentials trong hệ thống quản lý credentials, không trong Git. Đặt biến API công khai trong môi trường EAS tương ứng, rồi `eas build --profile development --platform android` và `--platform ios` (simulator dùng profile `development-simulator`). Để thử nội bộ, dùng `--profile preview` riêng từng nền tảng. Không dùng store submit trong M0. [EAS setup](https://docs.expo.dev/build/setup/), [internal distribution](https://docs.expo.dev/build/internal-distribution/).
 
-Windows native build có thể vướng giới hạn Ninja 260 ký tự do checkout + pnpm store + codegen. Attempt hiện tại đã gặp lỗi này, xem READINESS; cần kiểm tra bằng checkout vật lý ngắn hoặc đường build khác được phép. Không coi đổi junction/subst hay bật setting global là đã khắc phục khi chưa build lại thành công.
+Windows native build có thể vướng giới hạn Ninja 260 ký tự do checkout + pnpm store + codegen. Attempt đầu đã gặp lỗi này; kiểm chứng lại bằng checkout vật lý riêng có đường ngắn và fresh frozen install đã build APK debug x86_64 thành công, xem READINESS/receipt. Không cần đổi registry/hoist; junction/subst chưa được kiểm chứng.
 
-Để tái hiện attempt với ít RAM, sau Android prebuild chạy trong `apps/mobile/android` trên PowerShell:
+Để tái lập build với ít RAM, sau frozen install và Android prebuild tại checkout ngắn, chạy trong `apps/mobile/android` trên PowerShell. Init script tạm chỉ đặt job pool CMake cho lần gọi này; không thay source hoặc cấu hình Gradle/global:
 
 ```powershell
 $env:NODE_ENV = 'development'
-.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=384m' -PreactNativeArchitectures=x86_64
+$env:CI = '1'
+[Environment]::SetEnvironmentVariable('ORG_GRADLE_PROJECT_kotlin.compiler.execution.strategy', 'in-process', 'Process')
+$nativeInitPath = Join-Path ([IO.Path]::GetTempPath()) ('goease-native-' + [guid]::NewGuid() + '.init.gradle')
+@'
+allprojects { p ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        p.plugins.withId(pluginId) {
+            p.extensions.getByName('android').defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+                '-DCMAKE_JOB_POOLS=goease_native=1',
+                '-DCMAKE_JOB_POOL_COMPILE=goease_native',
+                '-DCMAKE_JOB_POOL_LINK=goease_native'
+            ])
+        }
+    }
+}
+'@ | Set-Content -LiteralPath $nativeInitPath
+.\gradlew.bat :app:assembleDebug --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=384m' '-Dorg.gradle.parallel=false' '-Pkotlin.compiler.execution.strategy=in-process' '-PreactNativeArchitectures=x86_64' -I $nativeInitPath
 ```
+
+Quote tham số có dấu chấm trên PowerShell để không bị tách thành tên task. [Kotlin in-process](https://kotlinlang.org/docs/compiler-execution-strategy.html) dùng cùng process Gradle; biến process-local cũng truyền tới included builds. [CMake job pools](https://cmake.org/cmake/help/latest/variable/CMAKE_JOB_POOLS.html) giới hạn C++ khi Ninja chạy; `--max-workers=1` riêng không đảm bảo Ninja tuần tự.
 
 Đây là debug build cho emulator x86_64, không phải APK preview hay build mọi ABI. Chạy build và emulator lần lượt, không cùng lúc. Heap giới hạn không đảm bảo đủ RAM; ghi lỗi thật nếu build không xong. CMake đã hash object path trong attempt này; tăng/giảm `CMAKE_OBJECT_PATH_MAX` không rút ngắn input codegen bị lỗi ([CMake reference](https://cmake.org/cmake/help/latest/variable/CMAKE_OBJECT_PATH_MAX.html)).
 
@@ -51,8 +69,8 @@ Expo `57.0.27`, React Native `0.86.3`, React `19.2.3`, dev-client `57.0.19`, saf
 
 | Nhóm / nguồn đối chiếu 11/10/2026 | Android | iOS |
 | --- | --- | --- |
-| Expo/RN/React theo metadata SDK 57 | Metro export pass; native Kotlin/Java/Dex qua, CMake bị lỗi đường dẫn Windows; runtime chưa kiểm chứng | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
-| [expo-dev-client SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/dev-client/) | Có hỗ trợ theo SDK, đã vào Gradle graph; chưa có development APK chạy | Có hỗ trợ theo SDK; cần đường build/cài thực, không dùng Expo Go thay thế |
-| [safe-area-context SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/safe-area-context/) | Có hỗ trợ theo SDK; Kotlin/Java qua, C++ codegen gặp lỗi Ninja path; notch/edge-to-edge chưa thử trên app | Có hỗ trợ theo SDK; bundle pass, safe area trên simulator/iPhone chưa thử |
+| Expo/RN/React theo metadata SDK 57 | Metro export và native APK debug x86_64 build pass; cài/runtime chưa kiểm chứng | Metro export pass; native prebuild/build/cài/runtime chưa kiểm chứng trên Windows |
+| [expo-dev-client SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/dev-client/) | Có trong APK development đã build; chưa cài/chạy app | Có hỗ trợ theo SDK; cần đường build/cài thực, không dùng Expo Go thay thế |
+| [safe-area-context SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/safe-area-context/) | Kotlin/Java/C++ build pass sau checkout ngắn; notch/edge-to-edge chưa thử trên app | Có hỗ trợ theo SDK; bundle pass, safe area trên simulator/iPhone chưa thử |
 
 Nguồn tương thích và bundle thành công không thay native acceptance; cập nhật bảng và receipt khi build/runtime thực có kết quả.
