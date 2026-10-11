@@ -72,9 +72,13 @@ export class AuthService {
     if (!equalHash(hash(identity.nonce), row.nonceHash)) throw new ApiFault('AUTH_INVALID_IDENTITY', 401);
     const token = opaque(), csrfToken = csrfFor(token), now = new Date();
     const result = await db.$transaction(async tx => {
-      const consumed = await tx.$executeRaw`UPDATE "AuthChallenge" SET "consumedAt" = clock_timestamp()
+      // Observe expiry after any row-lock wait, and use a single millisecond
+      // timestamp so rounding cannot consume at/after the expiry boundary.
+      await tx.$queryRaw`SELECT id FROM "AuthChallenge" WHERE id = ${row.id}::uuid FOR UPDATE`;
+      const consumed = await tx.$executeRaw`WITH instant AS MATERIALIZED (SELECT clock_timestamp() AS checked_at)
+        UPDATE "AuthChallenge" SET "consumedAt" = date_trunc('milliseconds', instant.checked_at) FROM instant
         WHERE id = ${row.id}::uuid AND transport = ${kind.toUpperCase()} AND "proofHash" = ${hash(proof)}
-        AND "nonceHash" = ${hash(identity.nonce)} AND "consumedAt" IS NULL AND "expiresAt" > clock_timestamp()`;
+        AND "nonceHash" = ${hash(identity.nonce)} AND "consumedAt" IS NULL AND "expiresAt" > instant.checked_at`;
       if (consumed !== 1) throw new ApiFault('AUTH_INVALID_CHALLENGE', 400);
       // Column-safe upsert intentionally omits role/disabledAt: runtime cannot provision admin.
       const users = await tx.$queryRaw<Array<AuthUser & { disabledAt: Date | null }>>`

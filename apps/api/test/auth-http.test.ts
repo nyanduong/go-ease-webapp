@@ -4,6 +4,7 @@ import { request as httpRequest } from 'node:http';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -228,6 +229,31 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
     } finally { await s.close(); }
   });
 
+  await t.test('challenge expiry is rechecked after a real row lock wait, with no partial session', async () => {
+    const s = await server();
+    const locker = new pg.Client({ connectionString: database.migrationUrl });
+    try {
+      const { body } = await s.challenge();
+      const expiresAt = new Date(Date.now() + 1200);
+      await op.authChallenge.update({ where: { id: body.challengeId }, data: { createdAt: new Date(expiresAt.getTime() - 300_000), expiresAt } });
+      await locker.connect(); await locker.query('BEGIN'); await locker.query('SELECT id FROM "AuthChallenge" WHERE id=$1 FOR UPDATE', [body.challengeId]);
+      const exchange = s.exchange(body, s.verifier.token(body, 'HTTP-lock-expired'));
+      let observedLock = false;
+      for (let i = 0; i < 40; i++) {
+        const waiting = await db.$queryRaw<Array<{ count: bigint }>>`SELECT count(*) FROM pg_stat_activity WHERE datname=current_database()
+          AND wait_event_type='Lock' AND query LIKE '%AuthChallenge%' AND pid <> pg_backend_pid()`;
+        if (Number(waiting[0]?.count) > 0) { observedLock = true; break; }
+        await delay(20);
+      }
+      assert.ok(observedLock, 'actual PostgreSQL row-lock wait must be observed');
+      await delay(Math.max(0, expiresAt.getTime() - Date.now() + 30));
+      await locker.query('ROLLBACK');
+      await fault(await exchange, 400, 'AUTH_INVALID_CHALLENGE');
+      assert.equal(await op.user.count({ where: { googleSubject: 'HTTP-lock-expired' } }), 0);
+      assert.equal((await op.authChallenge.findUniqueOrThrow({ where: { id: body.challengeId } })).consumedAt, null);
+    } finally { await locker.end(); await s.close(); }
+  });
+
   await t.test('transaction rollback restores unconsumed challenge; disabled login cannot update or create sessions', async () => {
     const s = await server();
     try {
@@ -275,7 +301,7 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
       assert.ok(elapsed >= 4000 && elapsed < 10_000, `bounded statement elapsed=${Math.round(elapsed)}ms`);
       await locker.query('ROLLBACK');
       assert.equal((await s.get('auth/me', login.headers)).status, 200);
-    } finally { await locker.query('ROLLBACK').catch(() => undefined); await locker.end(); await s.close(); }
+    } finally { await locker.end(); await s.close(); }
   });
 
   await t.test('strict input, safe error envelope, bounded challenge limiter and expired-row cleanup', async () => {
