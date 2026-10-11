@@ -81,6 +81,23 @@ export function createNativeAuthStore(client: ReturnType<typeof createNativeAuth
   }
   return {
     snapshot: () => state, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; }, restore, login, logout,
+    /** Token stays in this RAM closure; restore/logout/expiry invalidate every dependent request. */
+    async withSession<T>(work: (token: string, signal: AbortSignal) => Promise<T>, caller: AbortSignal): Promise<T> {
+      if (state.kind !== 'signedIn' || !token || !active || caller.aborted) throw new AuthFailure('expired');
+      const capturedToken = token, id = generation, sessionSignal = active.signal, controller = new AbortController();
+      const cancel = () => controller.abort();
+      caller.addEventListener('abort', cancel, { once: true }); sessionSignal.addEventListener('abort', cancel, { once: true });
+      if (caller.aborted || sessionSignal.aborted) cancel();
+      let rejectCancelled!: () => void;
+      const cancelled = new Promise<never>((_resolve, reject) => { rejectCancelled = () => reject(new AuthFailure('cancelled')); });
+      controller.signal.addEventListener('abort', rejectCancelled, { once: true });
+      try {
+        if (controller.signal.aborted) throw new AuthFailure('cancelled');
+        const value = await Promise.race([work(capturedToken, controller.signal), cancelled]);
+        if (controller.signal.aborted || generation !== id || token !== capturedToken || state.kind !== 'signedIn') throw new AuthFailure('cancelled');
+        return value;
+      } finally { caller.removeEventListener('abort', cancel); sessionSignal.removeEventListener('abort', cancel); controller.signal.removeEventListener('abort', rejectCancelled); }
+    },
     cancel() { if (state.kind === 'signingIn') { active?.abort(); publish({ kind: 'signedOut', message: new AuthFailure('cancelled').message }); } },
     dispose() { active?.abort(); generation++; clearTimeout(expiry); },
   };

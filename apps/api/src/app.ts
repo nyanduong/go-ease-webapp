@@ -29,7 +29,7 @@ export async function createApp({ logging = true, environment, closeWatchConnect
 export function configureApp(app: NestExpressApplication) {
   const config = app.get(ConfigService<Environment, true>);
   app.setGlobalPrefix('api');
-  app.use(['/api/auth', '/api/admin'], (_request: Request, response: Response, next: NextFunction) => {
+  app.use(['/api/auth', '/api/admin', '/api/maps'], (_request: Request, response: Response, next: NextFunction) => {
     response.setHeader('Cache-Control', 'no-store'); next();
   });
   app.useBodyParser('json', { limit: '24kb' });
