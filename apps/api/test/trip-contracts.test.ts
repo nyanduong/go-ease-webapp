@@ -53,6 +53,22 @@ test('Unicode limits count code points, reject NUL/surrogates and preserve emoji
   for (const title of ['\u0000', '\ud800', '\udc00', ' ']) assert.equal(isCreateTripRequest({ ...create, title }), false);
   for (const length of [1000, 1001]) assert.equal(isUpdateTripRequest({ ...update(), days: [{ dayNumber: 1, activities: [activity({ notes: '🧳'.repeat(length) })] }] }), length === 1000);
 });
+
+test('multiline notes preserve LF/CR/TAB in requests and responses without accepting other controls', () => {
+  for (const value of ['', '\n\r\tGhi chú\nDòng hai 🧳']) {
+    const request = { ...update(), days: [{ dayNumber: 1, activities: [activity({ notes: value })] }] };
+    assert.equal(isUpdateTripRequest(request), true);
+    assert.equal(canonicalUpdateTrip(request).days[0]!.activities[0]!.notes, value);
+    const response = detail(); response.days[0]!.activities[0]!.notes = value;
+    assert.equal(isTripDetail(response), true);
+  }
+  for (const value of ['\u0000', '\u0001', '\u000b', '\u000c', '\u007f', '\u0085', '\ud800']) {
+    assert.equal(isUpdateTripRequest({ ...update(), days: [{ dayNumber: 1, activities: [activity({ notes: value })] }] }), false);
+    const response = detail(); response.days[0]!.activities[0]!.notes = value;
+    assert.equal(isTripDetail(response), false);
+  }
+  assert.equal(isCreateTripRequest({ ...create, title: 'Tên\nchuyến' }), false);
+});
 test('budget is a group total; unknown, zero, empty and maximum aggregate remain distinct', () => {
   assert.deepEqual(calculateTripTotals([{ activities: [] }]), { knownSubtotalVnd: 0, unknownCostCount: 0, estimatedTotalVnd: 0 });
   assert.deepEqual(calculateTripTotals([{ activities: [activity({ estimatedCostVnd: 0 }), activity()] }]), { knownSubtotalVnd: 0, unknownCostCount: 1, estimatedTotalVnd: null });

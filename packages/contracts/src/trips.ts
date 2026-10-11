@@ -52,6 +52,11 @@ function text(value: unknown, max: number, empty = false): value is string {
   return typeof value === 'string' && (empty || value.trim().length > 0)
     && [...value].length <= max && !/[\p{Cc}\p{Cs}]/u.test(value);
 }
+/** Multiline plain notes retain LF/CR/TAB; other controls and lone surrogates are refused. */
+function notes(value: unknown): value is string {
+  return typeof value === 'string' && [...value].length <= 1000
+    && !/[\p{Cc}\p{Cs}]/u.test(value.replace(/[\n\r\t]/g, ''));
+}
 /** Actual calendar date; host timezone never participates. */
 export function isTripDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^(20[0-9]{2})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(value)) return false;
@@ -89,7 +94,7 @@ export function isUpdateTripRequest(value: unknown): value is UpdateTripRequest 
     return Array.from(day.activities).every(activity => {
       if (!fields(activity, ['id', 'placeId', 'title', 'notes', 'startMinute', 'endMinute', 'estimatedCostVnd'])
         || !(activity.id === null || isTripUuid(activity.id)) || !(activity.placeId === null || isTripUuid(activity.placeId))
-        || !text(activity.title, 160) || !(activity.notes === null || text(activity.notes, 1000, true))
+        || !text(activity.title, 160) || !(activity.notes === null || notes(activity.notes))
         || !timePair(activity.startMinute, activity.endMinute) || !isTripAmount(activity.estimatedCostVnd)) return false;
       if (activity.id !== null) {
         const id = activity.id.toLowerCase(); if (ids.has(id)) return false; ids.add(id);
@@ -176,7 +181,7 @@ export function isTripDetail(value: unknown): value is TripDetail {
     return Array.from(day.activities).every((activity, position) => {
       if (!fields(activity, ['id', 'position', 'title', 'notes', 'startMinute', 'endMinute', 'estimatedCostVnd', 'place'])
         || !isTripUuid(activity.id) || ids.has(activity.id.toLowerCase()) || activity.position !== position
-        || !text(activity.title, 160) || !(activity.notes === null || text(activity.notes, 1000, true))
+        || !text(activity.title, 160) || !(activity.notes === null || notes(activity.notes))
         || !timePair(activity.startMinute, activity.endMinute) || !isTripAmount(activity.estimatedCostVnd)
         || !(activity.place === null || place(activity.place))) return false;
       ids.add(activity.id.toLowerCase()); return true;

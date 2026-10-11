@@ -33,7 +33,8 @@ export function configureApp(app: NestExpressApplication) {
   app.use(['/api/auth', '/api/admin', '/api/trips'], (_request: Request, response: Response, next: NextFunction) => {
     response.setHeader('Cache-Control', 'no-store'); next();
   });
-  app.use('/api/trips', json({ limit: '256kb' }));
+  // The bounded 250-activity DTO can exceed 1 MiB with Unicode notes/title.
+  app.use('/api/trips', json({ limit: '1536kb' }));
   app.useBodyParser('json', { limit: '24kb' });
   const webAuth = Boolean(config.get('DATABASE_URL', { infer: true }) && config.get('GOOGLE_WEB_CLIENT_ID', { infer: true }));
   app.enableCors({ origin: config.get('WEB_ORIGINS', { infer: true }), credentials: webAuth,

@@ -15,7 +15,6 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.js';
 import { GoogleIdentityVerifier, type VerifiedGoogleIdentity } from '../src/modules/auth/google-verifier.js';
 import { LOGIN_COOKIE, SESSION_COOKIE } from '../src/modules/auth/http.js';
-import { TripsModule } from '../src/modules/trips/trips.module.js';
 import { ApiFault } from '../src/common/api-fault.js';
 import { createDatabaseClient } from '../src/database/client.js';
 import { seedCatalog } from '../src/database/seed.js';
@@ -105,7 +104,7 @@ test('Trips HTTP: real PostgreSQL, reviewed auth with identity doubles, atomic r
   async function server() {
     const identities = new TestIdentities();
     const module = await Test.createTestingModule({ imports: [await AppModule.register({ NODE_ENV: 'test', WEB_ORIGINS: origin,
-      DATABASE_URL: database.runtimeUrl, GOOGLE_WEB_CLIENT_ID: 'test-client.apps.googleusercontent.com' }), TripsModule] })
+      DATABASE_URL: database.runtimeUrl, GOOGLE_WEB_CLIENT_ID: 'test-client.apps.googleusercontent.com' })] })
       .overrideProvider(GoogleIdentityVerifier).useValue(identities).compile();
     const app = module.createNestApplication<NestExpressApplication>({ logger: false });
     let lostBody: TripDetail | undefined;
