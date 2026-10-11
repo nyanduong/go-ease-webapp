@@ -8,7 +8,7 @@ MVP gồm chuyến 1–5 ngày, ngân sách tổng nhóm VND, trải nghiệm đ
 
 ## Cài và chạy trên Windows/Linux
 
-Dùng **Node LTS 24.15.0** (.node-version/.nvmrc) và **pnpm 10.34.6** (packageManager). Nếu máy chưa có pnpm, cài theo [tài liệu pnpm 10](https://pnpm.io/10.x/installation); không cần thay Git identity hoặc cấu hình dịch vụ hệ thống.
+Dùng **Node LTS 24.21.0** (.node-version/.nvmrc) và **pnpm 10.34.6** (packageManager). Nếu máy chưa có pnpm, cài theo [tài liệu pnpm 10](https://pnpm.io/10.x/installation); không cần thay Git identity hoặc cấu hình dịch vụ hệ thống.
 
 Từ root repository:
 
@@ -71,11 +71,11 @@ Sau build, có thể chạy API bằng `pnpm --filter @goease/api start` và web
 
 ## Thành phần và phiên bản
 
-Phiên bản stable kiểm tra ngày 08/10/2026 qua tài liệu chính thức và npm registry; package.json khóa exact, pnpm-lock.yaml khóa cả dependency gián tiếp. Node 24.15.0 đang có trên máy và tương thích bộ công cụ; không tự nâng runtime hệ thống.
+Phiên bản thư viện stable kiểm tra ngày 08/10/2026 qua tài liệu chính thức và npm registry; package.json khóa exact, pnpm-lock.yaml khóa cả dependency gián tiếp. Runtime dự án cập nhật Node24.21.0 LTS theo nguồn chính thức ngày11/10/2026 để nhận các bản vá bảo mật trong dòng24; dùng portable/process-local khi kiểm tra, không tự nâng Node hệ thống. Receipt cũ giữ phiên bản thực đã dùng.
 
 | Thành phần | Phiên bản dùng | Nguồn chính thức |
 | --- | --- | --- |
-| Node / pnpm | 24.15.0 LTS / 10.34.6 | [Lịch Node LTS](https://github.com/nodejs/Release), [pnpm 10](https://pnpm.io/10.x/installation) |
+| Node / pnpm | 24.21.0 LTS / 10.34.6 | [Node release](https://nodejs.org/en/blog/release/v24.21.0), [pnpm 10](https://pnpm.io/10.x/installation) |
 | React / React DOM | 19.3.0 | [React versions](https://react.dev/versions) |
 | Vite / React plugin | 8.3.3 / 6.1.2 | [Vite 8](https://vite.dev/blog/announcing-vite8) |
 | NestJS / Config | 12.1.2 / 12.0.1 | [Nest 12 migration](https://docs.nestjs.com/migration-guide) |
