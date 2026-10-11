@@ -55,6 +55,16 @@ Artifacts ngoài Git chỉ ở máy này, không phải link phân phối, khôn
 | Auth828de55 | C:/ge4/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk ·67.187.077byte ·SHA256 `BC22E93CCF89676579A8A6280687DD196BDDBC5FF084FF9CED94AF4960A8583E` | Compile PASS; chưa install/runtime auth. |
 | Mapsf1f905c | C:/ge8/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk ·70.742.019byte ·SHA256 `BBCDF6B8C3A238C965B6C8B3E4C2287C2A716A9D53F9B7E5FC4DDE15849E726E` | Compile PASS; chưa install/runtime Maps;0keys. |
 
+## Android build cuối có luồng chuyến — compile only
+
+Source **`5111d474cb4bb6a1258aa0793405c1599e2e99d7`**, mobile tree `1df75e0ab267df17eb997fafddeaec84c1a28011`, branch detached ở checkout ngắn C:/ge6. Frozen install/contracts build/Android prebuild và `:app:assembleDebug` **PASS9m13s**,398tasks/398executed. Host Windows11, JDK21/SDK36/NDK27.1/CMake3.22.1/Gradle9.3.1; Gradle1024MiB/1worker, CMake pool1. Expo autolinking xác nhận expo-crypto57.0.3 cùng auth/Maps modules. Không sửa vendor, PATH/service/global settings.
+
+Artifact **C:/ge6/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk**,70.774.787byte, SHA256 **`1496D027039E809E826CAEE75B2A58D62B1CCD5F65983FCF4031C363182C382A`**. `apksigner verify` PASS; public debug certificate SHA1 `5e8f16062ea3cd2c4a0d547876baa6f38cabf625`, SHA256 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`. Package `vn.goease.mobile.dev`,0.1.0/code1,min24/target36,x86_64.
+
+Profile **development/debug**, public API config `http://10.0.2.2:3000/api` cho emulator local; không OAuth/Maps key. ZIP có **0 JS `.bundle` entries**: đây không phải preview đóng gói JS/assets hoặc bản dùng điện thoại/staging. Chưa cài/runtime Trips/health/auth/Maps trên APK này; automatic approval Metro blocker vẫn còn. iOS không native build/cài/runtime. Compile không đánh dấu UAT-01…10/12 native PASS.
+
+Private logs `%TEMP%/goease-issue11-native-20261011`; assemble-debug.log SHA256 `A3C9690B2CF86108DA99EEC4A29EC724E4B6DBB810B9701C0094CDDA905526E9`, apk-metadata.txt `DE4B8E23C8478D3CC94670FA544155D3C9FAA4F9087157F3F9CA41AC7A0D2C5F`. Có warnings deprecated SDK/Kotlin/C++ và Gradle10 incompatibility warning; không báo log sạch. Build không khởi động Metro/emulator/API/PG và không còn process riêng của checkout này sau kết thúc.
+
 Android và iOS runtime/live vẫn chặn theo UAT; automatic approval review từ chối khởi động Metro với lý do **blocked by policy**, không chạy biến thể để vượt chặn. Không tự bật billing, tạo hosting công khai, đăng ký/nhận terms hoặc chạy probe có chi phí. Thiếu điều kiện không làm mất phần code/test độc lập đã merge.
 
 ## Tiếp tục nghiệm thu

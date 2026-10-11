@@ -29,7 +29,7 @@ PASS chỉ khi đúng bước và môi trường đã thực thi, FAIL có lỗi
 
 ## Android — kết quả thực tế
 
-Host Windows11; chưa có điện thoại vật lý được xác minh. Android15/API35 x86_64 emulator chỉ có **health lịch sử** source fbc62f3/flows f190524, không phải luồng chuyến cuối. Các APK auth/Maps lịch sử chỉ compile. Build/commit cuối được ghi riêng trong index, không mượn bằng chứng runtime cũ.
+Host Windows11; chưa có điện thoại vật lý được xác minh. Android15/API35 x86_64 emulator chỉ có **health lịch sử** source fbc62f3/flows f190524, không phải luồng chuyến cuối. Các APK auth/Maps lịch sử chỉ compile. APK development/debug source5111d47 mới assembleDebugPASS9m13s,70.774.787byte/SHA256 trong [index](README.md); chưa cài/runtime, không có JS bundle preview. Không mượn bằng chứng runtime cũ.
 
 | Mã | Trạng thái native/thiết bị thật | Build/môi trường, bằng chứng hỗ trợ và điều kiện thiếu |
 | --- | --- | --- |

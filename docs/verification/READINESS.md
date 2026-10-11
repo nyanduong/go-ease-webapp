@@ -24,3 +24,7 @@ Không chạy EAS/billing/account probes, không tự mua tài nguyên và khôn
 ## Bổ sung Maps #8 — 11/10/2026
 
 Source `f1f905c` đã nối MapsModule vào AppModule, thêm react-native-maps1.27.2, expo-location57.0.20 và direct expo-constants57.0.21; frozen install, root typecheck/lint/test/build, Expo check PASS, 194test/0skip và HTTP/PostgreSQL7PASS. Android/iOS JS export PASS; không suy native/live. Android prebuild và assembleDebug Maps PASS (source f1f905c,9m43s/398tasks), APK checksum ở receipt; chưa cài/runtime mới. iOS native chưa có đường build/ký/thiết bị được xác minh. Keys/billing/quota/budget của cả hai SDK và Routes chưa xác minh; Routes HTTP mặc định tắt. [Receipt riêng](GE-M0-08.md) được cập nhật khi build có kết quả; lịch sử health #15 vẫn là bằng chứng riêng.
+
+## Bổ sung chuyến #6 — 11/10/2026
+
+Source main5111d474cb4bb6a1258aa0793405c1599e2e99d7 đã có trips client/editor/store/map và expo-crypto57.0.3. Android prebuild/assembleDebug tại C:/ge6 PASS9m13s/398tasks, debug x86_64 APK70.774.787byte, checksum/chữ ký public ở [index bàn giao](../handover/README.md). Chưa install/runtime mới; ZIP0JSbundle nên không là preview Metro-off. iOS chỉ JS/Hermes export, chưa native. Không nâng health lịch sử thành kết quả Trips, không đổi blocker Metro/OAuth/HTTPS/signing/thiết bị.
