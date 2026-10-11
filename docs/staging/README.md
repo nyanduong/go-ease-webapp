@@ -27,13 +27,13 @@ Images official được pin **OCI index digest kiểm tra registry ngày 11/10/
 
 | Image | Digest |
 | --- | --- |
-| `node:24.15.0-bookworm-slim` | `sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d` |
+| `node:24.21.0-bookworm-slim` | `sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20` |
 | `nginx:1.30.5-alpine3.24` | `sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94` |
 | `postgres:18.6-trixie` | `sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
 
 Pin không tự chứng minh image không có CVE. Cập nhật pin cần review, test lại và ghi platform/digest thực. Runtime Prisma dùng JS/WASM với `adapter-pg`, không dựa vào migration engine của operator. Test container CI phải xác nhận image operator có thư viện TLS/OpenSSL cần thiết; local chưa chạy Docker.
 
-**Điều kiện trước kích hoạt ra ngoài:** Node24.15.0 hiện pin theo nền dự án, có trước các đợt security release June/July2026; chưa có assessment đầy đủ CVE Node và OS image. Owner/điều phối phải đối chiếu [Node security releases](https://nodejs.org/en/blog/vulnerability/), scan image thực và nâng bản được review khi cần trước external staging. Không gọi các pin này là security-clean; không bulk upgrade hay bỏ audit trong PR packaging.
+Node được cập nhật đồng bộ lên24.21.0 LTS sau các security releases June/July2026; [assessment và kiểm chứng #38](../verification/ISSUE-38.md) ghi checksum/digest, bề mặt liên quan và giới hạn reachability. **Trước kích hoạt ngoài vẫn phải scan image thực và đánh giá OS packages/residual advisories** theo [Node security releases](https://nodejs.org/en/blog/vulnerability/). Pin mới không chứng minh security-clean; không bulk upgrade hoặc bỏ audit/scanner.
 
 ## Điều kiện owner phải cung cấp
 
