@@ -22,6 +22,12 @@ apps/mobile/ios/
 *.keystore
 *.mobileprovision
 *.p12
+*.pfx
+*.p8
+*.pem
+*.key
+credentials.json
+keystore.properties
 .local/
 .database-upgrade-test/
 apps/api/src/generated/prisma/

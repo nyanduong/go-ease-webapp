@@ -1,6 +1,6 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import { apiBaseUrl } from './src/lib/config.ts';
-import { googleClientId } from './src/features/auth/google.ts';
+import { googleClientId } from './src/lib/google-client-id.ts';
 
 export function buildConfig(environment: Record<string, string | undefined>): ExpoConfig {
   const variant = environment.GOEASE_APP_VARIANT ?? 'development';
@@ -18,6 +18,7 @@ export function buildConfig(environment: Record<string, string | undefined>): Ex
   if (!development) apiBaseUrl(environment.EXPO_PUBLIC_API_BASE_URL, 'preview');
   return {
     name: development ? 'GoEase Dev' : 'GoEase Preview', slug: 'goease', version: '0.1.0',
+    owner: 'nyan1126s-team',
     platforms: ['android', 'ios'], orientation: 'portrait',
     scheme: development ? 'goease-dev' : 'goease-preview',
     android: { package: development ? 'vn.goease.mobile.dev' : 'vn.goease.mobile.preview' },
@@ -35,7 +36,8 @@ export function buildConfig(environment: Record<string, string | undefined>): Ex
         isIosBackgroundLocationEnabled: false, isAndroidBackgroundLocationEnabled: false,
         isAndroidForegroundServiceEnabled: false, isAndroidMotionActivityEnabled: false }],
       ...(iosClient ? [['react-native-nitro-google-signin', { iosUrlScheme: `com.googleusercontent.apps.${iosClient.replace('.apps.googleusercontent.com', '')}` }] as [string, { iosUrlScheme: string }]] : [])],
-    extra: { appVariant: variant, nativeMapsConfigured: { android: Boolean(androidMaps), ios: Boolean(iosMaps) } },
+    extra: { appVariant: variant, nativeMapsConfigured: { android: Boolean(androidMaps), ios: Boolean(iosMaps) },
+      eas: { projectId: '38b47740-0837-4b2c-a34e-95be5c4cffa6' } },
   };
 }
 export default (_context: ConfigContext) => buildConfig(process.env);

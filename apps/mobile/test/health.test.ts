@@ -122,5 +122,6 @@ test('Preview build từ chối API chưa cấp/HTTP; identity riêng và không
   assert.ok(!preview.ios?.infoPlist?.NSLocalNetworkUsageDescription);
   assert.deepEqual(preview.plugins?.[1], ['./plugins/with-development-network.cjs', { allowHttp: false }]);
   assert.deepEqual(dev.plugins?.[1], ['./plugins/with-development-network.cjs', { allowHttp: true }]);
-  assert.equal(preview.extra?.eas, undefined);
+  assert.deepEqual(preview.extra?.eas, { projectId: '38b47740-0837-4b2c-a34e-95be5c4cffa6' });
+  assert.equal(preview.owner, 'nyan1126s-team');
 });

@@ -1,6 +1,8 @@
 # Staging M0 — đóng gói và vận hành
 
-Đây là cấu hình triển khai nội bộ cho #10, **chưa phải HTTPS staging đang chạy**. Owner chưa xác minh hosting, domain/TLS, PostgreSQL staging, EAS/signing hoặc thiết bị thật. PR dùng `Refs #10`; #10/#11/M0 còn mở. Không chạy các lệnh triển khai lên tài nguyên ngoài khi chưa có quyền và cấu hình thật. Không tự tạo account, bật billing, nhận điều khoản, mở cổng public hoặc dùng secret mẫu.
+Đây là cấu hình triển khai nội bộ cho #10, **chưa phải HTTPS staging đang chạy**. EAS owner/project/Free quota đã xác minh và signer Android preview đã có local; upload signer EAS chưa đạt. Hosting/HTTPS/PostgreSQL staging, iOS signing và thiết bị thật vẫn thiếu. PR dùng `Refs #10`; #10/#11/M0 còn mở. Không chạy các lệnh triển khai lên tài nguyên ngoài khi chưa có quyền và cấu hình thật. Không tự tạo account, bật billing, nhận điều khoản, mở cổng public hoặc dùng secret mẫu.
+
+[Đề xuất hosting chính](HOSTING_PLAN.md) đánh giá Render Singapore và các adapter/TLS/secret/backup còn thiếu; chưa được duyệt chi phí hoặc deploy. Owner xác nhận ngày12/10/2026 chưa muốn chi tiền; dừng trước bước trả phí/trial có thể tính phí/thêm thẻ/nâng gói. [Mobile preview](MOBILE_PREVIEW.md) ghi riêng điều kiện Expo/Android/iOS thực tế.
 
 ## Thành phần và ranh giới
 
