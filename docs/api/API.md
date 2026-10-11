@@ -1,4 +1,4 @@
-# API M0 — health, xác thực và Maps
+# API M0 — health, xác thực, chuyến và Maps
 
 REST prefix `/api`. `GET /health` chỉ kiểm tra tiến trình, vẫn hoạt động khi chưa có DB/OAuth; chưa có OpenAPI UI. Auth dùng contracts/runtime guards trong `@goease/contracts`. Lỗi giữ envelope `{error:{code,message,statusCode},path,timestamp}`, không trả JWT, SQL, credential hoặc stack. Auth/admin trả `Cache-Control: no-store`.
 
