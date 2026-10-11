@@ -6,9 +6,9 @@ Ngày đối chiếu 11/10/2026 · **Refs #11**. Đã triển khai và merge cá
 
 ## Nền đã xác minh
 
-PR #12 và #17 thực sự đã merge, lần lượt `ac1feabd90118e841504befcebdcd7b78206aa5f` và `ef24b4cca6ca64209b93dae69b5e8ee90f0d49c7`; không triển khai lại scaffold. Luồng chuyến mobile PR36 kế thừa actual main97a8210 và merge thành `5111d474cb4bb6a1258aa0793405c1599e2e99d7`. Source product/gates của từng receipt có thể cũ hơn PR HEAD do commit cuối chỉ thêm tài liệu; bảng dưới ghi **HEAD CI thật**, không gán artifact cũ cho HEAD mới.
+PR #12 và #17 thực sự đã merge, lần lượt `ac1feabd90118e841504befcebdcd7b78206aa5f` và `ef24b4cca6ca64209b93dae69b5e8ee90f0d49c7`; không triển khai lại scaffold. Luồng chuyến mobile PR36 merge thành `5111d474cb4bb6a1258aa0793405c1599e2e99d7`; packaging PR37 kế thừa nền này, merge thành `162d93739aca05a067836bbe26c66883ce8fe64c`, main CI gồm container SUCCESS. Source product/gates của từng receipt có thể cũ hơn PR HEAD do commit cuối chỉ thêm tài liệu; bảng trong [M0_REPORT](M0_REPORT.md) ghi **HEAD CI thật**, không gán artifact cũ cho HEAD mới.
 
-Tất cả run lịch sử sau đây đã đọc lại từ GitHub, Quality Gate job SUCCESS và SHA khớp HEAD/merge. Thành công CI không xác nhận native/live. PR12 GitGuardian lịch sử **NEUTRAL**, không có nghĩa sạch; PR17–36 scanner SUCCESS. Các receipt có chữ “chờ CI/merge” là mốc trước khi PR được tạo; dùng bảng này và GitHub để đọc kết quả sau đó, không viết lại lịch sử thất bại thành thành công.
+Các run trong M0_REPORT đã đọc lại từ GitHub, Quality Gate job SUCCESS và SHA khớp HEAD/merge. Thành công CI không xác nhận native/live. PR12 GitGuardian lịch sử **NEUTRAL**, không có nghĩa sạch; PR17–37 scanner SUCCESS. Các receipt có chữ “chờ CI/merge” là mốc trước khi PR được tạo; dùng bảng và GitHub để đọc kết quả sau đó, không viết lại lịch sử thất bại thành thành công.
 
 [Báo cáo M0](M0_REPORT.md) ghi traceability issue/tiêu chí/PR HEAD/merge/CI, các fix và giới hạn. [Runbook bàn giao](RUNBOOK.md) dẫn lệnh local/build/ký/cài/deploy/migrate/seed/backup/restore/rollback.
 
@@ -25,6 +25,7 @@ Tất cả run lịch sử sau đây đã đọc lại từ GitHub, Quality Gate
 | Maps | [runbook](../maps/README.md), [receipt](../verification/GE-M0-08.md) | Native source/Android compile + adapter doubles; Maps/Places/Routes0Google calls, keys/billing/quyền chưa xác minh; iOS native chưa build. |
 | Booking | [readiness](../integrations/BOOKING_READINESS.md), [receipt](../verification/GE-M0-09.md) | Nghiên cứu nguồn chính thức;0provider/sandbox/booking/payment, chưa hợp đồng/entitlement/tồn chỗ/confirmed. |
 | Native/toolchain | [mobile](../mobile/README.md), [readiness](../verification/READINESS.md), [receipt issue15](../verification/GE-M0-14.md) | Health emulator lịch sử khác auth/Maps compile; iOS không native; GE-M0-14.md là issue15, không suy số issue từ tên file. |
+| Staging/preview | [runbook](../staging/README.md), [preview](../staging/MOBILE_PREVIEW.md), [receipt #10](../verification/GE-M0-10.md) | PR37/main CI bốn container/private PG/operator/backup/restore/proxy/browser PASS local HTTP; chưa public HTTPS hoặc preview hai thiết bị thật. |
 | Dependency/security | [audit #31](../verification/ISSUE-31.md), [architecture](../ARCHITECTURE.md) | shell-quote đã vá/regression thực; residual audit0critical/4high/2moderate có ngoại lệ giới hạn, không báo sạch hoặc tắt scanner. |
 
 ## Artifact native lịch sử

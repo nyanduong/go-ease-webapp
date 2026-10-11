@@ -1,6 +1,6 @@
 # Điều kiện bên ngoài M0
 
-Ngày đối chiếu: 11/10/2026. Đây là bảng điều kiện kỹ thuật, không thay backlog/status ở GitHub Project. Owner cấp quyền/tài nguyên là nyanduong; agent chuẩn bị và kiểm chứng trong issue tương ứng. Không ghi secret, cookie, chứng chỉ, key ký hay dữ liệu cá nhân. Tên biến **đề xuất** bên dưới chưa có nghĩa adapter đã được triển khai hoặc tài nguyên đã tồn tại.
+Ngày đối chiếu: 11/10/2026. Đây là bảng điều kiện kỹ thuật, không thay backlog/status ở GitHub Project. Owner cấp quyền/tài nguyên là nyanduong; agent chuẩn bị và kiểm chứng trong issue tương ứng. Không ghi secret, cookie, chứng chỉ, key ký hay dữ liệu cá nhân. Tên biến bên dưới mô tả cấu hình; chỉ sự hiện diện tên biến không chứng minh tài nguyên đã tồn tại hoặc tích hợp live đạt.
 
 | Dịch vụ / issue | Nơi cấu hình chính thức | Biến / định danh cần chuẩn bị | Trạng thái và việc owner cần làm | Kiểm chứng cần chạy / blocker |
 | --- | --- | --- | --- | --- |

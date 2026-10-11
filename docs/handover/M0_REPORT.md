@@ -16,12 +16,12 @@ Ngày đối chiếu 11/10/2026 · **Refs #11; M0 chưa hoàn tất**. Đây là
 | Booking #9 | PR22; [report](../integrations/BOOKING_READINESS.md), [receipt](../verification/GE-M0-09.md) | Nghiên cứu nguồn chính thức hoàn tất; **0provider/sandbox/booking/payment**, chưa entitlement/hợp đồng/tồn chỗ. |
 | Toolchain #15 | PR26 partial; [readiness](../verification/READINESS.md), [receipt](../verification/GE-M0-14.md) | Android emulator chỉ health lịch sử có runtime; auth/Maps/Trips APK mới compile-only. iOS chưa native build/cài/runtime. |
 | Admin #16 | PR35 partial; [receipt](../verification/GE-M0-16.md) | Server-granted role guards/private-trip privacy, browser gated desktop/360px và actual API/PG đạt; employee OAuth/HTTPS còn BLOCKED. |
-| Staging #10 | [runbook](../staging/README.md), [receipt](../verification/GE-M0-10.md) | Đóng gói/operator/proxy/backup được kiểm tra độc lập theo receipt; chưa có HTTPS deployment hoặc preview Android/iPhone thật để bàn giao. |
+| Staging #10 | PR37 partial; [runbook](../staging/README.md), [receipt](../verification/GE-M0-10.md) | CI trên HEAD và main kiểm tra bốn images/non-root readonly/private PG/operator/backup/restore/proxy/browser PASS local HTTP; chưa HTTPS deployment hoặc preview Android/iPhone thật. |
 | Handover #11 | [index](README.md), [runbook](RUNBOOK.md), [UAT](UAT.md) | Tài liệu/kịch bản/bằng chứng riêng từng nền tảng; #11/M0 OPEN vì tiêu chí live/native bắt buộc còn thiếu. |
 
 ## PR HEAD → merge main → Quality Gate
 
-Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt cũ có thể ghi “chờ CI/merge” tại mốc tạo tài liệu; không xóa lịch sử đó. CI pass không là native/live. PR12 scanner lịch sử NEUTRAL không chứng minh sạch; các PR17–36 scanner SUCCESS.
+Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt cũ có thể ghi “chờ CI/merge” tại mốc tạo tài liệu; không xóa lịch sử đó. CI pass không là native/live. PR12 scanner lịch sử NEUTRAL không chứng minh sạch; các PR17–37 scanner SUCCESS.
 
 | PR / phạm vi | HEAD CI | Merge main | Quality Gate PR / main |
 | --- | --- | --- | --- |
@@ -42,6 +42,7 @@ Các run dưới đây đã đọc từ GitHub và đối chiếu SHA. Receipt c
 | [34 — fix dependency #31](https://github.com/nyanduong/go-ease-webapp/pull/34) | 60066ee4 | f2a0a431 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38139364336) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38139605091) |
 | [35 — admin, Refs #16](https://github.com/nyanduong/go-ease-webapp/pull/35) | bad25ca3 | 97a82100 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140000308) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140243392) |
 | [36 — mobile chuyến, Refs #6](https://github.com/nyanduong/go-ease-webapp/pull/36) | 9c1d380d | 5111d474 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141287122) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141577313) |
+| [37 — staging packaging, Refs #10](https://github.com/nyanduong/go-ease-webapp/pull/37) | 656a941f | 162d9373 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148538687) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148950694) |
 
 Source product, source dùng build/test và commit tài liệu có thể khác nhau; đọc receipt từng phần. APK Android cuối compile từ main5111d474, mobile tree/checksum ở [index](README.md); không gán binary lịch sử cho source mới. PR của báo cáo này được xác minh trên HEAD và receipt sau merge ở [issue11](https://github.com/nyanduong/go-ease-webapp/issues/11), tránh vòng commit tự ghi chính SHA của mình.
 
