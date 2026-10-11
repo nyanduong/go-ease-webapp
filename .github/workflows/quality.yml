@@ -35,7 +35,7 @@ jobs:
         run: pnpm typecheck
       - name: Lint
         run: pnpm lint
-      - name: Test API, UI và web–API thật
+      - name: Test kiến trúc, API, UI, web–API và dev regression
         run: pnpm test
       - name: Build
         run: pnpm build
