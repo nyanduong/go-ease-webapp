@@ -41,5 +41,7 @@ jobs:
         run: pnpm test
       - name: Build web/API và Metro JavaScript Android + iOS (không phải native build)
         run: pnpm build
+      - name: Kiểm chứng container production, proxy và backup PostgreSQL cô lập
+        run: node deploy/ci-containers.mjs
       # Một job tuần tự: không continue-on-error, không skip bước bắt buộc,
       # không path filter. Chỉ xanh khi toàn bộ kiểm tra thành công.

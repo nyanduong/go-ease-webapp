@@ -7,7 +7,10 @@ import { Button } from './ui/button';
 
 export function AdminCatalog() {
   const { store: auth, state: session } = useWebAuth();
-  const store = useMemo(() => createAdminCatalogStore(createAdminClient(API_BASE_URL), auth), [auth]);
+  // Shared auth already validates absolute production origins. Resolve a relative
+  // deployment base here too; preserve the existing explicit local transport.
+  const store = useMemo(() => createAdminCatalogStore(createAdminClient(API_BASE_URL, fetch, 8000,
+    API_BASE_URL.startsWith('/') ? window.location.origin : undefined), auth), [auth]);
   const state = useSyncExternalStore(store.subscribe, store.snapshot);
   useEffect(() => store.connect(), [store]);
   // Render-time guard hides old data even before effect/subscription cleanup.

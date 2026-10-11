@@ -1,6 +1,7 @@
 export interface Environment {
   NODE_ENV: 'development' | 'test' | 'production';
   PORT: number;
+  HOST: '127.0.0.1' | '0.0.0.0';
   WEB_ORIGINS: string[];
   DATABASE_URL?: string;
   GOOGLE_WEB_CLIENT_ID?: string;
@@ -14,6 +15,10 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
     throw new Error('NODE_ENV phải là development, test hoặc production.');
   }
   const rawPort = String(input.PORT ?? '3000');
+  const host = input.HOST ?? '127.0.0.1';
+  if (host !== '127.0.0.1' && host !== '0.0.0.0') {
+    throw new Error('HOST chỉ chấp nhận 127.0.0.1 hoặc 0.0.0.0 được khai báo rõ ràng.');
+  }
   const port = Number(rawPort);
   if (!/^\d+$/.test(rawPort) || !Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('PORT phải là số nguyên từ 1 đến 65535.');
@@ -46,7 +51,7 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
   if (googleClient !== undefined && (typeof googleClient !== 'string' || !/^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(googleClient))) {
     throw new Error('GOOGLE_WEB_CLIENT_ID phải là client ID Google phía server.');
   }
-  return { NODE_ENV: mode, PORT: port, WEB_ORIGINS: [...new Set(origins)],
+  return { NODE_ENV: mode, PORT: port, HOST: host, WEB_ORIGINS: [...new Set(origins)],
     ...(database === undefined ? {} : { DATABASE_URL: database }),
     ...(googleClient === undefined ? {} : { GOOGLE_WEB_CLIENT_ID: googleClient }),
     ...(mapsKey === undefined ? {} : { GOOGLE_MAPS_SERVER_API_KEY: mapsKey }),

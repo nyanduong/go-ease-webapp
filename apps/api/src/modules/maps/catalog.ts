@@ -1,5 +1,5 @@
 import { isSampleMapCatalog, isSampleRouteRequest, type SampleMapCatalog, type SampleRouteRequest } from '@goease/contracts';
-import { samplePlaces } from '../../database/seed.js';
+import { samplePlaces } from '../../database/sample-catalog.js';
 import { loadApprovedSampleCatalog } from '../ai/catalog.js';
 import { MapsError } from './errors.js';
 

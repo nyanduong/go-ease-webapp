@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import pg from 'pg';
+export { grantRuntime } from '../../scripts/lib/runtime-role.js';
 
 const execute = promisify(execFile);
 
@@ -100,24 +101,6 @@ export async function createIsolatedDatabase(cluster: LocalPostgres, databaseNam
   try { await migration.query('REVOKE CREATE ON SCHEMA public FROM PUBLIC'); }
   finally { await migration.end(); }
   return { databaseName, runtime, migrator, migrationUrl, runtimeUrl };
-}
-
-export async function grantRuntime(migrationUrl: string, role: string) {
-  if (!/^goease_[a-z0-9_]+_app$/.test(role)) throw new Error('Invalid runtime role');
-  const client = new pg.Client({ connectionString: migrationUrl });
-  await client.connect();
-  try {
-    await client.query(`GRANT USAGE ON SCHEMA public TO ${role}`);
-    await client.query(`GRANT SELECT ON "User", "Trip", "TripDay", "Activity", "Place", "Session", "IdempotencyRecord", "AuthChallenge" TO ${role}`);
-    await client.query(`GRANT INSERT (id, transport, "nonceHash", "proofHash", "createdAt", "expiresAt"), UPDATE ("consumedAt"), DELETE ON "AuthChallenge" TO ${role}`);
-    await client.query(`GRANT INSERT (id, "googleSubject", "displayName", "createdAt", "updatedAt"), UPDATE ("displayName", "updatedAt") ON "User" TO ${role}`);
-    await client.query(`GRANT INSERT, UPDATE ON "Trip", "Place", "IdempotencyRecord" TO ${role}`);
-    await client.query(`GRANT INSERT, UPDATE, DELETE ON "TripDay", "Activity" TO ${role}`);
-    // Remove broad grants from a previous local deployment before narrowing them.
-    await client.query(`REVOKE ALL ON "Session" FROM ${role}`);
-    await client.query(`GRANT SELECT, INSERT (id, "userId", "tokenHash", transport, "csrfTokenHash", "createdAt", "expiresAt"), UPDATE ("revokedAt") ON "Session" TO ${role}`);
-    // No table-wide User write, DDL, migration table, role/disabledAt or DB grants.
-  } finally { await client.end(); }
 }
 
 export async function fixtureDirectory() {
