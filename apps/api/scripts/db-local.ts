@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { createDatabaseClient } from '../src/database/client.js';
 import { seedCatalog } from '../src/database/seed.js';
-import { createIsolatedDatabase, grantRuntime, LocalPostgres, runTool } from '../test/helpers/postgres.js';
+import { createIsolatedDatabase, LocalPostgres, runTool } from '../test/helpers/postgres.js';
+import { grantRuntime } from './lib/runtime-role.js';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
 const local = path.join(apiRoot, '.local');

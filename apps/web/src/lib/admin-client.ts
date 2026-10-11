@@ -1,5 +1,6 @@
 import { isAdminPlacesResponse, type AdminPlacesResponse } from '@goease/contracts';
 import { webAbortable } from './auth-client';
+import { resolveApiBase } from './api-base';
 
 export type AdminFailureCode = 'configuration' | 'network' | 'timeout' | 'cancelled' | 'expired' | 'forbidden' | 'unavailable' | 'contract';
 const messages: Record<AdminFailureCode, string> = {
@@ -43,9 +44,12 @@ async function readJson(response: Response, signal: AbortSignal, assertDeadline:
   }
   try { return JSON.parse(text) as unknown; } catch { throw new AdminFailure('contract'); }
 }
-export function createAdminClient(apiBase: string, fetcher: typeof fetch = fetch, timeoutMs = 8000) {
+export function createAdminClient(apiBase: string, fetcher: typeof fetch = fetch, timeoutMs = 8000, pageOrigin?: string) {
   let configured = false;
-  try { const url = new URL(apiBase); configured = ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash; } catch { /* Fixed error below. */ }
+  try {
+    if (pageOrigin !== undefined) apiBase = resolveApiBase(apiBase, pageOrigin);
+    const url = new URL(apiBase); configured = ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash;
+  } catch { /* Fixed error below. */ }
   if (!Number.isInteger(timeoutMs) || timeoutMs < 10 || timeoutMs > 30_000) throw new AdminFailure('configuration');
   return {
     async catalog(signal: AbortSignal): Promise<AdminPlacesResponse> {

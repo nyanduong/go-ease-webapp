@@ -5,7 +5,7 @@ import { isSampleRouteRequest, type SampleMapCatalog, type SampleRouteResult } f
 import type { Environment } from '../../config.js';
 import { ApiFault } from '../../common/api-fault.js';
 import { createDatabaseClient } from '../../database/client.js';
-import { samplePlaces } from '../../database/seed.js';
+import { samplePlaces } from '../../database/sample-catalog.js';
 import { validateApprovedSampleRows } from '../ai/catalog.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { SessionGuard } from '../auth/auth.guard.js';

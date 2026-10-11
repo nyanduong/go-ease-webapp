@@ -1,6 +1,6 @@
 import type { AiCandidatePlace } from '@goease/contracts';
 import { createDatabaseClient } from '../../database/client.js';
-import { samplePlaces } from '../../database/seed.js';
+import { samplePlaces } from '../../database/sample-catalog.js';
 import { AiError } from './errors.js';
 import { prepareAiRequest, requestFromCatalog } from './schedule.js';
 
