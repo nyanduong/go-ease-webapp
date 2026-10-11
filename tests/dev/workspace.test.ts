@@ -7,6 +7,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
+import { createConnection, type Socket } from 'node:net';
 import { chromium, expect, type Browser, type Locator, type Page } from '@playwright/test';
 
 const run = promisify(execFile);
@@ -114,12 +115,21 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
   dev.stderr.on('data', data => { logs += String(data); });
   const stopped = new Promise<void>((resolve, reject) => { dev.once('close', () => resolve()); dev.once('error', reject); });
   let browser: Browser | undefined;
+  let preconnect: Socket | undefined;
   try {
     browser = await chromium.launch();
     await eventually(async () => await listening(apiUrl) && await listening(webUrl), 'Dev không khởi động.');
     const page = await browser.newPage();
     await page.goto(webUrl);
     await retryHealthUntil(page, page.getByRole('heading', { name: 'API đang hoạt động', exact: true }), 'Web không nhận API sau khi dev khởi động.');
+    // A real socket with no HTTP request reproduces browser speculative
+    // preconnect: httpServer.close alone can wait forever for this connection.
+    preconnect = createConnection({ host: '127.0.0.1', port: 3031 });
+    preconnect.resume();
+    await new Promise<void>((resolve, reject) => {
+      preconnect!.once('connect', resolve);
+      preconnect!.once('error', reject);
+    });
     const probe = original.toString().replace("'goease-api' as const", "'goease-api-dev-probe' as const")
       .replace("health.scope === 'api-only'", "health.scope === 'dev-probe'");
     assert.notEqual(probe, original.toString());
@@ -127,6 +137,7 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
     await eventually(async () => {
       try { return (await (await fetch(apiUrl)).json() as { service: string }).service === 'goease-api-dev-probe'; } catch { return false; }
     }, 'API không nhận runtime contracts mới.');
+    await eventually(async () => preconnect!.destroyed, 'Watch restart không đóng kết nối preconnect cũ.');
     // Reproduce a later watcher restart after the readiness sample, using the
     // real fixture process (no network mock). Hold startup until the browser has
     // demonstrably observed downtime before exercising explicit retry.
@@ -155,6 +166,7 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
   } catch (error) {
     throw new Error(`Dev regression thất bại.\n${logs}`, { cause: error });
   } finally {
+    preconnect?.destroy();
     await rm(restartGate, { force: true });
     await browser?.close();
     await writeFile(source, original);
