@@ -59,6 +59,7 @@ for (const [label, file, source, expected] of [
   ['asset nội bộ không tồn tại', 'apps/web/src/main.ts', "import './missing.json';", /Không phân giải/],
   ['workspace chưa có', 'apps/web/src/main.ts', "import '@goease/mobile';", /vượt ranh giới/],
   ['file ngoài workspace', 'apps/web/src/main.ts', "import '../../../shared.js';", /ngoài workspace/],
+  ['Vite glob vượt ranh giới', 'apps/web/src/main.ts', "const files = import.meta.glob('../../api/src/*.ts', { eager: true });", /chuỗi cố định/],
 ] as const) {
   test(`Chặn ${label}`, () => {
     fixture({
@@ -105,4 +106,28 @@ test('CLI thất bại với vi phạm ranh giới kể cả khi module chưa t�
     assert.equal(cli.status, 1);
     assert.match(cli.stderr, /vượt ranh giới/);
   });
+});
+
+test('Checkout nằm dưới thư mục tên tests vẫn quét source sản phẩm', () => {
+  fixture({ 'tests/repo/apps/web/src/main.ts': "import 'node:fs';" }, root => {
+    const result = checkArchitecture(join(root, 'tests/repo'));
+    assert.equal(result.files, 1);
+    assert.ok(result.violations.some(violation => /server\/Node\/DB/.test(violation.message)));
+  });
+});
+
+test('Alias trỏ vào package server/DB trong node_modules vẫn bị chặn', () => {
+  fixture({
+    'node_modules/pg/index.d.ts': 'export const database: string;',
+    'apps/web/tsconfig.json': JSON.stringify({ compilerOptions: { paths: { '@db': ['../../node_modules/pg/index.d.ts'] } } }),
+    'apps/web/src/main.ts': "import { database } from '@db';",
+  }, root => assert.ok(checkArchitecture(root).violations.some(violation => /server\/Node\/DB.*@db.*pg/.test(violation.message))));
+});
+
+test('JSON/asset không che import credential ngoài workspace', () => {
+  fixture({
+    'server-config.json': '{}',
+    'apps/web/tsconfig.json': JSON.stringify({ compilerOptions: { resolveJsonModule: true } }),
+    'apps/web/src/main.ts': "import config from '../../../server-config.json';",
+  }, root => assert.ok(checkArchitecture(root).violations.some(violation => /ngoài workspace/.test(violation.message))));
 });

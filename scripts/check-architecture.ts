@@ -11,7 +11,7 @@ const sourceExtension = /\.(?:[cm]?[jt]sx?)$/;
 const testPath = /(?:^|\/)(?:__tests__|__mocks__|test|tests)(?:\/|$)|\.(?:test|spec)\.[^.]+$/;
 const assetExtension = /\.(?:css|svg|png|jpe?g|webp|gif|ico|ttf|woff2?|json)$/;
 const serverPackages = ['@nestjs/', '@prisma/', 'prisma', 'pg', 'postgres', 'mysql2', 'mongodb', 'typeorm', 'google-auth-library', '@google/genai', '@google/generative-ai', '@googlemaps/google-maps-services-js'];
-const uiPackages = ['react', 'react-dom', 'react-native', 'expo', '@expo/', 'expo-'];
+const uiPackages = ['react', 'react-dom', 'react-native', 'expo', '@expo/', 'expo-', '@radix-ui/'];
 const slash = (path: string) => path.replaceAll('\\', '/');
 const matchesPackage = (name: string, rule: string) => rule.endsWith('/') || rule.endsWith('-')
   ? name.startsWith(rule) : name === rule || name.startsWith(`${rule}/`);
@@ -21,12 +21,12 @@ function areaOf(root: string, file: string): Area | undefined {
   return areas.find(area => path.startsWith(`${area}/`));
 }
 
-function sourceFiles(directory: string): string[] {
+function sourceFiles(directory: string, scanRoot = directory): string[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const path = join(directory, entry.name);
-    if (['node_modules', 'dist', '.expo', 'coverage'].includes(entry.name) || testPath.test(slash(path))) return [];
-    return entry.isDirectory() ? sourceFiles(path) : sourceExtension.test(entry.name) ? [path] : [];
+    if (['node_modules', 'dist', '.expo', 'coverage'].includes(entry.name) || testPath.test(slash(relative(scanRoot, path)))) return [];
+    return entry.isDirectory() ? sourceFiles(path, scanRoot) : sourceExtension.test(entry.name) ? [path] : [];
   });
 }
 
@@ -42,6 +42,11 @@ function imports(source: ts.SourceFile): { node: ts.Node; specifier?: string }[]
       add(node, node.moduleReference.expression);
     } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
       add(node, node.argument.literal);
+    } else if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && ts.isMetaProperty(node.expression.expression) && node.expression.expression.keywordToken === ts.SyntaxKind.ImportKeyword
+      && node.expression.name.text.startsWith('glob')) {
+      // Vite expands glob patterns outside TypeScript's module resolver.
+      add(node, undefined);
     } else if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword
       || ts.isIdentifier(node.expression) && node.expression.text === 'require')) {
       add(node, node.arguments[0]);
@@ -50,6 +55,15 @@ function imports(source: ts.SourceFile): { node: ts.Node; specifier?: string }[]
   };
   visit(source);
   return result;
+}
+
+function packageInPath(file: string): string | undefined {
+  const path = slash(file);
+  const marker = '/node_modules/';
+  const index = path.lastIndexOf(marker);
+  if (index < 0) return undefined;
+  const parts = path.slice(index + marker.length).split('/');
+  return parts[0]?.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
 }
 
 export function checkArchitecture(repository: string): { files: number; violations: Violation[] } {
@@ -97,12 +111,6 @@ export function checkArchitecture(repository: string): { files: number; violatio
       const report = (message: string) => violations.push({ file: slash(relative(root, file)), line: source.getLineAndCharacterOfPosition(dependency.node.getStart(source)).line + 1, message });
       const name = dependency.specifier;
       if (name === undefined) { report('Import/require động phải dùng chuỗi cố định để kiểm tra ranh giới.'); continue; }
-      if (area !== 'apps/api' && (name.startsWith('node:') || isBuiltin(name) || serverPackages.some(rule => matchesPackage(name, rule)))) {
-        report(`Không được import module server/Node/DB: ${name}`);
-      }
-      if (area === 'packages/contracts' && uiPackages.some(rule => matchesPackage(name, rule))) report(`Contracts phải độc lập UI/framework: ${name}`);
-      if (area === 'apps/web' && ['react-native', 'expo', '@expo/', 'expo-'].some(rule => matchesPackage(name, rule))) report(`Web không import UI native: ${name}`);
-      if (area === 'apps/mobile' && ['react-dom', '@radix-ui/'].some(rule => matchesPackage(name, rule))) report(`Mobile không import UI DOM: ${name}`);
       let targetArea: Area | undefined;
       const workspace = [...workspaceNames].find(([packageName]) => name === packageName || name.startsWith(`${packageName}/`));
       if (workspace) targetArea = workspace[1];
@@ -123,6 +131,16 @@ export function checkArchitecture(repository: string): { files: number; violatio
       }
       // Workspace exports normally resolve to dist/.d.ts; inspect source instead.
       if (workspace && name === workspace[0]) target = join(root, workspace[1], 'src/index.ts');
+      const packageNames = new Set([name, resolved?.packageId?.name, target && packageInPath(target), ...aliasCandidates.map(packageInPath)]);
+      for (const packageName of packageNames) {
+        if (!packageName) continue;
+        if (area !== 'apps/api' && (packageName.startsWith('node:') || isBuiltin(packageName) || serverPackages.some(rule => matchesPackage(packageName, rule)))) {
+          report(`Không được import module server/Node/DB: ${name} (${packageName})`);
+        }
+        if (area === 'packages/contracts' && uiPackages.some(rule => matchesPackage(packageName, rule))) report(`Contracts phải độc lập UI/framework: ${name} (${packageName})`);
+        if (area === 'apps/web' && ['react-native', 'expo', '@expo/', 'expo-'].some(rule => matchesPackage(packageName, rule))) report(`Web không import UI native: ${name} (${packageName})`);
+        if (area === 'apps/mobile' && ['react-dom', '@radix-ui/'].some(rule => matchesPackage(packageName, rule))) report(`Mobile không import UI DOM: ${name} (${packageName})`);
+      }
       if (target && !slash(target).includes('/node_modules/')) targetArea = areaOf(root, target);
       targetArea ??= aliasCandidates.map(path => areaOf(root, path)).find(candidate => candidate !== undefined);
       if (targetArea && targetArea !== area && !(area !== 'packages/contracts' && targetArea === 'packages/contracts')) {
@@ -132,10 +150,11 @@ export function checkArchitecture(repository: string): { files: number; violatio
       if ((!target || !existsSync(target)) && internal) {
         report(`Không phân giải được import nội bộ: ${name}`);
       }
-      if (!target || slash(target).includes('/node_modules/') || assetExtension.test(name)) continue;
+      if (!target || slash(target).includes('/node_modules/')) continue;
       target = resolve(target);
       if (!areaOf(root, target)) { report(`Import file ngoài workspace được phép: ${name}`); continue; }
       if (testPath.test(slash(relative(root, target)))) { report(`Code sản phẩm không import test/fixture: ${name}`); continue; }
+      if (assetExtension.test(name)) continue;
       if (sourceExtension.test(target) && existsSync(target) && statSync(target).isFile()) {
         edges.push(target);
         pending.push(target);

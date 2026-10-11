@@ -65,9 +65,9 @@ Hướng import code: mỗi app chỉ dùng module của chính nó và `@goease
 
 `pnpm test:architecture` chạy [fixture hành vi](../tests/architecture/boundaries.test.ts) rồi [checker TypeScript AST](../scripts/check-architecture.ts) trên source thật. `pnpm test` gọi bước này trước các regression cũ; **Quality Gate** vẫn giữ typecheck/lint/test/build tuần tự. Checker:
 
-- Đọc import, re-export, import type, `require()` và `import()` chuỗi cố định; chặn import động không thể phân tích tĩnh.
+- Đọc import, re-export, import type, `require()` và `import()` chuỗi cố định; chặn import động không thể phân tích tĩnh, gồm `import.meta.glob*` của Vite.
 - Phân giải relative `.js` → source TypeScript, workspace package và alias `paths` trong tsconfig; import nội bộ chưa phân giải là lỗi. Chặn import giữa app, ra file ngoài workspace, production import test/fixture; contracts chỉ phụ thuộc code contracts.
-- Chặn Node builtin cả `node:fs` và `fs/promises`, các package server/DB đã liệt kê ở client/contracts, framework UI trong contracts, UI DOM ở mobile và UI native ở web. Test/config của công cụ được tách khỏi code sản phẩm.
+- Chặn Node builtin cả `node:fs` và `fs/promises`, các package server/DB đã liệt kê ở client/contracts, framework UI trong contracts, UI DOM ở mobile và UI native ở web; kiểm tra cả tên import và package đích alias đã phân giải. Test/config của công cụ được tách khỏi code sản phẩm, không phụ thuộc tên thư mục cha của checkout.
 - Theo graph local để phát hiện vòng import, kể cả re-export/import type/import động tĩnh; trả exit 1 với file/dòng khi có vi phạm. Fixture âm kiểm tra cả lỗi và exit code CLI.
 
 Source roots hiện là `apps/api/src`, `apps/web/src`, `packages/contracts/src`; tự nhận `apps/mobile/src`, `apps/mobile/app`, `App.tsx`/`App.js`/`index.ts`/`index.js` khi có. File local được import tiếp tục được quét; không quét `node_modules`/dist, test/spec, thư mục test hoặc cấu hình build ở root app. Đây là guard ban đầu, không phân tích code bên trong dependency npm hay chứng minh bundle không có secret: dependency/SDK mới cần review, mở rộng danh sách/fixture nếu cần, scanner và kiểm chứng runtime vẫn bắt buộc.
