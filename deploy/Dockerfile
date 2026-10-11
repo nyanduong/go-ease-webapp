@@ -1,12 +1,13 @@
 # Registry index digests verified 2026-10-11; do not silently advance tags.
 FROM node:24.15.0-bookworm-slim@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d AS build
 WORKDIR /source
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.34.6 --activate
 COPY . .
-RUN pnpm install --frozen-lockfile --filter @goease/api... --filter @goease/web...
+RUN pnpm install --frozen-lockfile --filter goease --filter @goease/api... --filter @goease/web...
 RUN pnpm --filter @goease/contracts build && pnpm --filter @goease/api build
-RUN pnpm --filter @goease/api deploy --legacy --prod --no-optional /artifacts/api \
- && pnpm --filter @goease/api deploy --legacy --no-optional /artifacts/operator
+RUN pnpm exec node deploy/locked-deploy.mjs production /artifacts/api \
+ && pnpm exec node deploy/locked-deploy.mjs operator /artifacts/operator
 # Operator tools never enter the runtime allowlist or image.
 RUN mkdir -p /artifacts/operator/dist/scripts/lib \
  && cp apps/api/dist/scripts/staging-operator.js /artifacts/operator/dist/scripts/ \
@@ -14,6 +15,7 @@ RUN mkdir -p /artifacts/operator/dist/scripts/lib \
  && cp apps/api/dist/src/database/seed.js /artifacts/operator/dist/src/database/ \
  && cp apps/api/prisma7.config.ts /artifacts/operator/ \
  && cp -R apps/api/prisma /artifacts/operator/
+RUN node deploy/prepare-operator.mjs /artifacts/operator
 RUN node deploy/prepare-artifact.mjs /artifacts/api && node deploy/verify-artifact.mjs /artifacts/api \
  && node --input-type=module -e "import {isolateProjectLinks} from './deploy/prepare-artifact.mjs'; await isolateProjectLinks('/artifacts/operator')"
 
@@ -31,6 +33,7 @@ EXPOSE 3000
 CMD ["node", "--env-file=/run/secrets/api_env", "dist/src/main.js"]
 
 FROM node:24.15.0-bookworm-slim@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d AS operator
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /artifacts/operator/ ./

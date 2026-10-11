@@ -9,6 +9,37 @@ import { prepareArtifact, relocateArtifact } from './prepare-artifact.mjs';
 import { verifyArtifact } from './verify-artifact.mjs';
 import { immutableImage, privateFile, stagingPreflight } from './preflight.mjs';
 import { redactedPnpmFailure } from './pnpm-error.mjs';
+import { assertArtifactDependencies } from './dependency-graph.mjs';
+
+test('deployed versions must belong to the reachable frozen API graph, including scoped workspace contracts', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'goease-dependency-source-'));
+  const api = path.join(root, 'apps/api'), apiModules = path.join(api, 'node_modules');
+  const writePackage = async (directory, value) => { await mkdir(directory, { recursive: true }); await writeFile(path.join(directory, 'package.json'), JSON.stringify(value)); };
+  const apiManifest = { name: '@goease/api', version: '0.1.0', dependencies: { leaf: '1.0.0', '@goease/contracts': 'workspace:*' }, devDependencies: { tooling: '2.0.0' } };
+  await writePackage(root, { name: 'goease', version: '0.1.0' });
+  await writePackage(api, apiManifest); await mkdir(path.join(apiModules, '@goease'), { recursive: true });
+  for (const [name, version] of [['leaf', '1.0.0'], ['tooling', '2.0.0'], ['unrelated', '9.0.0']]) {
+    const directory = path.join(root, `node_modules/.pnpm/${name}@${version}/node_modules/${name}`);
+    await writePackage(directory, { name, version });
+    if (name !== 'unrelated') await symlink(directory, path.join(apiModules, name), process.platform === 'win32' ? 'junction' : 'dir');
+  }
+  const contracts = path.join(root, 'packages/contracts'); await writePackage(contracts, { name: '@goease/contracts', version: '0.1.0' });
+  await symlink(contracts, path.join(apiModules, '@goease/contracts'), process.platform === 'win32' ? 'junction' : 'dir');
+  const artifact = await mkdtemp(path.join(os.tmpdir(), 'goease-dependency-artifact-'));
+  await writePackage(artifact, apiManifest);
+  await writePackage(path.join(artifact, 'node_modules/leaf'), { name: 'leaf', version: '1.0.0' });
+  await writePackage(path.join(artifact, 'node_modules/@goease/contracts'), { name: '@goease/contracts', version: '0.1.0' });
+  assert.equal(await assertArtifactDependencies(root, artifact, 'production'), 3);
+  await writePackage(path.join(artifact, 'node_modules/leaf'), { name: 'leaf', version: '1.0.1' });
+  await assert.rejects(assertArtifactDependencies(root, artifact, 'production'), /outside the frozen API graph/);
+  await writePackage(path.join(artifact, 'node_modules/leaf'), { name: 'leaf', version: '1.0.0' });
+  await writePackage(path.join(artifact, 'node_modules/unrelated'), { name: 'unrelated', version: '9.0.0' });
+  await assert.rejects(assertArtifactDependencies(root, artifact, 'operator'), /outside the frozen API graph/);
+  const operator = await mkdtemp(path.join(os.tmpdir(), 'goease-dependency-operator-')); await writePackage(operator, apiManifest);
+  await writePackage(path.join(operator, 'node_modules/tooling'), { name: 'tooling', version: '2.0.0' });
+  assert.equal(await assertArtifactDependencies(root, operator, 'operator'), 2);
+  await assert.rejects(assertArtifactDependencies(root, operator, 'production'), /outside the frozen API graph/);
+});
 
 test('pnpm failures disclose only bounded identifiers, never child output or cause', () => {
   const failure = redactedPnpmFailure('production', {

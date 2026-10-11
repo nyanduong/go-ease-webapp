@@ -15,6 +15,10 @@
 
 API production dùng `pnpm deploy --legacy --prod --no-optional`. Bước prepare bỏ TypeScript, declaration, source map và env khỏi artifact; verifier kiểm tra link không thoát artifact, không có Prisma CLI/Nest testing/seed/probe/operator/test/schema, và import Prisma PostgreSQL WASM/contracts. Integration test chuyển artifact sang thư mục mới, query PostgreSQL thực và boot API từ cwd mới. Operator deploy riêng với dev dependency Prisma CLI, chỉ copy các tool cần thiết.
 
+`locked-deploy.mjs` dùng metadata registry bình thường: pnpm legacy cần metadata chưa có trên runner chỉ vừa frozen install, nên không dùng `--offline`. Root install vẫn `--frozen-lockfile`; wrapper xác nhận bytes lockfile không đổi sau deploy và kiểm tra từng package artifact có name/version trong cây dependency đã cài thực từ API. Operator được thêm cây root dev tools mà legacy full-tool deploy sử dụng; version orphan/unrelated web/mobile không được chấp nhận chỉ vì có trong store. Đây là kiểm tra name/version và membership cây cài đặt, không tuyên bố so sánh đầy đủ snapshot/integrity của mọi edge.
+
+Operator chuẩn bị Prisma platform engine bằng CLI `--version` trong build, kiểm tra engine nằm trong artifact và chạy được; không cần DB credential. Build/operator có OpenSSL và CA certificates. Startup giữ non-root/read-only và không tự tải engine vào filesystem production. CI container thật phải xác nhận việc migrate chạy với các hạn chế đó.
+
 pnpm legacy có một self alias `node_modules/.pnpm/node_modules/@goease/api` trỏ về workspace. Prepare chỉ bỏ đúng alias này khi tên package, physical parent nằm trong artifact và target đúng source `apps/api`; link khác thoát ngoài bị từ chối. API không self-import bằng tên package. Khi chuyển artifact trên Windows, helper kiểm tra toàn bộ link rồi rebase junction nội bộ sang thư mục sibling mới; không sửa target ngoài. Catalog mẫu dùng module dữ liệu thuần `sample-catalog.js`, vì production không chứa operator `seed.js`.
 
 Images official được pin **OCI index digest kiểm tra registry ngày 11/10/2026**:
@@ -87,7 +91,7 @@ Nghiệm thu thật cần: browser HTTPS `/admin/catalog`, `/admin/requests`, `/
 docker compose -f deploy/compose.staging.yaml --profile operator run --rm pg-tools backup release_before_migration
 ```
 
-Tên chỉ gồm chữ/số/underscore/hyphen. Tool reserve label bằng mkdir atomic, dump vào file riêng, publish hard link no-clobber, in SHA256; không ghi đè/xóa backup đã có. Filesystem backup phải hỗ trợ hard link, còn dung lượng; lỗi thì dừng, không fallback overwrite. Sau SIGKILL có thể còn lock riêng: owner kiểm tra không còn job dùng lock trước khi xử lý thủ công, không tự global cleanup.
+Tên chỉ gồm chữ/số/underscore/hyphen. Tool reserve label bằng mkdir atomic, dump vào file riêng, publish hard link no-clobber, in SHA256; không ghi đè/xóa backup đã có. Archive giữ UID postgres/mode0600; CI kiểm tra checksum bằng container cùng UID với backup mount read-only, không nới quyền file để host runner đọc. Filesystem backup phải hỗ trợ hard link, còn dung lượng; lỗi thì dừng, không fallback overwrite. Sau SIGKILL có thể còn lock riêng: owner kiểm tra không còn job dùng lock trước khi xử lý thủ công, không tự global cleanup.
 
 Để restore: owner provision **DB mới rỗng**, migration role sở hữu; thay private PostgreSQL service file để chỉ đúng target mới. Không đổi source/production khi chưa xác nhận backup/digest/target. Chạy `pg-tools restore-fresh <nhãn>`. Tool từ chối user schema/table/type/routine/extension/large object/default ACL/foreign server/event trigger hiện có; restore single transaction/no-owner/no-privileges/exit-on-error, không `--clean`/drop/reset. Sau đó đổi operator URLs đến DB mới, apply grants + verify, kiểm tra row counts và auth/Trip integrity trước owner chuyển traffic. Không restore trực tiếp vào DB hiện có, kể cả DB có ít dữ liệu.
 

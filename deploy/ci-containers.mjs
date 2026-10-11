@@ -2,8 +2,8 @@
 // CI-only actual container test. Never starts a Docker daemon or contacts providers.
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { randomBytes, createHash } from 'node:crypto';
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -75,7 +75,13 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   const results = await Promise.allSettled([pgTools(sourceService, 'backup', 'collision'), pgTools(sourceService, 'backup', 'collision')]);
   assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
   assert.equal(results.filter(result => result.status === 'rejected').length, 1);
-  const hash = async () => createHash('sha256').update(await readFile(path.join(backups, 'collision.dump'))).digest('hex');
+  // The archive stays UID postgres/mode0600. A non-root CI runner must not
+  // weaken that permission merely to read the checksum from the host.
+  const hash = async () => {
+    const output = await docker(['run', '--rm', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--entrypoint', 'sha256sum', '--mount', `type=bind,src=${backups},dst=/backups,readonly`, `${prefix}-pg-tools`, '/backups/collision.dump']);
+    const match = /^([a-f0-9]{64}) {2}\/backups\/collision\.dump$/.exec(output);
+    assert.ok(match, 'Private archive checksum must be returned by its owning UID'); return match[1];
+  };
   const before = await hash(); await assert.rejects(pgTools(sourceService, 'backup', 'collision')); assert.equal(await hash(), before);
   await docker(['exec', '-i', pg, 'psql', '-U', 'postgres', '-d', 'goease_ci', '-v', 'ON_ERROR_STOP=1'], 'CREATE DATABASE goease_restore OWNER goease_ci_migrator; CREATE DATABASE goease_dirty OWNER goease_ci_migrator;');
   await docker(['exec', '-i', pg, 'psql', '-U', 'postgres', '-d', 'goease_dirty', '-v', 'ON_ERROR_STOP=1'], "CREATE TYPE public.test_only_enum AS ENUM ('TEST_ONLY');");
