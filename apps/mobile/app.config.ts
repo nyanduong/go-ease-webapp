@@ -19,6 +19,7 @@ export function buildConfig(environment: Record<string, string | undefined>): Ex
     plugins: ['expo-dev-client', ['./plugins/with-development-network.cjs', { allowHttp: development }],
       ['expo-splash-screen', { backgroundColor: '#f4f7f2', image: './assets/splash.png' }],
       ['expo-secure-store', { configureAndroidBackup: true }],
+      './plugins/with-windows-native-staging.cjs',
       ...(iosClient ? [['react-native-nitro-google-signin', { iosUrlScheme: `com.googleusercontent.apps.${iosClient.replace('.apps.googleusercontent.com', '')}` }] as [string, { iosUrlScheme: string }]] : [])],
     extra: { appVariant: variant },
   };
