@@ -32,8 +32,7 @@ function uuid(value: unknown): value is string {
 }
 function text(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= max
-    && !/[\u0000-\u001f\u007f]/.test(value)
-    && !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(value);
+    && !/[\p{Cc}\p{Cs}]/u.test(value);
 }
 export function isMapCoordinate(value: unknown): value is MapCoordinate {
   return fields(value, ['latitude', 'longitude']) && typeof value.latitude === 'number'
