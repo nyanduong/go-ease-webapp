@@ -98,6 +98,31 @@ test('Phát hiện vòng local qua re-export + dynamic import + relative .js và
   });
 });
 
+test('Prisma generated nội bộ có vòng kiểu; vẫn chặn client và import vượt ranh giới từ output', () => {
+  const generated = {
+    'apps/api/src/database/client.ts': "export * from '../generated/prisma/client.js';",
+    'apps/api/src/generated/prisma/client.ts': "export * from './model.js';",
+    'apps/api/src/generated/prisma/model.ts': "export * from './client.js';",
+  };
+  fixture(generated, root => assert.deepEqual(checkArchitecture(root).violations, []));
+  for (const source of ['apps/web/src/main.ts', 'apps/mobile/src/main.ts']) {
+    fixture({ ...generated, [source]: "import '../../api/src/generated/prisma/client.js';" }, root => {
+      assert.ok(checkArchitecture(root).violations.some(item => /vượt ranh giới/.test(item.message)));
+    });
+  }
+  fixture({ ...generated, 'apps/api/src/generated/prisma/model.ts': "import '../../../../web/src/main.js';", 'apps/web/src/main.ts': 'export const value=1;' }, root => {
+    assert.ok(checkArchitecture(root).violations.some(item => /vượt ranh giới/.test(item.message)));
+  });
+  fixture({ ...generated, 'apps/api/src/generated/prisma/model.ts': "import '../../database/client.js';" }, root => {
+    assert.ok(checkArchitecture(root).violations.some(item => /Vòng import/.test(item.message)));
+  });
+  fixture({
+    'apps/api/src/generated/prisma/client.ts': "import './model.js'; import '../../zzz/branch.js';",
+    'apps/api/src/generated/prisma/model.ts': "import './client.js';",
+    'apps/api/src/zzz/branch.ts': "import '../generated/prisma/model.js';",
+  }, root => assert.ok(checkArchitecture(root).violations.some(item => /Vòng import/.test(item.message))));
+});
+
 test('CLI thất bại với vi phạm ranh giới kể cả khi module chưa tồn tại', () => {
   fixture({ 'apps/web/src/main.ts': "import '@goease/api';" }, root => {
     // A workspace name remains protected before the app has source files.

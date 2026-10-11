@@ -68,6 +68,7 @@ function packageInPath(file: string): string | undefined {
 
 export function checkArchitecture(repository: string): { files: number; violations: Violation[] } {
   const root = resolve(repository);
+  const generatedPrisma = (file: string) => slash(relative(root, file)).startsWith('apps/api/src/generated/prisma/');
   const violations: Violation[] = [];
   const graph = new Map<string, string[]>();
   const options = new Map<Area, ts.CompilerOptions>();
@@ -161,21 +162,48 @@ export function checkArchitecture(repository: string): { files: number; violatio
       }
     }
   }
-  const completed = new Set<string>();
+  const indices = new Map<string, number>();
+  const lows = new Map<string, number>();
   const active: string[] = [];
+  const onStack = new Set<string>();
+  let sequence = 0;
   const visit = (file: string) => {
-    if (completed.has(file)) return;
-    const cycleStart = active.indexOf(file);
-    if (cycleStart >= 0) {
-      violations.push({ file: slash(relative(root, file)), line: 1, message: `Vòng import: ${[...active.slice(cycleStart), file].map(path => slash(relative(root, path))).join(' → ')}` });
-      return;
-    }
+    indices.set(file, sequence); lows.set(file, sequence++);
     active.push(file);
-    for (const target of graph.get(file) ?? []) visit(target);
-    active.pop();
-    completed.add(file);
+    onStack.add(file);
+    for (const target of graph.get(file) ?? []) {
+      if (!indices.has(target)) {
+        visit(target);
+        lows.set(file, Math.min(lows.get(file)!, lows.get(target)!));
+      } else if (onStack.has(target)) lows.set(file, Math.min(lows.get(file)!, indices.get(target)!));
+    }
+    if (lows.get(file) !== indices.get(file)) return;
+    const component = new Set<string>();
+    let member: string;
+    do { member = active.pop()!; onStack.delete(member); component.add(member); } while (member !== file);
+    if (component.size === 1 && !graph.get(file)?.includes(file)) return;
+    // Pure generator-owned cycles are intentional. An authored source anywhere
+    // in the strongly connected component remains a blocking cycle, even when
+    // a generated subcycle was visited first.
+    const start = [...component].filter(item => !generatedPrisma(item)).sort()[0];
+    if (!start) return;
+    const seen = new Set<string>();
+    const cyclePath = (current: string, trail: string[]): string[] | undefined => {
+      seen.add(current);
+      for (const target of graph.get(current) ?? []) {
+        if (!component.has(target)) continue;
+        if (target === start) return [...trail, target];
+        if (!seen.has(target)) {
+          const found = cyclePath(target, [...trail, target]);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const cycle = cyclePath(start, [start])!;
+    violations.push({ file: slash(relative(root, start)), line: 1, message: `Vòng import: ${cycle.map(path => slash(relative(root, path))).join(' → ')}` });
   };
-  for (const file of graph.keys()) visit(file);
+  for (const file of graph.keys()) if (!indices.has(file)) visit(file);
   return { files: visited.size, violations };
 }
 
