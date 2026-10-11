@@ -12,3 +12,13 @@ playwright-report/
 .idea/
 .vscode/
 .codex/
+.expo/
+apps/mobile/android/
+apps/mobile/ios/
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore
+*.mobileprovision
+*.p12

@@ -4,9 +4,19 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/test-results/**', '**/playwright-report/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/test-results/**', '**/playwright-report/**', '**/.expo/**', 'apps/mobile/android/**', 'apps/mobile/ios/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['apps/mobile/plugins/*.cjs'],
+    languageOptions: { globals: { require: 'readonly', module: 'readonly' } },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
+    files: ['apps/mobile/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: { ...reactHooks.configs.recommended.rules },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     rules: { '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }] },
