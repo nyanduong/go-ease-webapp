@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, readFile, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import http from 'node:http';
 import { publicClientId, stagingHost } from './validate.mjs';
 import { prepareArtifact, relocateArtifact } from './prepare-artifact.mjs';
 import { verifyArtifact } from './verify-artifact.mjs';
@@ -11,6 +12,24 @@ import { immutableImage, privateFile, stagingPreflight } from './preflight.mjs';
 import { redactedPnpmFailure } from './pnpm-error.mjs';
 import { assertArtifactDependencies } from './dependency-graph.mjs';
 import { redactedContainerFailure, redactedStartupStatus } from './container-error.mjs';
+import { localHttpProbe } from './local-http.mjs';
+
+test('loopback proxy probe sends the required Host and preserves rejection/status/cache headers', async () => {
+  const server = http.createServer((request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    response.writeHead(request.headers.host === 'ci.goease.vn' ? 200 : 421); response.end();
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = `http://127.0.0.1:${server.address().port}/api/health`;
+    const accepted = await localHttpProbe(address, 'ci.goease.vn');
+    assert.equal(accepted.status, 200); assert.equal(accepted.ok, true);
+    assert.equal(accepted.headers.get('Cache-Control'), 'no-store');
+    const rejected = await localHttpProbe(address, 'unknown.invalid');
+    assert.equal(rejected.status, 421); assert.equal(rejected.ok, false);
+    assert.throws(() => localHttpProbe('http://external.invalid/api/health', 'ci.goease.vn'), /loopback/);
+  } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+});
 
 test('container diagnostics retain bounded build phase and identifiers without exposing child output', () => {
   const failure = redactedContainerFailure('build', {

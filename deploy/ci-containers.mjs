@@ -1,4 +1,4 @@
-/* global console, fetch, AbortSignal, setTimeout, clearTimeout */
+/* global console, setTimeout, clearTimeout */
 // CI-only actual container test. Never starts a Docker daemon or contacts providers.
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -9,6 +9,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 import { redactedContainerFailure, redactedStartupStatus } from './container-error.mjs';
+import { localHttpProbe } from './local-http.mjs';
 const execute = promisify(execFile), prefix = `goease-ci-${randomBytes(6).toString('hex')}`;
 const containers = [], images = [], network = `${prefix}-net`;
 async function docker(args, input) {
@@ -117,18 +118,18 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   const address = await docker(['port', proxy, '8080/tcp']);
   assert.notEqual(await docker(['exec', proxy, 'id', '-u']), '0');
   assert.match(address, /^127\.0\.0\.1:\d+$/);
-  const base = `http://${address}`, headers = { Host: 'ci.goease.vn' };
-  await waitForContainer(proxy, 'proxy', async () => { try { return (await fetch(base + '/api/health', { headers, signal: AbortSignal.timeout(1000) })).ok; } catch { return false; } });
+  const base = `http://${address}`, probe = route => localHttpProbe(base + route, 'ci.goease.vn');
+  await waitForContainer(proxy, 'proxy', async () => { try { return (await probe('/api/health')).ok; } catch { return false; } });
   for (const route of ['/admin/catalog', '/admin/requests', '/technical/health']) {
-    const response = await fetch(base + route, { headers }); assert.equal(response.status, 200);
+    const response = await probe(route); assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /text\/html/); assert.match(response.headers.get('cache-control'), /no-store/);
   }
-  assert.equal((await fetch(base + '/assets/not-present.js', { headers })).status, 404);
+  assert.equal((await probe('/assets/not-present.js')).status, 404);
   for (const [route, status] of [['/api/admin/places', 401], ['/api/not-present', 404]]) {
-    const response = await fetch(base + route, { headers }); assert.equal(response.status, status);
+    const response = await probe(route); assert.equal(response.status, status);
     assert.match(response.headers.get('content-type'), /application\/json/); assert.match(response.headers.get('cache-control'), /no-store/);
   }
-  assert.equal((await fetch(base + '/api/health', { headers: { Host: 'unknown.invalid' } })).status, 421);
+  assert.equal((await localHttpProbe(base + '/api/health', 'unknown.invalid')).status, 421);
   assert.equal(await docker(['port', api]), '', 'API must have no host-published port');
   // Keep proxy running. Start a replacement while old IP is still allocated,
   // then remove the old API; DNS must recover without restarting nginx.
@@ -139,7 +140,7 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   assert.notEqual(await ip(api), await ip(replacement));
   await waitFor(async () => { try { await docker(['exec', replacement, 'node', '-e', "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]); return true; } catch { return false; } });
   await docker(['rm', '-f', api]);
-  await waitFor(async () => { try { return (await fetch(base + '/api/health', { headers, signal: AbortSignal.timeout(1000) })).ok; } catch { return false; } });
+  await waitFor(async () => { try { return (await probe('/api/health')).ok; } catch { return false; } });
   const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP ci.goease.vn 127.0.0.1'] });
   console.info('Checking static browser relative /api and refresh on local HTTP fixture.');
   try {
