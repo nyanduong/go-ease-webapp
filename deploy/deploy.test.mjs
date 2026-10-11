@@ -8,6 +8,19 @@ import { publicClientId, stagingHost } from './validate.mjs';
 import { prepareArtifact, relocateArtifact } from './prepare-artifact.mjs';
 import { verifyArtifact } from './verify-artifact.mjs';
 import { immutableImage, privateFile, stagingPreflight } from './preflight.mjs';
+import { redactedPnpmFailure } from './pnpm-error.mjs';
+
+test('pnpm failures disclose only bounded identifiers, never child output or cause', () => {
+  const failure = redactedPnpmFailure('production', {
+    stderr: 'ERR_PNPM_NO_OFFLINE_TARBALL failed https://TEST_ONLY_SECRET@private.invalid/package',
+    stdout: 'DATABASE_URL=TEST_ONLY_PRIVATE_VALUE', code: 1,
+  });
+  assert.match(failure.message, /\(ERR_PNPM_NO_OFFLINE_TARBALL\)/);
+  assert.doesNotMatch(failure.message + failure.stack, /TEST_ONLY|https|DATABASE_URL/);
+  assert.equal(failure.cause, undefined);
+  assert.match(redactedPnpmFailure('operator', { code: 'ETIMEDOUT' }).message, /\(ETIMEDOUT\)/);
+  assert.match(redactedPnpmFailure('unsafe PRIVATE_STAGE', { stderr: 'secret only' }).message, /^Isolated operator deploy failed \(COMMAND_FAILED\)/);
+});
 
 test('public configuration cannot inject proxy syntax or invent OAuth config', () => {
   assert.equal(stagingHost('admin.goease.vn'), 'admin.goease.vn');

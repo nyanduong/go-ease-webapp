@@ -10,6 +10,7 @@ import { promisify } from 'node:util';
 import { test } from 'node:test';
 import { prepareArtifact, relocateArtifact, isolateProjectLinks } from './prepare-artifact.mjs';
 import { verifyArtifact } from './verify-artifact.mjs';
+import { redactedPnpmFailure } from './pnpm-error.mjs';
 
 const execute = promisify(execFile), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 test('pruned, moved production artifact uses PostgreSQL WASM and its own runtime dependencies (real private PG)', { timeout: 300_000 }, async () => {
@@ -20,12 +21,12 @@ test('pruned, moved production artifact uses PostgreSQL WASM and its own runtime
   assert.ok(pnpmCli && /\.(?:c?js)$/.test(pnpmCli), 'Run with pnpm test:deploy so the pinned pnpm CLI path is available');
   try {
     await execute(process.execPath, [pnpmCli, '--filter', '@goease/api', 'deploy', '--legacy', '--prod', '--no-optional', '--offline', initial], { cwd: root, timeout: 90_000, maxBuffer: 1024 * 1024, windowsHide: true });
-  } catch { throw new Error('Isolated production deploy failed; inspect package graph without printing environment'); }
+  } catch (error) { throw redactedPnpmFailure('production', error); }
   await prepareArtifact(initial); await relocateArtifact(initial, deployed); await verifyArtifact(deployed);
   // Separate operator bundle: contains explicit tools that runtime lacks.
   const operator = path.join(parent, 'operator');
   try { await execute(process.execPath, [pnpmCli, '--filter', '@goease/api', 'deploy', '--legacy', '--no-optional', '--offline', operator], { cwd: root, timeout: 90_000, maxBuffer: 1024 * 1024, windowsHide: true }); }
-  catch { throw new Error('Isolated operator deploy failed'); }
+  catch (error) { throw redactedPnpmFailure('operator', error); }
   await isolateProjectLinks(operator);
   await mkdir(path.join(operator, 'dist/scripts/lib'), { recursive: true });
   for (const file of ['dist/scripts/staging-operator.js', 'dist/scripts/lib/runtime-role.js', 'dist/src/database/seed.js', 'prisma7.config.ts']) {
