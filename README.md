@@ -19,6 +19,8 @@ pnpm dev
 
 Web: http://127.0.0.1:5173 — API: http://127.0.0.1:3000/api/health. `pnpm dev` build contracts thành công trước khi chạy ứng dụng, rồi giữ một TypeScript watcher cho contracts cùng API/web. Thay đổi runtime được API nạp lại và Vite cập nhật trên web; bấm **Kiểm tra lại** để gửi health request mới. Lỗi compile contracts hiện trong terminal, giữ dist hợp lệ trước đó và tự build lại khi sửa lỗi. Ctrl+C dừng các watcher và cả hai app. Lệnh chạy trực tiếp trong PowerShell/Linux.
 
+API dev thêm bootstrap flag `--dev-watch`: khi restart/dừng, Nest đóng các socket preconnect/keep-alive còn mở để watcher không treo. Request đang chạy có thể mất kết nối; UI phải giữ draft và cho retry. `pnpm start` không thêm flag, giữ cách drain response mặc định của Nest. Xem [Nest FAQ](https://docs.nestjs.com/faq/keep-alive-connections) và [receipt fix #23](docs/verification/ISSUE-23.md).
+
 Cấu hình local mặc định đủ để chạy, không cần tạo .env. Nếu muốn tùy chỉnh, copy riêng `apps/api/.env.example` và `apps/web/.env.example` thành `.env` ở cùng thư mục. Đổi cấu hình Vite cần khởi động lại dev/build.
 
 | Biến | Nơi | Mẫu / ý nghĩa |

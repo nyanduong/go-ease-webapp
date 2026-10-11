@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm build && concurrently --raw -k -n compiler,server \"tsc -p tsconfig.json --watch --preserveWatchOutput\" \"node --watch dist/src/main.js\"",
+    "dev": "pnpm build && concurrently --raw -k -n compiler,server \"tsc -p tsconfig.json --watch --preserveWatchOutput\" \"node --watch dist/src/main.js --dev-watch\"",
     "start": "node dist/src/main.js",
     "build": "pnpm db:generate && tsc -p tsconfig.json",
     "typecheck": "pnpm db:generate && tsc -p tsconfig.json --noEmit",
