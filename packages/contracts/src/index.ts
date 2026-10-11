@@ -1,3 +1,5 @@
+export * from './auth.js';
+
 export const API_SERVICE = 'goease-api' as const;
 
 /** Chỉ xác nhận tiến trình API trả lời, chưa kiểm tra dịch vụ ngoài. */
