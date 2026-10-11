@@ -11,7 +11,6 @@ import { configureApp } from '../src/app.js';
 import { ApiFault } from '../src/common/api-fault.js';
 import { createDatabaseClient } from '../src/database/client.js';
 import { samplePlaces, seedCatalog } from '../src/database/seed.js';
-import { AdminModule } from '../src/modules/admin/admin.module.js';
 import { GoogleIdentityVerifier, type VerifiedGoogleIdentity } from '../src/modules/auth/google-verifier.js';
 import { LOGIN_COOKIE, SESSION_COOKIE } from '../src/modules/auth/http.js';
 import { createIsolatedDatabase, fixtureDirectory, grantRuntime, LocalPostgres, runTool } from './helpers/postgres.js';
@@ -60,7 +59,7 @@ test('Admin read-only sample Places use current server role with isolated real P
   const db = owned.operator = createDatabaseClient(database.migrationUrl); await seedCatalog(db);
   const verifier = new TestIdentityVerifier();
   const module = await Test.createTestingModule({ imports: [await AppModule.register({ NODE_ENV: 'test', WEB_ORIGINS: origin,
-    DATABASE_URL: database.runtimeUrl, GOOGLE_WEB_CLIENT_ID: 'test-client.apps.googleusercontent.com' }), AdminModule] })
+    DATABASE_URL: database.runtimeUrl, GOOGLE_WEB_CLIENT_ID: 'test-client.apps.googleusercontent.com' })] })
     .overrideProvider(GoogleIdentityVerifier).useValue(verifier).compile();
   const app = owned.app = module.createNestApplication<NestExpressApplication>({ logger: false }); configureApp(app); await app.listen(0, '127.0.0.1');
   const url = await app.getUrl();

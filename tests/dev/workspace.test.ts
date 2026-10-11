@@ -120,7 +120,7 @@ test('dev từ fixture sạch: contracts → API/web, compile recovery và dừn
     browser = await chromium.launch();
     await eventually(async () => await listening(apiUrl) && await listening(webUrl), 'Dev không khởi động.');
     const page = await browser.newPage();
-    await page.goto(webUrl);
+    await page.goto(`${webUrl}/technical/health`);
     await retryHealthUntil(page, page.getByRole('heading', { name: 'API đang hoạt động', exact: true }), 'Web không nhận API sau khi dev khởi động.');
     // A real socket with no HTTP request reproduces browser speculative
     // preconnect: httpServer.close alone can wait forever for this connection.
