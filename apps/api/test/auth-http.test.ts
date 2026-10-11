@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -46,6 +47,18 @@ async function fault(response: Response, status: number, code?: string) {
   assert.ok(!JSON.stringify(body).includes('TESTONLY.'));
   assert.ok(!JSON.stringify(body).includes('postgresql://'));
   assert.equal(response.headers.get('cache-control'), 'no-store');
+}
+async function rawHttp(url: string, headers: string[], body?: string) {
+  return new Promise<{ status: number | undefined; body: string; cacheControl: string | undefined }>((resolve, reject) => {
+    const request = httpRequest(url, { headers, method: body === undefined ? 'GET' : 'POST' }, response => {
+      const parts: Buffer[] = [];
+      response.on('data', (part: Buffer) => parts.push(part));
+      response.on('end', () => resolve({ status: response.statusCode, body: Buffer.concat(parts).toString(), cacheControl: response.headers['cache-control'] }));
+      response.on('error', reject);
+    });
+    request.setTimeout(3000, () => request.destroy(new Error('Raw auth HTTP fixture timeout')));
+    request.on('error', reject); request.end(body);
+  });
 }
 
 test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles only through Nest override', { timeout: 180_000 }, async t => {
@@ -188,6 +201,7 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
       assert.equal(row.transport, 'WEB'); assert.notEqual(row.tokenHash, sessionCookie.slice(SESSION_COOKIE.length + 1));
       await fault(await s.get('auth/me', { Cookie: `${sessionCookie}; ${sessionCookie}` }), 400, 'INVALID_REQUEST');
       await fault(await s.get('auth/me', { Cookie: sessionCookie, Authorization: `Bearer ${opaque()}` }), 400, 'INVALID_REQUEST');
+      await fault(await s.get('auth/me', { Cookie: sessionCookie, Authorization: '' }), 400, 'INVALID_REQUEST');
       await fault(await s.get('auth/me', { Authorization: `Bearer ${sessionCookie.slice(SESSION_COOKIE.length + 1)}` }), 401, 'SESSION_REQUIRED');
       await fault(await s.post('auth/logout', {}, { Cookie: sessionCookie, 'X-CSRF-Token': body.csrfToken }), 403, 'ORIGIN_FORBIDDEN');
       await fault(await s.post('auth/logout', {}, { Origin: origin, Cookie: sessionCookie }), 403, 'CSRF_INVALID');
@@ -200,6 +214,9 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
       if (native.body.transport === 'native') {
         await fault(await s.get('auth/me', { Cookie: `${SESSION_COOKIE}=${native.body.accessToken}` }), 401, 'SESSION_REQUIRED');
         await fault(await s.get('auth/me', { ...native.headers, Origin: origin }), 401, 'SESSION_REQUIRED');
+        await fault(await s.get('auth/me', { ...native.headers, Cookie: web.cookie }), 400, 'INVALID_REQUEST');
+        const duplicate = await rawHttp(`${s.url}/api/auth/me`, ['Authorization', `Bearer ${native.body.accessToken}`, 'Authorization', `Bearer ${native.body.accessToken}`]);
+        assert.equal(duplicate.status, 400); assert.equal(JSON.parse(duplicate.body).error.code, 'INVALID_REQUEST');
       }
       const cors = await fetch(`${s.url}/api/auth/google/web`, { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'POST',
         'Access-Control-Request-Headers': 'content-type,x-goease-auth-proof' } });
@@ -248,10 +265,21 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
   await t.test('strict input, safe error envelope, bounded challenge limiter and expired-row cleanup', async () => {
     const s = await server();
     try {
+      const before = { users: await op.user.count(), sessions: await op.session.count(), challenges: await op.authChallenge.count() };
+      for (const [body, status] of [['{', 400], [JSON.stringify({ testOnlyPrivateBody: 'PRIVATE-TEST-ONLY'.repeat(2000) }), 413]] as const) {
+        const raw = await rawHttp(`${s.url}/api/auth/challenges/native`, ['Content-Type', 'application/json', 'Content-Length', String(Buffer.byteLength(body))], body);
+        assert.equal(raw.status, status); assert.equal(raw.cacheControl, 'no-store');
+        const error = JSON.parse(raw.body) as { error: { code: string; statusCode: number; message: string } };
+        assert.equal(error.error.code, 'REQUEST_ERROR'); assert.equal(error.error.statusCode, status);
+        assert.ok(!raw.body.includes('PRIVATE-TEST-ONLY')); assert.ok(!raw.body.includes('SyntaxError'));
+      }
+      assert.deepEqual({ users: await op.user.count(), sessions: await op.session.count(), challenges: await op.authChallenge.count() }, before);
+      assert.equal(s.verifier.calls, 0);
       await fault(await s.post('auth/challenges/desktop'), 400, 'INVALID_REQUEST');
       await fault(await s.post('auth/challenges/native', { role: 'ADMIN' }), 400, 'INVALID_REQUEST');
       await fault(await s.post('auth/challenges/native', []), 400, 'INVALID_REQUEST');
       await fault(await s.post('auth/google/native', { challengeId: randomUUID(), idToken: 'a.b.c', role: 'ADMIN' }), 400, 'INVALID_REQUEST');
+      await fault(await s.post('auth/google/native', { challengeId: randomUUID(), idToken: 'a.b.c', ownerId: randomUUID() }), 400, 'INVALID_REQUEST');
       await fault(await s.post('auth/google/native', { challengeId: 'invalid', idToken: 'a.b.c' }), 400, 'INVALID_REQUEST');
       await fault(await s.post('auth/google/native', { challengeId: randomUUID(), idToken: 'a'.repeat(20_000) }), 400, 'INVALID_REQUEST');
       const expiredIds: string[] = [];

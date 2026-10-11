@@ -105,6 +105,7 @@ export class AuthService {
     if (authorization !== undefined && browserToken) throw new ApiFault('INVALID_REQUEST', 400);
     let token: string | undefined, kind: AuthTransport;
     if (authorization !== undefined) {
+      if (cookie(request, LOGIN_COOKIE)) throw new ApiFault('INVALID_REQUEST', 400);
       const match = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(authorization);
       token = match?.[1]; kind = 'native';
       if (!token || oneHeader(request, 'origin') !== undefined) throw new ApiFault('SESSION_REQUIRED', 401);
