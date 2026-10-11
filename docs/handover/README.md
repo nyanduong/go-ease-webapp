@@ -2,33 +2,15 @@
 
 Ngày đối chiếu 11/10/2026 · **Refs #11**. Đã triển khai và merge các phần nền có thể kiểm tra độc lập; **M0 chưa hoàn tất**. Chưa xác minh được tài nguyên HTTPS staging/preview Android+iOS/OAuth/Maps/Gemini; chưa có bằng chứng live hoặc thiết bị thật hai nền tảng. #11 và milestone M0 giữ mở, nyanduong nghiệm thu sản phẩm cuối. Đây là snapshot bằng chứng, không thay backlog trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
-[UAT-01–12](UAT.md) là hướng dẫn thử và kết quả riêng Android/iOS/admin/API. Owner thực hiện các thao tác cấp quyền/tài nguyên tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md); không gửi secret vào chat/Issue/PR. URL admin/API staging và bản cài preview: **chưa có**.
+[UAT-01–12](UAT.md) là hướng dẫn thử và kết quả riêng Android/iOS/admin/API. Owner thực hiện các thao tác cấp quyền/tài nguyên tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md); không gửi secret vào chat/Issue/PR. URL admin/API staging và bản cài preview: **chưa có bản đã kiểm chứng để bàn giao**.
 
 ## Nền đã xác minh
 
 PR #12 và #17 thực sự đã merge, lần lượt `ac1feabd90118e841504befcebdcd7b78206aa5f` và `ef24b4cca6ca64209b93dae69b5e8ee90f0d49c7`; không triển khai lại scaffold. Luồng chuyến mobile PR36 kế thừa actual main97a8210 và merge thành `5111d474cb4bb6a1258aa0793405c1599e2e99d7`. Source product/gates của từng receipt có thể cũ hơn PR HEAD do commit cuối chỉ thêm tài liệu; bảng dưới ghi **HEAD CI thật**, không gán artifact cũ cho HEAD mới.
 
-Tất cả run lịch sử sau đây đã đọc lại từ GitHub, Quality Gate job SUCCESS và SHA khớp HEAD/merge. Thành công CI không xác nhận native/live. PR12 GitGuardian lịch sử **NEUTRAL**, không có nghĩa sạch; PR17–35 scanner SUCCESS. Các receipt có chữ “chờ CI/merge” là mốc trước khi PR được tạo; dùng bảng này và GitHub để đọc kết quả sau đó, không viết lại lịch sử thất bại thành thành công.
+Tất cả run lịch sử sau đây đã đọc lại từ GitHub, Quality Gate job SUCCESS và SHA khớp HEAD/merge. Thành công CI không xác nhận native/live. PR12 GitGuardian lịch sử **NEUTRAL**, không có nghĩa sạch; PR17–36 scanner SUCCESS. Các receipt có chữ “chờ CI/merge” là mốc trước khi PR được tạo; dùng bảng này và GitHub để đọc kết quả sau đó, không viết lại lịch sử thất bại thành thành công.
 
-| PR / phạm vi | HEAD CI | Merge main | Quality Gate PR / main |
-| --- | --- | --- | --- |
-| [12 — nền #1](https://github.com/nyanduong/go-ease-webapp/pull/12) | bebe68ba | ac1feabd | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/37796675919) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/37916821404) |
-| [17 — baseline #13](https://github.com/nyanduong/go-ease-webapp/pull/17) | be96bd25 | ef24b4cc | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/37918532564) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38119315274) |
-| [19 — guard #18](https://github.com/nyanduong/go-ease-webapp/pull/19) | 3ab6002c | 9e8711b3 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38121828356) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38121969087) |
-| [20 — thiết kế DB #2](https://github.com/nyanduong/go-ease-webapp/pull/20) | 7e916424 | 1c5d601a | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38122128845) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38122262892) |
-| [24 — fix watcher #23](https://github.com/nyanduong/go-ease-webapp/pull/24) | 5e8f36d4 | ca799056 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38124516175) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38124760217) |
-| [21 — prototype #14](https://github.com/nyanduong/go-ease-webapp/pull/21) | 06498b27 | 6b14bac4 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38125379005) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38125680722) |
-| [22 — booking research #9](https://github.com/nyanduong/go-ease-webapp/pull/22) | af771357 | a792894e | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38125422889) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38126073741) |
-| [25 — PostgreSQL #3](https://github.com/nyanduong/go-ease-webapp/pull/25) | 48422a91 | ecee30ca | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38126110295) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38126252649) |
-| [26 — nền mobile, Refs #15](https://github.com/nyanduong/go-ease-webapp/pull/26) | 89148c0a | 683a6c37 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38129264974) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38129510471) |
-| [28 — fix UTC/bounds #27](https://github.com/nyanduong/go-ease-webapp/pull/28) | 0a4ab607 | 6ea14147 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38131089261) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38131364474) |
-| [29 — Gemini, Refs #7](https://github.com/nyanduong/go-ease-webapp/pull/29) | 2982068a | 6f6fc56a | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38132329244) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38132544899) |
-| [30 — auth, Refs #4](https://github.com/nyanduong/go-ease-webapp/pull/30) | f714c380 | 22ab75f9 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38133799291) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38134021298) |
-| [32 — Maps, Refs #8](https://github.com/nyanduong/go-ease-webapp/pull/32) | 31e10f8c | 7bdeb311 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38137830165) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38138111160) |
-| [33 — API chuyến #5](https://github.com/nyanduong/go-ease-webapp/pull/33) | 008b6583 | 84b89838 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38138480260) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38138933161) |
-| [34 — fix dependency #31](https://github.com/nyanduong/go-ease-webapp/pull/34) | 60066ee4 | f2a0a431 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38139364336) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38139605091) |
-| [35 — admin, Refs #16](https://github.com/nyanduong/go-ease-webapp/pull/35) | bad25ca3 | 97a82100 | [PR](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140000308) / [main](https://github.com/nyanduong/go-ease-webapp/actions/runs/38140243392) |
-| [36 — mobile chuyến, Refs #6](https://github.com/nyanduong/go-ease-webapp/pull/36) | 9c1d380d | 5111d474 | [PR SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141287122) / [main SUCCESS](https://github.com/nyanduong/go-ease-webapp/actions/runs/38141577313) |
+[Báo cáo M0](M0_REPORT.md) ghi traceability issue/tiêu chí/PR HEAD/merge/CI, các fix và giới hạn. [Runbook bàn giao](RUNBOOK.md) dẫn lệnh local/build/ký/cài/deploy/migrate/seed/backup/restore/rollback.
 
 ## Runbook và bằng chứng theo phần
 

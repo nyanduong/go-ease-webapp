@@ -6,7 +6,7 @@
 
 Từ root dùng Node/pnpm đã pin, `pnpm install --frozen-lockfile`, `pnpm --filter @goease/contracts build`. Sao chép `apps/mobile/.env.example` thành `.env.local` **không commit**, đặt `EXPO_PUBLIC_API_BASE_URL` theo đường mạng thực và `GOEASE_APP_VARIANT=development`.
 
-- `pnpm dev`: API và admin web; API hiện chỉ bind loopback, prefix `/api`.
+- `pnpm dev`: API và admin web; API mặc định bind loopback, prefix `/api`.
 - `pnpm dev:mobile`: Metro cho development client; không phải Expo Go.
 - `pnpm --filter @goease/mobile android`: build/cài Android development client bằng SDK/JDK local rồi kết nối Metro.
 - `pnpm --filter @goease/mobile ios`: build/cài iOS development client trên Mac có Xcode tương thích; Windows không build iOS local.
@@ -96,7 +96,7 @@ Trước bàn giao #10/#11 còn cần preview trên Android thật và iPhone th
 
 ## Dependency và ranh giới
 
-Expo `57.0.27`, React Native `0.86.3`, React `19.2.3`, dev-client `57.0.19`, safe-area-context `5.7.0` theo metadata SDK 57. Safe area xử lý notch/edge-to-edge trên hai nền tảng; không dùng router hoặc Maps SDK trong issue này. `react-dom@19.2.3` chỉ là **dev peer cho công cụ Expo CLI**: cài strict ban đầu tự chọn DOM `19.3.0` của web gây mismatch; pin peer đúng React mobile giữ strict install. App native không import DOM, web giữ React/DOM `19.3.0`; chỉ contracts thuần được chia sẻ. Không hoist toàn bộ hoặc override React chung. [Expo monorepo](https://docs.expo.dev/guides/monorepos/), [SDK 57 metadata](https://registry.npmjs.org/expo/57.0.27).
+Expo `57.0.27`, React Native `0.86.3`, React `19.2.3`, dev-client `57.0.19`, safe-area-context `5.7.0` theo metadata SDK 57. Safe area xử lý notch/edge-to-edge trên hai nền tảng. Nền #15 chưa có Maps; source hiện tại đã bổ sung auth/Maps/Trips theo receipt riêng, không dùng kết quả health cũ để nghiệm thu các module mới. `react-dom@19.2.3` chỉ là **dev peer cho công cụ Expo CLI**: cài strict ban đầu tự chọn DOM `19.3.0` của web gây mismatch; pin peer đúng React mobile giữ strict install. App native không import DOM, web giữ React/DOM `19.3.0`; chỉ contracts thuần được chia sẻ. Không hoist toàn bộ hoặc override React chung. [Expo monorepo](https://docs.expo.dev/guides/monorepos/), [SDK 57 metadata](https://registry.npmjs.org/expo/57.0.27).
 
 Splash plugin dùng ảnh PNG trong suốt trung tính tại `assets/splash.png` trên cả hai nền tảng. Với SDK57.0.9, cấu hình chỉ màu nền đã tạo style Android tham chiếu `splashscreen_logo` nhưng không sinh drawable và làm native build fail; ảnh rõ ràng tránh tài nguyên thiếu. Đây là tài nguyên kỹ thuật, chưa phải branding hoặc nghiệm thu splash preview.
 

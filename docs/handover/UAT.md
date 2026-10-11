@@ -17,7 +17,7 @@ PASS chỉ khi đúng bước và môi trường đã thực thi, FAIL có lỗi
 | UAT-01 | Cài đúng preview, xác minh checksum/version; tắt Metro, mở app và xem môi trường API. | App thật mở bằng JS/assets đóng gói, gọi đúng HTTPS staging; ghi OS/thiết bị/build/commit. |
 | UAT-02 | Google sign-in A, hủy một lượt sign-in, đăng xuất và mở lại; kiểm tra phiên hết hạn. | Backend xác minh danh tính; lỗi/hủy rõ, không bypass; dữ liệu riêng ẩn/xóa RAM đúng phiên. |
 | UAT-03 | Tạo chuyến 1 ngày và 5 ngày; kiểm tra ngày thật, nhóm, budget tổng VND; thử trống/0/sai phạm vi. | Có ID server; GET trả ngày/tiền đúng; seed Hà Nội có nhãn mẫu, chưa là điểm đến mở thử. |
-| UAT-04 | Sửa tên/ghi chú/giờ/chi phí một activity, lưu; đọc lại từ server. | Read-after-write đúng version, hoạt động và tiền; saved/unsaved rõ, không chỉ đổi state app. |
+| UAT-04 | Sửa tên/ghi chú/giờ/chi phí một activity, lưu; đọc lại từ server. Thử keyboard mở/đóng, safe-area, chữ lớn/overflow, Android system Back/iOS back gesture và hủy modal khi còn draft. | Read-after-write đúng version, hoạt động và tiền; saved/unsaved rõ, không chỉ đổi state app. Field/nút lưu đọc và chạm được, không bị keyboard/notch che hoặc tràn ngang; back/hủy có hành vi giữ/bỏ draft rõ, không báo đã lưu giả. |
 | UAT-05 | Ghi trip ID đã lưu; force-close/mở lại, xử lý restore phiên và mở cùng ID. | Đọc server cùng trip ID/ngày/tiền/activity; không yêu cầu draft chưa lưu sống qua OS kill. |
 | UAT-06 | Mở bản đồ từ ngày của chuyến; đổi ngày; thử vị trí denied/revoked/no GPS, mất mạng/no route. | Pin canonical đúng ngày; null không bịa tọa độ, inactive có nhãn; tuyến thật, attribution và trạng thái lỗi rõ. |
 | UAT-07 | Tắt mạng khi đang xem/chỉnh/lưu, double-tap lưu; theo dõi request/log an toàn. | Không crash/xóa draft trong phiên hoặc báo lưu giả; bản gửi bất biến và pending được giữ. |
@@ -36,7 +36,7 @@ Host Windows11; chưa có điện thoại vật lý được xác minh. Android1
 | UAT-01 | BLOCKED | Chưa có preview/HTTPS staging/thiết bị thật; [đường build](../verification/EXTERNAL_RESOURCES.md). |
 | UAT-02 | BLOCKED | Chưa OAuth Android/test users; [auth](../verification/GE-M0-04.md) có doubles/PG và compile, chưa Google native live. |
 | UAT-03 | BLOCKED | [API chuyến](../verification/GE-M0-05.md) PostgreSQL/HTTP thật + Google verifier double; [mobile](../verification/GE-M0-06.md) transport/store doubles, chưa native CRUD. |
-| UAT-04 | BLOCKED | API CAS/read-after-write/rollback và mobile editor/store regression hỗ trợ; chưa runtime trên Android. |
+| UAT-04 | BLOCKED | API CAS/read-after-write/rollback và mobile editor/store regression hỗ trợ; chưa Android runtime keyboard/safe-area/chữ lớn/overflow/system Back/modal cancel khi dirty. |
 | UAT-05 | BLOCKED | API+PG restart đọc/replay đã thử; chưa force-close/restore/read cùng trip trên app. |
 | UAT-06 | BLOCKED | [Maps](../verification/GE-M0-08.md) compile/doubles; chưa restricted keys/billing được phép, native tiles/location/route. |
 | UAT-07 | BLOCKED | Mobile abort/lost-response/draft/late callback doubles; health emulator lịch sử không thay editor/lưu native. |
@@ -55,7 +55,7 @@ Host Windows11; Mac/Xcode/EAS project/team/signing/provisioning/iPhone chưa đ�
 | UAT-01 | BLOCKED | Chưa signed preview/đường phân phối hợp lệ/iPhone/HTTPS staging; không có IPA để nghiệm thu. |
 | UAT-02 | BLOCKED | Chưa OAuth iOS/bundle/reversed scheme/test users/signing và runtime; auth doubles không là Google native. |
 | UAT-03 | BLOCKED | Shared client/store + API PG/HTTP hỗ trợ; chưa native tạo/lưu trên iOS. |
-| UAT-04 | BLOCKED | Shared editor/store regression + API CAS hỗ trợ; chưa keyboard/layout/lưu/read-after-write iOS. |
+| UAT-04 | BLOCKED | Shared editor/store regression + API CAS hỗ trợ; chưa iOS keyboard/safe-area/chữ lớn/overflow/back gesture/modal cancel khi dirty hoặc lưu/read-after-write native. |
 | UAT-05 | BLOCKED | Chưa force-close/SecureStore restore/cùng trip ID trên iOS; API restart không thay ca này. |
 | UAT-06 | BLOCKED | Chưa iOS native SDK/key/location permission/tiles/Routes; Android compile không thay iOS. |
 | UAT-07 | BLOCKED | Shared doubles hỗ trợ lỗi/draft; chưa native mạng/foreground/background/abort iOS. |

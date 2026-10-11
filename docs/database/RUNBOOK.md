@@ -1,6 +1,6 @@
 # PostgreSQL local, migration và dữ liệu thử
 
-Theo [DATA_MODEL](DATA_MODEL.md) đã merge ở PR #20. PostgreSQL chỉ do backend truy cập; app/web không nhận connection string. Prisma CLI/client/adapter `7.10.0`, `pg 8.23.1`, Node/pnpm theo root. Hai migration: `202610110001_core` tạo bảng/FK/index; `202610110002_invariants` bổ sung CHECK, timestamp, parent lock và deferred exact-day constraint, đồng thời kiểm tra aggregate đã tồn tại.
+Theo [DATA_MODEL](DATA_MODEL.md) đã merge ở PR #20. PostgreSQL chỉ do backend truy cập; app/web không nhận connection string. Prisma CLI/client/adapter `7.10.0`, `pg 8.23.1`, Node/pnpm theo root. Ba migration: `202610110001_core` tạo bảng/FK/index; `202610110002_invariants` bổ sung CHECK, timestamp, parent lock và deferred exact-day constraint, đồng thời kiểm tra aggregate đã tồn tại; `202610110003_auth_challenge` thêm challenge Google và transport/CSRF cho phiên.
 
 ## Điều kiện và cách ly
 
@@ -39,7 +39,7 @@ pnpm --filter @goease/api db:local check
 pnpm --filter @goease/api db:local stop
 ```
 
-`migrate` dùng operator URL và cấp runtime grants tối thiểu sau deploy; chạy lại an toàn khi migration đã áp dụng. `prisma generate` không cần credential/DB. `db:migrate` là CLI deploy với `DATABASE_MIGRATION_URL` từ environment hoặc `.env.local`; đối với local ưu tiên `db:local migrate` vì còn áp dụng grants. `db:seed` chạy bundle với `DATABASE_URL`; local ưu tiên `db:local seed` dùng operator. Chưa nối DB vào health bootstrap; backend dùng `createDatabaseClient()` sau khi cấp `DATABASE_URL` trong runtime an toàn ở issue tiêu thụ. `.env.local` không tự biến thành env của process API chạy từ terminal khác.
+`migrate` dùng operator URL và cấp runtime grants tối thiểu sau deploy; chạy lại an toàn khi migration đã áp dụng. `prisma generate` không cần credential/DB. `db:migrate` là CLI deploy với `DATABASE_MIGRATION_URL` từ environment hoặc `.env.local`; đối với local ưu tiên `db:local migrate` vì còn áp dụng grants. `db:seed` chạy bundle với `DATABASE_URL`; local ưu tiên `db:local seed` dùng operator. Health vẫn là api-only; auth/Trips/admin hiện dùng client runtime giới hạn sau khi cấp `DATABASE_URL`, theo receipt #4/#5/#16. `.env.local` không tự biến thành env của process API chạy từ terminal khác.
 
 ## Seed và nguồn
 
@@ -64,7 +64,7 @@ pnpm --filter @goease/api db:local restore-check
 
 Backup custom format vào `.local/goease-local.dump`, từ chối ghi đè backup cũ. Giữ/đổi tên bằng file manager trước lần backup sau. Dump có thể chứa dữ liệu riêng, không commit/upload. Restore chỉ vào DB riêng mới `goease_restore_<random>`, `--no-owner --no-privileges --exit-on-error`, rồi cấp lại runtime grants, đọc sample count. Không restore đè DB đang dùng. Automated test kiểm tra thêm trip/days/receipt và constraint sau restore.
 
-Migration đã áp dụng không sửa lịch sử/checksum. Hai migration này dùng `BEGIN/COMMIT` để DDL nguyên tử; vẫn phải kiểm tra cả schema và lịch sử nếu mất kết nối lúc commit. Nếu deploy lỗi: giữ app cũ, backup, đọc `migrate status` và private log. Prisma chặn deploy tiếp khi lịch sử có migration failed; không chỉ thêm một migration mới hoặc đánh dấu applied tùy tiện. Theo [quy trình Prisma v7](https://www.prisma.io/docs/orm/v7/prisma-migrate/workflows/patching-and-hotfixing#failed-migration), operator chọn một đường sau khi kiểm chứng: khôi phục/revert đúng về baseline rồi `migrate resolve --rolled-back <migration>` để deploy lại; hoặc hoàn tất chính xác phần SQL thiếu, xác minh schema/constraint tương ứng rồi `migrate resolve --applied <migration>`. Dùng `--config apps/api/prisma7.config.ts` khi chạy CLI từ root và operator URL trong environment; không đưa URL vào command line/log. Không `reset` DB dùng chung.
+Migration đã áp dụng không sửa lịch sử/checksum. Các migration dùng `BEGIN/COMMIT` để DDL nguyên tử; vẫn phải kiểm tra cả schema và lịch sử nếu mất kết nối lúc commit. Nếu deploy lỗi: giữ app cũ, backup, đọc `migrate status` và private log. Prisma chặn deploy tiếp khi lịch sử có migration failed; không chỉ thêm một migration mới hoặc đánh dấu applied tùy tiện. Theo [quy trình Prisma v7](https://www.prisma.io/docs/orm/v7/prisma-migrate/workflows/patching-and-hotfixing#failed-migration), operator chọn một đường sau khi kiểm chứng: khôi phục/revert đúng về baseline rồi `migrate resolve --rolled-back <migration>` để deploy lại; hoặc hoàn tất chính xác phần SQL thiếu, xác minh schema/constraint tương ứng rồi `migrate resolve --applied <migration>`. Dùng `--config apps/api/prisma7.config.ts` khi chạy CLI từ root và operator URL trong environment; không đưa URL vào command line/log. Không `reset` DB dùng chung.
 
 Đổi schema phá tương thích cần backup trước và kế hoạch rollback riêng. Khi cần khôi phục: restore vào DB mới, xác minh counts/constraints/app smoke, rồi operator chuyển cấu hình ở môi trường được phép; không tự thay URL staging hoặc chạy destructive down migration.
 
