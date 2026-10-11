@@ -22,6 +22,19 @@ function fixtureClient(overrides: Partial<ReturnType<typeof createNativeAuthClie
   return { challenge: async () => challenge(), exchange: async () => session(), current: async () => ({ transport: 'native' as const, user, expiresAt: future() }), logout: async () => {}, ...overrides };
 }
 
+test('Shared native session closure cancels dependent calls on restore/logout and refuses late token results', { timeout: 1000 }, async t => {
+  const store = createNativeAuthStore(fixtureClient(), provider, vault(opaque)); t.after(store.dispose);
+  await store.restore(); let release!: (value: string) => void, transport: AbortSignal | undefined;
+  const pending = store.withSession(async (provided, signal) => { assert.equal(provided, opaque); transport = signal; return new Promise<string>(resolve => { release = resolve; }); }, signal());
+  await store.restore(); assert.equal(transport?.aborted, true);
+  await assert.rejects(pending, { code: 'cancelled' }); release('TEST_ONLY_LATE_RESULT');
+  assert.equal(JSON.stringify(store.snapshot()).includes(opaque), false);
+  const request = store.withSession(async (_token, signal) => { transport = signal; return new Promise<string>(resolve => { release = resolve; }); }, signal());
+  await store.logout(); assert.equal(transport?.aborted, true);
+  await assert.rejects(request, { code: 'cancelled' }); release('TEST_ONLY_LATE_RESULT');
+  await assert.rejects(store.withSession(async () => 'forbidden', signal()), { code: 'expired' });
+});
+
 test('Native auth validates transport and expiry, uses bearer/proof without cookies or role fields', async () => {
   const seen: Array<{ url: string; init: RequestInit }> = [];
   const client = createNativeAuthClient('https://api.goease.test/api', async (url, init) => {

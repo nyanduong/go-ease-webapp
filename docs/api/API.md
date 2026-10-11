@@ -1,4 +1,4 @@
-# API M0 — health và nền xác thực
+# API M0 — health, xác thực và Maps
 
 REST prefix `/api`. `GET /health` chỉ kiểm tra tiến trình, vẫn hoạt động khi chưa có DB/OAuth; chưa có OpenAPI UI. Auth dùng contracts/runtime guards trong `@goease/contracts`. Lỗi giữ envelope `{error:{code,message,statusCode},path,timestamp}`, không trả JWT, SQL, credential hoặc stack. Auth/admin trả `Cache-Control: no-store`.
 
@@ -27,9 +27,9 @@ Transport chỉ `web`/`native`, body không nhận field thừa, không nhận u
 2. Backend dùng `google-auth-library` xác minh RS256, issuer Google, audience cấu hình, chữ ký/cert, thời điểm, subject và nonce. Subject Google ổn định là identity key, không dùng email để nối tài khoản hoặc cấp admin. Cert fetch timeout 3,5 giây, không retry tự động; SDK lỗi không ra response/log. Tối đa 8 lần verify đang chạy trong một tiến trình.
 3. Challenge hết hạn sau 5 phút. Web exchange cần Origin chính xác, proof custom header và cookie `__Host-goease-login` cùng proof (Secure/HttpOnly/SameSite=Lax/Path=/, không Domain). Native không nhận Origin hay cookie login. Header/cookie trùng hoặc cookie session + bearer cùng request bị từ chối.
 4. Sau verify ngoài transaction, DB compare-and-set consume challenge còn hạn, column-safe upsert User bỏ cột role/disabledAt, tạo Session cùng transaction. Một challenge chỉ có một winner; lỗi DB/disabled user rollback toàn bộ. Response thất lạc sau commit: bắt đầu challenge mới, không replay để khôi phục raw session token.
-5. Phiên absolute 24 giờ, token opaque random 32 bytes; DB chỉ giữ SHA-256 hash. Web cookie `__Host-goease-session` Secure/HttpOnly/SameSite=Lax/Path=/, không Domain. Native client cần SecureStore; phần native client và xử lý lỗi lưu/xóa còn phụ thuộc #15. Không lưu token vào AsyncStorage/localStorage.
+5. Phiên absolute 24 giờ, token opaque random 32 bytes; DB chỉ giữ SHA-256 hash. Web cookie `__Host-goease-session` Secure/HttpOnly/SameSite=Lax/Path=/, không Domain. Native client hiện dùng SecureStore, có test lỗi lưu/xóa và cleanup phiên; xem receipt auth. Không lưu token vào AsyncStorage/localStorage.
 6. CSRF web là HMAC-SHA256 từ opaque session token với nhãn cố định; DB giữ hash của CSRF. `/me` tái tạo CSRF cho web đã xác thực. Unsafe web POST cần Origin + custom CSRF header; SameSite không phải biện pháp duy nhất. Mỗi request đọc Session + User hiện tại: expiry/revoked/disabled và role server; demote/disable có hiệu lực ở request kế tiếp. Native token không dùng được như cookie, web token không dùng được như bearer.
-7. Logout hợp lệ ghi revokedAt trước trả 204. Request lặp với phiên đã revoke/hết hạn có thể trả 204 và clear cookie. Logout offline chưa có server acknowledgement không được báo đã thu hồi server; client triển khai sau phải mô tả rõ phần này. Hủy Google trước exchange không tạo user/session; challenge tự hết hạn.
+7. Logout hợp lệ ghi revokedAt trước trả 204. Request lặp với phiên đã revoke/hết hạn có thể trả 204 và clear cookie. Logout offline chưa có server acknowledgement không được báo đã thu hồi server; client hiện giữ trạng thái lỗi và cho retry, không hiển thị đã revoke khi chưa nhận acknowledgement. Hủy Google trước exchange không tạo user/session; challenge tự hết hạn.
 
 Giới hạn chống lạm dụng M0: mỗi IP socket trực tiếp tối đa 10 challenge/20 exchange mỗi phút, toàn tiến trình 600 request challenge/exchange mỗi phút, tối đa 1.000 bucket hash IP. Không tin X-Forwarded-For và không ghi IP. Challenge creation dùng advisory transaction lock, tối đa 2.000 hàng; mỗi lần dọn tối đa 100 hàng hết hạn. Đây là brake cho một backend M0, chưa phải giới hạn phân tán theo identity. `429 AUTH_RATE_LIMITED` không tự retry vô hạn. Google unavailable → 503, identity sai → 401, challenge sai/expired/replay → 400; CSRF/Origin/admin sai → 403.
 
@@ -46,3 +46,12 @@ Android cần OAuth Android client khớp package + SHA-1 bản ký thực; iOS 
 Tài khoản, OAuth client types/test users/permissions chưa xác minh. Backend tests dùng identity double qua Nest testing override và Google crypto fixture offline, không gọi Google. Web login live và native Google login/logout/cancel/error/expired chưa đạt; #4 giữ mở với `Refs #4`. Xem [receipt](../verification/GE-M0-04.md) và [điều kiện ngoài](../WORKFLOW.md#điều-kiện-cần-xác-minh).
 
 Nguồn chính thức đọc 11/10/2026: [Google ID-token verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token), [GIS JS nonce/popup](https://developers.google.com/identity/gsi/web/reference/js-reference), [Expo Google authentication](https://docs.expo.dev/guides/google-authentication/), [SecureStore](https://docs.expo.dev/versions/latest/sdk/securestore/), [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html). Public docs không chứng minh GoEase đã có OAuth quyền/client configuration.
+## Maps mẫu
+
+- `GET /api/maps/catalog`: public, ba Place seed canonical PostgreSQL, `SampleMapCatalog`; không gọi Google và không là Places API.
+- `POST /api/maps/sample-route`: chỉ SessionGuard + native bearer hợp lệ; web cookie 403, anonymous/expired/revoked/disabled 401. Body `{originPlaceId,destinationPlaceId}` là hai UUID khác nhau trong danh mục đã kiểm chứng. Không nhận tọa độ/role/owner tùy ý.
+- `MAPS_ROUTES_ENABLED=true` và `GOOGLE_MAPS_SERVER_API_KEY` là cấu hình backend bắt buộc cho provider; mặc định 503, 0 provider calls. Không tự bật billing hay coi cờ này là phê duyệt ngân sách.
+- `SampleRouteResult` phân biệt route thật/no-route; lỗi provider 502, timeout 504, admission 429. Provider có deadline 15s, body64KiB, 0 retry; chỉ Google Routes v2 endpoint cố định. Kết quả geometry chỉ RAM, không ghi Trip/DB/cache.
+- Auth/admin/maps đều no-store trước body parser. Admission mỗi process 10/user/phút,30 tổng/phút,2 đồng thời; không thay quota/budget của Google.
+
+HTTP thật + PostgreSQL riêng đã chạy 7 PASS tại source `f1f905c`; Google identity/Routes là test doubles, 0 Google calls. Bao gồm socket đóng trong async SessionGuard trước controller → 0 provider calls. Xem [runbook](../maps/README.md) và [receipt](../verification/GE-M0-08.md).
