@@ -34,5 +34,11 @@
     "@types/express": "5.0.6",
     "@types/pg": "8.23.1",
     "prisma": "7.10.0"
-  }
+  },
+  "files": [
+    "dist/src/**/*.js",
+    "!dist/src/database/seed.js",
+    "!dist/src/modules/ai/probe.js",
+    "!dist/src/modules/maps/probe.js"
+  ]
 }

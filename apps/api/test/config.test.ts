@@ -4,8 +4,15 @@ import { validateEnvironment } from '../src/config.js';
 
 test('cấu hình local dùng origin rõ ràng và port mặc định', () => {
   assert.deepEqual(validateEnvironment({}), {
-    NODE_ENV: 'development', PORT: 3000, WEB_ORIGINS: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    NODE_ENV: 'development', PORT: 3000, HOST: '127.0.0.1', WEB_ORIGINS: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   });
+});
+
+test('container binding requires the explicit allowlisted HOST; no DNS or injected bind values', () => {
+  assert.equal(validateEnvironment({ HOST: '0.0.0.0' }).HOST, '0.0.0.0');
+  for (const HOST of ['localhost', '::', '192.168.1.1', '', '0.0.0.0\n', 0, '0.0.0.0;echo test']) {
+    assert.throws(() => validateEnvironment({ HOST }), /HOST/);
+  }
 });
 
 test('từ chối port, mode, wildcard, credentials và path sai', () => {

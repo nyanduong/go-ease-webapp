@@ -1,5 +1,6 @@
 import { isAuthChallengeResponse, isCurrentSessionResponse, isGoogleExchangeRequest, isSessionResponse,
   type AuthChallengeResponse, type CurrentSessionResponse, type WebSessionResponse } from '@goease/contracts';
+import { resolveApiBase } from './api-base';
 
 export type WebAuthFailureCode = 'configuration' | 'network' | 'timeout' | 'cancelled' | 'expired' | 'contract' | 'rejected' | 'provider';
 const messages: Record<WebAuthFailureCode, string> = {
@@ -14,9 +15,8 @@ export class WebAuthFailure extends Error {
 }
 export function webAuthConfig(clientId: string | undefined, apiBase: string, pageOrigin: string) {
   try {
-    const api = new URL(apiBase), page = new URL(pageOrigin);
-    if (!clientId || !/^[0-9]+-[a-z0-9-]+\.apps\.googleusercontent\.com$/.test(clientId) || api.protocol !== 'https:' || page.protocol !== 'https:' || api.origin !== page.origin || api.username || api.password || api.search || api.hash) throw new Error();
-    return { clientId, apiBase: api.href.replace(/\/+$/, '') };
+    if (!clientId || !/^[0-9]+-[a-z0-9-]+\.apps\.googleusercontent\.com$/.test(clientId)) throw new Error();
+    return { clientId, apiBase: resolveApiBase(apiBase, pageOrigin) };
   } catch { throw new WebAuthFailure('configuration'); }
 }
 export function webAbortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
