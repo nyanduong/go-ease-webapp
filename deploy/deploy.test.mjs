@@ -10,7 +10,7 @@ import { verifyArtifact } from './verify-artifact.mjs';
 import { immutableImage, privateFile, stagingPreflight } from './preflight.mjs';
 import { redactedPnpmFailure } from './pnpm-error.mjs';
 import { assertArtifactDependencies } from './dependency-graph.mjs';
-import { redactedContainerFailure } from './container-error.mjs';
+import { redactedContainerFailure, redactedStartupStatus } from './container-error.mjs';
 
 test('container diagnostics retain bounded build phase and identifiers without exposing child output', () => {
   const failure = redactedContainerFailure('build', {
@@ -23,6 +23,9 @@ test('container diagnostics retain bounded build phase and identifiers without e
   assert.match(sqlFailure.message, /Container exec failed \(57P03\)/);
   assert.doesNotMatch(sqlFailure.message + sqlFailure.stack, /TEST_ONLY|postgresql|private\.invalid/);
   assert.match(redactedContainerFailure('unsafe PRIVATE_COMMAND', { stderr: 'secret only' }).message, /^Container command failed \(COMMAND_FAILED\)/);
+  assert.equal(redactedStartupStatus('Error [ERR_MODULE_NOT_FOUND] TEST_ONLY_SECRET postgres://private.invalid'), 'MODULE_MISSING');
+  assert.equal(redactedStartupStatus('nginx: [emerg] unknown directive TEST_ONLY_SECRET'), 'NGINX_DIRECTIVE_FAILED');
+  assert.equal(redactedStartupStatus('private unrecognized TEST_ONLY_SECRET'), 'UNCLASSIFIED_STARTUP');
 });
 
 test('deployed versions must belong to the reachable frozen API graph, including scoped workspace contracts', async () => {

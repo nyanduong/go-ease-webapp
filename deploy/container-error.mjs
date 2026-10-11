@@ -11,3 +11,19 @@ export function redactedContainerFailure(operation, error) {
     ?? (output.includes('Operator platform engine preparation failed.') ? 'OPERATOR_ENGINE_FAILED' : 'COMMAND_FAILED');
   return new Error(`Container ${command} failed (${phase ? `${phase[1]} ${phase[2]}/${phase[3]}, ` : ''}${identifier}); raw environment and SQL are not logged`);
 }
+
+export function redactedStartupStatus(output) {
+  // These fixed diagnoses never include module paths, URLs, env or raw logs.
+  const text = typeof output === 'string' ? output.slice(-65_536) : '';
+  const signatures = [
+    ['MODULE_MISSING', /ERR_MODULE_NOT_FOUND|MODULE_NOT_FOUND/],
+    ['PERMISSION_DENIED', /EACCES|[Pp]ermission denied/],
+    ['READ_ONLY_FILESYSTEM', /EROFS|[Rr]ead-only file system/],
+    ['ADDRESS_IN_USE', /EADDRINUSE/],
+    ['UPSTREAM_DNS_FAILED', /host not found in upstream/],
+    ['NGINX_DIRECTIVE_FAILED', /unknown directive|invalid number of arguments/],
+    ['FILE_MISSING', /ENOENT|No such file or directory/],
+    ['NGINX_STARTUP_FAILED', /nginx: \[emerg\]/],
+  ];
+  return signatures.find(([, pattern]) => pattern.test(text))?.[0] ?? 'UNCLASSIFIED_STARTUP';
+}

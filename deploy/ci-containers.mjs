@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
-import { redactedContainerFailure } from './container-error.mjs';
+import { redactedContainerFailure, redactedStartupStatus } from './container-error.mjs';
 const execute = promisify(execFile), prefix = `goease-ci-${randomBytes(6).toString('hex')}`;
 const containers = [], images = [], network = `${prefix}-net`;
 async function docker(args, input) {
@@ -31,6 +31,17 @@ async function docker(args, input) {
 async function waitFor(check) {
   for (let attempt = 0; attempt < 90; attempt++) { if (await check()) return; await new Promise(resolve => setTimeout(resolve, 500)); }
   throw new Error('Owned container readiness timed out');
+}
+async function waitForContainer(name, label, check) {
+  try { await waitFor(check); }
+  catch {
+    let diagnosis = 'LOG_UNAVAILABLE';
+    try {
+      const logs = await execute('docker', ['logs', '--tail', '80', name], { timeout: 5000, maxBuffer: 128 * 1024 });
+      diagnosis = redactedStartupStatus(logs.stdout + '\n' + logs.stderr);
+    } catch { /* Never expose raw execution errors. */ }
+    throw new Error(`Owned ${label} readiness timed out (${diagnosis}); raw startup logs are not logged`);
+  }
 }
 try {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'goease-container-ci-'));
@@ -99,14 +110,15 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
   const api = `${prefix}-api`, proxy = `${prefix}-proxy`; containers.push(api, proxy);
   console.info('Checking non-root API and local HTTP proxy boundaries.');
   await docker(['run', '-d', '--name', api, '--network', network, '--network-alias', 'api', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=32m', '--mount', `type=bind,src=${apiFile},dst=/run/secrets/api_env,readonly`, `${prefix}-api`]);
-  await waitFor(async () => { try { await docker(['exec', api, 'node', '-e', "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]); return true; } catch { return false; } });
+  await waitForContainer(api, 'API', async () => { try { await docker(['exec', api, 'node', '-e', "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(1000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]); return true; } catch { return false; } });
+  console.info('Non-root API health is ready; starting local HTTP proxy.');
   await docker(['exec', api, 'node', '-e', 'if(process.getuid()===0)process.exit(1)']);
   await docker(['run', '-d', '--name', proxy, '--network', network, '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', '--tmpfs', '/tmp:rw,size=32m', '-e', 'STAGING_HOST=ci.goease.vn', '-p', '127.0.0.1::8080', `${prefix}-admin`]);
   const address = await docker(['port', proxy, '8080/tcp']);
   assert.notEqual(await docker(['exec', proxy, 'id', '-u']), '0');
   assert.match(address, /^127\.0\.0\.1:\d+$/);
   const base = `http://${address}`, headers = { Host: 'ci.goease.vn' };
-  await waitFor(async () => { try { return (await fetch(base + '/api/health', { headers, signal: AbortSignal.timeout(1000) })).ok; } catch { return false; } });
+  await waitForContainer(proxy, 'proxy', async () => { try { return (await fetch(base + '/api/health', { headers, signal: AbortSignal.timeout(1000) })).ok; } catch { return false; } });
   for (const route of ['/admin/catalog', '/admin/requests', '/technical/health']) {
     const response = await fetch(base + route, { headers }); assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /text\/html/); assert.match(response.headers.get('cache-control'), /no-store/);
