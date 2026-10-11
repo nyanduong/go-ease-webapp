@@ -27,3 +27,22 @@ Source pin độc lập `ab45f54` bắt đầu từ main5111d474 đã merge th�
 Kiểm tra dự kiến: frozen install → typecheck → lint → test → build → Expo check tuần tự. Test gồm architecture, private PostgreSQL/HTTP, deploy artifact/operator; build export Android/iOS JS. Required CI còn build/run bốn container, migration/grants/seed, private backup/restore và proxy/browser. Không bỏ bước, không dùng test doubles để báo provider live.
 
 Không thay source mobile/native dependencies; APK Android lịch sử vẫn ghi đúng source/toolchain lúc build, không tự gán binary cho Node mới hoặc suy iOS đạt. Physical devices, OAuth/Maps/Gemini live, staging/signing và preview Metro-off vẫn cần điều kiện trong EXTERNAL_RESOURCES khi tài liệu bàn giao được tích hợp. Không có provider calls hoặc billing trong issue này.
+
+## Kết quả local trên source cuối
+
+Product **`317a84d69d5fbe8f5f1bed5491aef11392750490`** kế thừa PR37 đã merge thật tại main **`162d93739aca05a067836bbe26c66883ce8fe64c`**. [PR37 CI](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148538687) và [main CI](https://github.com/nyanduong/go-ease-webapp/actions/runs/38148950694) đều SUCCESS, gồm container; không dùng chúng thay CI của Node mới.
+
+Điều phối chạy tuần tự bằng portable Node24.21.0/Corepack pnpm10.34.6; shim pnpm được tạo riêng trong thư mục portable, PATH/COREPACK_HOME chỉ scope process. Shim global Windows ép Node cũ nên đã kiểm tra cả nested `pnpm exec pnpm exec node`: execPath thực thuộc portable, OpenSSL3.5.8/Undici7.29.1. Không đổi cài đặt/PATH/global máy.
+
+| Kiểm tra | Kết quả thật |
+| --- | --- |
+| Frozen install, typecheck, lint, test, build, Expo check | Tất cả PASS |
+| Root tests | **300PASS/0skip** =26architecture+2dependency+135API+49web+69mobile+14deploy+4browser+1dev; architecture96source/0violations |
+| Deployment local | Actual private PG/operator, moved/pruned runtime/WASM/API và Host regression PASS; không local Docker |
+| Expo build | Android687modules →dist/android; iOS689modules →dist/ios; chỉ JS/assets export, không native |
+| Lock / mobile source | Root lock SHA256 `BDABAF6F97FFD5AEB419A4AAFA72868520093F160FCCFA74CF04E9A410305925` giữ nguyên; mobile tree `1df75e0ab267df17eb997fafddeaec84c1a28011` bằng main5111 và162d937 |
+| npm audit cập nhật | Exit1:0critical/4high/2moderate, cùng residual exceptions trong [#31](ISSUE-31.md); không báo audit sạch hoặc đổi graph để che finding |
+| Review độc lập source/digest/assessment | CLEAR exact317a84d; receipt bổ sung chỉ ghi kết quả, không đổi product |
+| PR HEAD / Linux Docker Node24.21 | PENDING, mandatory trước browser merge; receipt merge/CI sau cùng ở [issue38](https://github.com/nyanduong/go-ease-webapp/issues/38) |
+
+Private logs `goease-issue38-node24-root-gates-20261011`: test SHA256 `0318441C04E25243892CBCCB61EB0B9C45ACD1DAE577212EE1A5ED305CCE0BA8`, build `3FE8CFBEE14B4BD96FE767943609AC2EB842D74E8ED4EF5FE542D58997B1D82C`, runtime `75CBF6F7B3133BAE2F8AAD84D97D39073A4EB8F1FB52090A29E190127393E228`. Test services dừng theo suite cleanup; không khởi động Metro/Docker daemon, không provider probe. APK x86_64 cũ vẫn compile-only đúng toolchain/source cũ; kết quả này không nâng UAT native/live thành PASS.
