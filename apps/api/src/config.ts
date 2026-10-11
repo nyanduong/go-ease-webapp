@@ -4,6 +4,8 @@ export interface Environment {
   WEB_ORIGINS: string[];
   DATABASE_URL?: string;
   GOOGLE_WEB_CLIENT_ID?: string;
+  GOOGLE_MAPS_SERVER_API_KEY?: string;
+  MAPS_ROUTES_ENABLED?: true;
 }
 
 export function validateEnvironment(input: Record<string, unknown>): Environment {
@@ -30,6 +32,14 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
   }
   const database = input.DATABASE_URL;
   const googleClient = input.GOOGLE_WEB_CLIENT_ID;
+  const mapsKey = input.GOOGLE_MAPS_SERVER_API_KEY;
+  const mapsEnabled = input.MAPS_ROUTES_ENABLED;
+  if (mapsKey !== undefined && (typeof mapsKey !== 'string' || !/^[A-Za-z0-9_-]{1,512}$/.test(mapsKey))) {
+    throw new Error('GOOGLE_MAPS_SERVER_API_KEY phải là cấu hình server hợp lệ.');
+  }
+  if (mapsEnabled !== undefined && mapsEnabled !== 'true' && mapsEnabled !== 'false') {
+    throw new Error('MAPS_ROUTES_ENABLED phải là true hoặc false.');
+  }
   if (database !== undefined && (typeof database !== 'string' || !/^postgres(?:ql)?:\/\//.test(database))) {
     throw new Error('DATABASE_URL phải là URL PostgreSQL phía server.');
   }
@@ -38,5 +48,7 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
   }
   return { NODE_ENV: mode, PORT: port, WEB_ORIGINS: [...new Set(origins)],
     ...(database === undefined ? {} : { DATABASE_URL: database }),
-    ...(googleClient === undefined ? {} : { GOOGLE_WEB_CLIENT_ID: googleClient }) };
+    ...(googleClient === undefined ? {} : { GOOGLE_WEB_CLIENT_ID: googleClient }),
+    ...(mapsKey === undefined ? {} : { GOOGLE_MAPS_SERVER_API_KEY: mapsKey }),
+    ...(mapsEnabled === 'true' ? { MAPS_ROUTES_ENABLED: true as const } : {}) };
 }

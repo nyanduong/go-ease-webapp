@@ -20,3 +20,7 @@ Attempt đầu `:app:assembleDebug` thất bại sau 10 phút 38 giây/291 task:
 Nguồn: [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/), [SDK metadata](https://registry.npmjs.org/expo/57.0.27), [blank TS template](https://registry.npmjs.org/expo-template-blank-typescript/57.0.29), [Gradle Java compatibility](https://docs.gradle.org/current/userguide/compatibility.html), [AGP 8.12](https://developer.android.com/build/releases/agp-8-12-0-release-notes), [RN environment](https://reactnative.dev/docs/0.86/set-up-your-environment), [EAS infrastructure](https://docs.expo.dev/build-reference/infrastructure/).
 
 Không chạy EAS/billing/account probes, không tự mua tài nguyên và không suy thiếu tài khoản từ việc executable chưa có trong PATH. Native build attempt và blocker phải đọc bằng chứng phía trên trước khi báo đạt.
+
+## Bổ sung Maps #8 — 11/10/2026
+
+Source `f1f905c` đã nối MapsModule vào AppModule, thêm react-native-maps1.27.2, expo-location57.0.20 và direct expo-constants57.0.21; frozen install, root typecheck/lint/test/build, Expo check PASS, 194test/0skip và HTTP/PostgreSQL7PASS. Android/iOS JS export PASS; không suy native/live. Android prebuild và assembleDebug Maps PASS (source f1f905c,9m43s/398tasks), APK checksum ở receipt; chưa cài/runtime mới. iOS native chưa có đường build/ký/thiết bị được xác minh. Keys/billing/quota/budget của cả hai SDK và Routes chưa xác minh; Routes HTTP mặc định tắt. [Receipt riêng](GE-M0-08.md) được cập nhật khi build có kết quả; lịch sử health #15 vẫn là bằng chứng riêng.

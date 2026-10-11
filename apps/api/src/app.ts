@@ -30,7 +30,7 @@ export async function createApp({ logging = true, environment, closeWatchConnect
 export function configureApp(app: NestExpressApplication) {
   const config = app.get(ConfigService<Environment, true>);
   app.setGlobalPrefix('api');
-  app.use(['/api/auth', '/api/admin', '/api/trips'], (_request: Request, response: Response, next: NextFunction) => {
+  app.use(['/api/auth', '/api/admin', '/api/trips', '/api/maps'], (_request: Request, response: Response, next: NextFunction) => {
     response.setHeader('Cache-Control', 'no-store'); next();
   });
   // The bounded 250-activity DTO can exceed 1 MiB with Unicode notes/title.
