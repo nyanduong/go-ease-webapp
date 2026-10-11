@@ -52,7 +52,7 @@ test('map guards reject sparse arrays, malformed Unicode, duplicate UUIDs and in
   }
   const emoji = catalog(); emoji.places[0]!.name = 'Điểm 🗺️'; assert.equal(isSampleMapCatalog(emoji), true);
   for (const value of [{ ...request, latitude: 21 }, { ...request, ownerId: ids[2] }, { ...request, originPlaceId: 'Q1202019' },
-    { ...request, destinationPlaceId: request.originPlaceId.toUpperCase() }, null]) assert.equal(isSampleRouteRequest(value), false);
+    { ...request, destinationPlaceId: request.originPlaceId.toUpperCase() }, { ...request, originPlaceId: `${request.originPlaceId}\n` }, null]) assert.equal(isSampleRouteRequest(value), false);
   assert.equal(isSampleRouteResult({ kind: 'no-route', source: 'google-routes', coordinates: [] }), false);
   assert.equal(isSampleRouteResult({ kind: 'route', source: 'google-routes', attribution: 'Google Maps', distanceMeters: 0,
     durationMilliseconds: 0, coordinates: new Array(2), warnings: [] }), false);

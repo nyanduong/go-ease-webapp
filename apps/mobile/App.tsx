@@ -5,6 +5,8 @@ import { apiBaseUrl } from './src/lib/config';
 import { createHealthClient } from './src/lib/health';
 import { createHealthStore } from './src/features/health/store';
 import { AuthPanel } from './src/features/auth/panel';
+import { NativeAuthProvider } from './src/features/auth/context';
+import { MapsPanel } from './src/features/maps/panel';
 
 function HealthScreen() {
   const setup = useMemo(() => {
@@ -40,12 +42,13 @@ function HealthScreen() {
             <Text style={styles.buttonText}>{state.kind === 'loading' ? 'Đang kiểm tra…' : 'Thử lại'}</Text>
           </Pressable>
         </View>
+        <MapsPanel />
         <Text style={styles.note}>Development build phục vụ kiểm chứng native. Bản preview cuối cần HTTPS staging, mở được khi Metro đã tắt. Google login thật, AI và bản đồ cần bằng chứng riêng.</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
-export default function App() { return <SafeAreaProvider><HealthScreen /></SafeAreaProvider>; }
+export default function App() { return <SafeAreaProvider><NativeAuthProvider><HealthScreen /></NativeAuthProvider></SafeAreaProvider>; }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f4f7f2' },
