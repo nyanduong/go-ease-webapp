@@ -17,9 +17,9 @@ export interface NativeSessionResponse {
   transport: 'native'; user: AuthUser; expiresAt: string; accessToken: string;
 }
 export type SessionResponse = WebSessionResponse | NativeSessionResponse;
-export interface CurrentSessionResponse {
-  transport: AuthTransport; user: AuthUser; expiresAt: string; csrfToken?: string;
-}
+export type CurrentSessionResponse =
+  { transport: 'web'; user: AuthUser; expiresAt: string; csrfToken: string } |
+  { transport: 'native'; user: AuthUser; expiresAt: string };
 
 export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -46,7 +46,7 @@ export function isGoogleExchangeRequest(value: unknown): value is GoogleExchange
 export function isAuthUser(value: unknown): value is AuthUser {
   return record(value) && keys(value, ['id', 'displayName', 'role']) && isUuid(value.id) &&
     (value.role === 'CUSTOMER' || value.role === 'ADMIN') &&
-    (value.displayName === null || (typeof value.displayName === 'string' && value.displayName.length <= 120));
+    (value.displayName === null || (typeof value.displayName === 'string' && Array.from(value.displayName).length <= 120));
 }
 export function isAuthChallengeResponse(value: unknown): value is AuthChallengeResponse {
   return record(value) && keys(value, ['challengeId', 'transport', 'nonce', 'proof', 'expiresAt']) &&
