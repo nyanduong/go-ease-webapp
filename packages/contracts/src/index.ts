@@ -25,3 +25,5 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
     health.scope === 'api-only' && typeof health.timestamp === 'string' &&
     /^\d{4}-\d{2}-\d{2}T/.test(health.timestamp) && Number.isFinite(Date.parse(health.timestamp));
 }
+
+export { isAdminPlacesResponse, type AdminPlace, type AdminPlacesResponse } from './admin.js';
