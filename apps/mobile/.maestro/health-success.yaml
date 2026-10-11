@@ -1,4 +1,5 @@
 # Requires the real local API and Metro for the installed development client.
+# Android launcher handling; this is not an iOS execution result.
 appId: vn.goease.mobile.dev
 ---
 - launchApp:
@@ -12,6 +13,10 @@ appId: vn.goease.mobile.dev
     visible: "Continue"
     timeout: 60000
 - tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Reload"
+    timeout: 10000
+- back
 - extendedWaitUntil:
     visible: "API đang hoạt động"
     timeout: 120000
