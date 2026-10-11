@@ -4,7 +4,7 @@ GoEase hỗ trợ hành trình Việt Nam của cả nhóm: khách dùng **app A
 
 `apps/web` giữ React + Vite + TypeScript, Tailwind CSS + shadcn/ui để phát triển quản trị; `apps/api` giữ NestJS + TypeScript dùng chung. PostgreSQL + Prisma 7 có schema/migration/seed sau [thiết kế dữ liệu #2](https://github.com/nyanduong/go-ease-webapp/issues/2) đã review/merge; [runbook DB](docs/database/RUNBOOK.md) hướng dẫn cluster local cô lập, role tối thiểu và backup/restore. Chia sẻ contracts/logic phù hợp, không hứa dùng chung toàn bộ UI.
 
-MVP gồm chuyến 1–5 ngày, ngân sách tổng nhóm VND, trải nghiệm địa phương và khách sạn/vé máy bay qua đối tác; một điểm đến mở thử tại Việt Nam chưa chốt. Gemini online qua backend, Ollama chỉ thử nghiệm; bản đồ khách hàng là native trong app, SDK hiện dùng react-native-maps/Google provider, cần nghiệm chứng native/live riêng từng nền tảng theo [Maps](docs/maps/README.md). M0 kiểm chứng nền/tích hợp, chưa phải toàn bộ MVP. Xem [phạm vi MVP](docs/MVP_SCOPE.md), [kiến trúc](docs/ARCHITECTURE.md), [quy trình GitHub](docs/WORKFLOW.md) và [hướng dẫn agent](AGENTS.md).
+MVP gồm chuyến 1–5 ngày, ngân sách tổng nhóm VND, trải nghiệm địa phương và khách sạn/vé máy bay qua đối tác; một điểm đến mở thử tại Việt Nam chưa chốt. Gemini online qua backend, Ollama chỉ thử nghiệm; bản đồ khách hàng là native trong app, SDK hiện dùng react-native-maps/Google provider, cần nghiệm chứng native/live riêng từng nền tảng theo [Maps](docs/maps/README.md). M0 kiểm chứng nền/tích hợp, chưa phải toàn bộ MVP. Xem [bàn giao/UAT M0](docs/handover/README.md), [phạm vi MVP](docs/MVP_SCOPE.md), [kiến trúc](docs/ARCHITECTURE.md), [quy trình GitHub](docs/WORKFLOW.md) và [hướng dẫn agent](AGENTS.md).
 
 ## Cài và chạy trên Windows/Linux
 
@@ -17,7 +17,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Web: http://127.0.0.1:5173 — API: http://127.0.0.1:3000/api/health. `pnpm dev` build contracts thành công trước khi chạy ứng dụng, rồi giữ một TypeScript watcher cho contracts cùng API/web. Thay đổi runtime được API nạp lại và Vite cập nhật trên web; bấm **Kiểm tra lại** để gửi health request mới. Lỗi compile contracts hiện trong terminal, giữ dist hợp lệ trước đó và tự build lại khi sửa lỗi. Ctrl+C dừng các watcher và cả hai app. Lệnh chạy trực tiếp trong PowerShell/Linux.
+Web admin: http://127.0.0.1:5173 — [màn kỹ thuật health](http://127.0.0.1:5173/technical/health) — API: http://127.0.0.1:3000/api/health. `pnpm dev` build contracts thành công trước khi chạy ứng dụng, rồi giữ một TypeScript watcher cho contracts cùng API/web. Thay đổi runtime được API nạp lại và Vite cập nhật trên web; mở `/technical/health`, bấm **Kiểm tra lại** để gửi health request mới. Lỗi compile contracts hiện trong terminal, giữ dist hợp lệ trước đó và tự build lại khi sửa lỗi. Ctrl+C dừng các watcher và cả hai app. Lệnh chạy trực tiếp trong PowerShell/Linux.
 
 API dev thêm bootstrap flag `--dev-watch`: khi restart/dừng, Nest đóng các socket preconnect/keep-alive còn mở để watcher không treo. Request đang chạy có thể mất kết nối; UI phải giữ draft và cho retry. `pnpm start` không thêm flag, giữ cách drain response mặc định của Nest. Xem [Nest FAQ](https://docs.nestjs.com/faq/keep-alive-connections) và [receipt fix #23](docs/verification/ISSUE-23.md).
 
@@ -42,7 +42,7 @@ pnpm dev:api
 pnpm dev:web
 ```
 
-Dừng terminal API, bấm **Kiểm tra lại** trên web: phải hiện lỗi. Chạy lại API, bấm **Thử lại**: phải nhận phản hồi thành công mới.
+Mở web `/technical/health`. Dừng terminal API, bấm **Kiểm tra lại**: phải hiện lỗi. Chạy lại API, bấm **Thử lại**: phải nhận phản hồi thành công mới.
 
 `dev:api` và `dev:web` chỉ theo dõi ứng dụng tương ứng, **không build/watch contracts**. Khi sửa contracts trong chế độ chạy riêng, dùng thêm một terminal `pnpm dev:contracts` (watcher này tự build lần đầu; chờ “Found 0 errors” trước khi bật app), hoặc chạy lại lệnh build contracts thủ công. Chỉ chạy một watcher/build contracts tại một thời điểm; không chạy các lệnh này đồng thời với `pnpm dev`.
 
