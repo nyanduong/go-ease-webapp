@@ -22,6 +22,10 @@ async function environment() {
   }
   return { migrationUrl: data.migrationUrl, runtimeUrl: data.runtimeUrl, runtime: data.runtime, databaseName: 'goease_local' };
 }
+async function applyMigrations(config: { migrationUrl: string; runtime: string }) {
+  await runTool(process.execPath, [path.join(apiRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'deploy', '--config', path.join(apiRoot, 'prisma7.config.ts')], { ...process.env, DATABASE_MIGRATION_URL: config.migrationUrl });
+  await grantRuntime(config.migrationUrl, config.runtime);
+}
 try {
   if (command === 'init') {
     if (existsSync(environmentFile) || existsSync(path.join(apiRoot, '.env.local'))) throw new Error('Existing local config found; refusing overwrite');
@@ -38,14 +42,17 @@ try {
     console.info(`Owned GoEase cluster ${command} completed.`);
   } else if (command === 'migrate') {
     const config = await environment();
-    await runTool(process.execPath, [path.join(apiRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'deploy', '--config', path.join(apiRoot, 'prisma7.config.ts')], { ...process.env, DATABASE_MIGRATION_URL: config.migrationUrl });
-    await grantRuntime(config.migrationUrl, config.runtime);
+    await applyMigrations(config);
     console.info('Migrations and minimum runtime grants applied to isolated GoEase local DB.');
   } else if (command === 'seed') {
     const config = await environment();
     const database = createDatabaseClient(config.migrationUrl);
     try { await seedCatalog(database); } finally { await database.$disconnect(); }
     console.info('Three labelled sample points seeded; no users/admin created.');
+  } else if (command === 'schema-check') {
+    const config = await environment();
+    await runTool(process.execPath, [path.join(apiRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'diff', '--from-config-datasource', '--to-schema', path.join(apiRoot, 'prisma/schema.prisma'), '--exit-code', '--config', path.join(apiRoot, 'prisma7.config.ts')], { ...process.env, DATABASE_MIGRATION_URL: config.migrationUrl });
+    console.info('Prisma datamodel matches the isolated DB; CHECK/triggers are verified separately by real DB tests.');
   } else if (command === 'backup') {
     const config = await environment();
     const cluster = await LocalPostgres.reopen(clusterDirectory);
@@ -70,8 +77,11 @@ try {
     const cluster = await LocalPostgres.reopen(clusterDirectory);
     const name = `goease_manual_test_${randomBytes(4).toString('hex')}`;
     const config = await createIsolatedDatabase(cluster, name);
+    await applyMigrations(config);
+    const database = createDatabaseClient(config.migrationUrl);
+    try { await seedCatalog(database); } finally { await database.$disconnect(); }
     await writeFile(path.join(local, 'manual-test.json'), JSON.stringify(config), { mode: 0o600 });
-    console.info('Fresh isolated test DB created; private URLs in apps/api/.local/manual-test.json. Existing DBs untouched.');
+    console.info('Fresh isolated test DB migrated/seeded; private URLs in apps/api/.local/manual-test.json. Existing DBs untouched.');
   } else if (command === 'check') {
     const config = await environment();
     const client = new pg.Client({ connectionString: config.runtimeUrl });
@@ -80,7 +90,7 @@ try {
       const result = await client.query('SELECT current_database() AS database, current_user AS role, (SELECT count(*)::int FROM "Place") AS places');
       console.info(result.rows[0]); // Names/count only; no URL, token or subject.
     } finally { await client.end(); }
-  } else throw new Error('Use init|start|stop|migrate|seed|check|backup|restore-check|reset-test');
+  } else throw new Error('Use init|start|stop|migrate|seed|check|schema-check|backup|restore-check|reset-test');
 } catch {
   // Do not print driver/Prisma errors: metadata may contain URLs, SQL or binds.
   console.error('Local DB operation failed; inspect the private environment and documented prerequisites. No credential was printed.');

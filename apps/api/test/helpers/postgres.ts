@@ -126,4 +126,3 @@ export async function fixtureDirectory() {
 export async function postgresVersion(bin: string) {
   return (await runTool(path.join(bin, 'postgres'), ['--version'])).stdout.trim();
 }
-

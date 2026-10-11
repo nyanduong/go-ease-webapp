@@ -1,4 +1,5 @@
 -- PostgreSQL row checks and deferred aggregate invariants, beyond Prisma DSL.
+BEGIN;
 ALTER TABLE "User" ADD CONSTRAINT user_subject CHECK ("googleSubject" ~ '^[!-~]+$'),
   ADD CONSTRAINT user_role CHECK (role IN ('CUSTOMER','ADMIN'));
 ALTER TABLE "Trip" ADD CONSTRAINT trip_title CHECK (title = btrim(title) AND length(title) BETWEEN 1 AND 160),
@@ -88,3 +89,4 @@ DO $$ BEGIN
     RAISE EXCEPTION 'Existing Trip day sequence is invalid' USING ERRCODE = '23514';
   END IF;
 END $$;
+COMMIT;

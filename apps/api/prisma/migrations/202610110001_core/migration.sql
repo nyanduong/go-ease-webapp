@@ -1,4 +1,5 @@
 -- Core baseline; 002 adds and validates SQL invariants on existing data.
+BEGIN;
 CREATE TABLE "User" (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), "googleSubject" varchar(255) NOT NULL,
   "displayName" varchar(120), role varchar(16) NOT NULL DEFAULT 'CUSTOMER', "disabledAt" timestamptz(3),
@@ -54,3 +55,4 @@ CREATE TABLE "IdempotencyRecord" (
   CONSTRAINT "IdempotencyRecord_tripId_userId_fkey" FOREIGN KEY ("tripId","userId") REFERENCES "Trip"(id,"ownerId") ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 CREATE INDEX "IdempotencyRecord_tripId_idx" ON "IdempotencyRecord"("tripId");
+COMMIT;

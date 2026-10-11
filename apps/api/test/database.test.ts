@@ -32,6 +32,7 @@ test('PostgreSQL: fresh/upgrade migrations, constraints, seed, privilege, concur
   assert.match(version, /PostgreSQL\) (16|17|18)\./);
   const env = await createIsolatedDatabase(cluster, 'goease_test');
   await migrate(env.migrationUrl);
+  await runTool(process.execPath, [prismaCli, 'migrate', 'diff', '--from-config-datasource', '--to-schema', path.join(apiRoot, 'prisma/schema.prisma'), '--exit-code', '--config', path.join(apiRoot, 'prisma7.config.ts')], { ...process.env, DATABASE_MIGRATION_URL: env.migrationUrl });
   await grantRuntime(env.migrationUrl, env.runtime);
   const db = createDatabaseClient(env.runtimeUrl);
   const operator = createDatabaseClient(env.migrationUrl);
@@ -83,6 +84,8 @@ test('PostgreSQL: fresh/upgrade migrations, constraints, seed, privilege, concur
     await assert.rejects(sql.query('UPDATE "Place" SET latitude=91'), isSqlError('23514'));
     await assert.rejects(sql.query('UPDATE "Place" SET longitude=181'), isSqlError('23514'));
     await assert.rejects(sql.query('INSERT INTO "Session" ("userId","tokenHash","expiresAt") VALUES ($1,$2,now()-interval \'1 day\')', [owner.id, 'a'.repeat(64)]), isSqlError('23514'));
+    await assert.rejects(sql.query('INSERT INTO "Session" ("userId","tokenHash","expiresAt") VALUES ($1,$2,now()+interval \'1 day\')', [owner.id, 'invalid-hash']), isSqlError('23514'));
+    await assert.rejects(sql.query('INSERT INTO "IdempotencyRecord" ("userId",operation,key,"requestHash","tripId","statusCode","responseBody") VALUES ($1,\'trip.create\',$2,$3,$4,201,\'{}\')', [owner.id, randomUUID(), 'invalid-hash', trip.id]), isSqlError('23514'));
     assert.equal((await db.trip.findUniqueOrThrow({ where: { id: trip.id } })).version, 1);
   });
 
