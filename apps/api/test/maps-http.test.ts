@@ -16,7 +16,7 @@ import { GoogleIdentityVerifier, type VerifiedGoogleIdentity } from '../src/modu
 import { hash } from '../src/modules/auth/crypto.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { LOGIN_COOKIE, SESSION_COOKIE } from '../src/modules/auth/http.js';
-import { MapsModule, MapsService, RoutesProvider } from '../src/modules/maps/maps.module.js';
+import { MapsService, RoutesProvider } from '../src/modules/maps/maps.module.js';
 import { MapsError } from '../src/modules/maps/errors.js';
 import type { RoutesConfig } from '../src/modules/maps/routes.js';
 import { createIsolatedDatabase, fixtureDirectory, grantRuntime, LocalPostgres, runTool } from './helpers/postgres.js';
@@ -69,7 +69,7 @@ test('Maps HTTP protects paid native Routes using actual PostgreSQL sessions and
     const identities = new TestIdentities(), provider = new TestRoutes();
     const module = await Test.createTestingModule({ imports: [await AppModule.register({ NODE_ENV: 'test', WEB_ORIGINS: origin,
       DATABASE_URL: database.runtimeUrl, GOOGLE_WEB_CLIENT_ID: 'test-client.apps.googleusercontent.com',
-      MAPS_ROUTES_ENABLED: enabled ? 'true' : 'false', ...(key ? { GOOGLE_MAPS_SERVER_API_KEY: 'TEST_ONLY_SERVER_MAPS_KEY' } : {}) }), MapsModule] })
+      MAPS_ROUTES_ENABLED: enabled ? 'true' : 'false', ...(key ? { GOOGLE_MAPS_SERVER_API_KEY: 'TEST_ONLY_SERVER_MAPS_KEY' } : {}) })] })
       .overrideProvider(GoogleIdentityVerifier).useValue(identities).overrideProvider(RoutesProvider).useValue(provider).compile();
     const app = module.createNestApplication<NestExpressApplication>({ logger: false }); configureApp(app); apps.add(app); await app.listen(0, '127.0.0.1');
     const url = await app.getUrl();
@@ -142,7 +142,10 @@ test('Maps HTTP protects paid native Routes using actual PostgreSQL sessions and
     try {
       const native = await s.login(); assert.equal(native.body.transport, 'native'); if (native.body.transport !== 'native') assert.fail();
       await fault(await s.post('maps/sample-route', pair, { ...native.headers, Origin: origin }), 401, 'SESSION_REQUIRED');
-      await op.session.updateMany({ where: { tokenHash: hash(native.body.accessToken) }, data: { expiresAt: new Date(Date.now() - 1000) } });
+      // Preserve the real expiresAt > createdAt invariant while making this fixture expired.
+      const expiredAt = new Date(Date.now() - 1000);
+      await op.session.updateMany({ where: { tokenHash: hash(native.body.accessToken) },
+        data: { createdAt: new Date(expiredAt.getTime() - 60_000), expiresAt: expiredAt } });
       await fault(await s.post('maps/sample-route', pair, native.headers), 401, 'SESSION_REQUIRED');
       const revoked = await s.login(); assert.equal(revoked.body.transport, 'native'); if (revoked.body.transport !== 'native') assert.fail();
       assert.equal((await s.post('auth/logout', {}, revoked.headers)).status, 204);
