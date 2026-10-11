@@ -59,7 +59,7 @@ Source product, source dùng build/test và commit tài liệu có thể khác n
 
 Lỗi trong branch chưa merge được sửa trong chính PR, không tạo issue trùng. Các receipt giữ finding/fix và lần test thất bại. Không có bằng chứng để gọi luồng sản phẩm “sẵn sàng nghiệm thu” khi native/live chưa chạy; những phần đó là BLOCKED, không được chuyển thành PASS bằng doubles.
 
-Điều kiện còn thiếu tập trung tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md): OAuth clients/test users; Gemini key/model/quota/ngân sách probe; restricted Maps keys/billing được phép; HTTPS/cloud DB; EAS/Apple signing và Android/iPhone thật. Automatic approval review đã chặn Metro development server; Docker engine Windows chưa kết nối được, Docker CI Linux đã PASS. Node đã vá ở #38; image/OS scan và residual advisory assessment vẫn cần trước kích hoạt ngoài. Không suy tài khoản không tồn tại chỉ vì chưa xác minh, không in secret hoặc tự bật billing.
+Điều kiện còn thiếu tập trung tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md): OAuth runtime, tài khoản thử B, Android preview certificate và HTTPS origin (Web/Android development/iOS development+iOS preview clients và test user A đã lưu theo receipt #4); Gemini key/model/quota/ngân sách probe; restricted Maps keys/billing được phép; HTTPS/cloud DB; EAS/Apple signing và Android/iPhone thật. Yêu cầu Metro development server bị từ chối `blocked by policy`, lớp gây chặn chưa xác định; Docker engine Windows chưa kết nối được, Docker CI Linux đã PASS. Node đã vá ở #38; image/OS scan và residual advisory assessment vẫn cần trước kích hoạt ngoài. Không suy tài khoản không tồn tại chỉ vì chưa xác minh, không in secret hoặc tự bật billing.
 
 ## Ngoài M0
 

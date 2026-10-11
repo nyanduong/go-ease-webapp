@@ -46,7 +46,7 @@ Kiểm tra checksum và source trước cài; mở preview khi Metro tắt rồi
 | Auth/admin503 | Xem tên config/DB readiness ở [API](../api/API.md), không thay Google verifier bằng double trong runtime. |
 | Cookie không gửi ở local HTTP/cross-site | Dùng HTTPS same-origin đúng [auth](../auth/README.md); không hạ Secure/CSRF hoặc mở wildcard CORS. |
 | Android Ninja path/RAM | Checkout vật lý ngắn và cấu hình lần gọi một worker theo mobile runbook; không sửa registry/global hoist hoặc kill process khác. |
-| Metro bị chặn | Automatic approval review đã từ chối khởi động Metro với lý do “blocked by policy”. Không thử biến thể để vượt chặn; native development runtime tương ứng vẫn BLOCKED. |
+| Metro bị chặn | Công cụ từ chối yêu cầu tạo tiến trình với `blocked by policy`; lớp gây chặn chưa xác định. Không chạy lại hoặc đổi cách thực thi để vượt chặn; chỉ tiếp tục khi có đường cấp quyền hợp lệ. Native development runtime tương ứng vẫn BLOCKED; xem đính chính trong receipt #4. |
 | iOS build/cài chưa có | Cấp đường Mac/Xcode hoặc EAS/signing/thiết bị hợp lệ theo bảng tài nguyên; JS export/Android không thay kết quả iOS. |
 | Mất response lúc lưu | Giữ pending key/body bất biến và retry theo [Trips](../mobile/TRIPS.md), không gửi yêu cầu mới để đoán đã lưu hay ghi đè409. |
 | Migration/restore lỗi | Giữ DB cũ/backup, đọc private log đã redaction và runbook; không reset, restore đè, tự mark applied hoặc che lỗi để xanh gate. |
