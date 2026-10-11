@@ -12,6 +12,8 @@ Cluster riêng ở `apps/api/.local/postgres`, host `127.0.0.1`, port trống ng
 
 DB role không thay authorization HTTP: app role có quyền đọc bảng, backend #4/#5 vẫn phải xác minh session/current role và query theo owner. M0 chưa dùng RLS; test DB ở #3 không chứng minh A không đọc B qua API. `schema-check` so datamodel Prisma với DB thật bằng migrate diff; CHECK/trigger ngoài DSL được kiểm chứng riêng trong DB suite.
 
+Client Prisma dùng chung ép **UTC cho từng kết nối** qua startup options: adapter-pg đã pin serialize UTC digits không offset và đọc timestamptz cần session UTC. Raw operator có thể dùng timezone khác; instant lưu không đổi. Không `ALTER ROLE/DATABASE` hoặc đổi timezone hệ điều hành. Options an toàn khác (ví dụ application_name) được giữ; UTC và statement timeout được nối sau cùng, URL không được vô hiệu hóa giới hạn. Pool tối đa 5, connect/acquire 3 giây, statement/query 5 giây, idle 10 giây; thiếu DB hoặc query bị chặn phải thất bại hữu hạn. Prisma migration engine riêng không dùng client này. Regression thật và giới hạn chứng cứ ở [GE-M0-27](../verification/GE-M0-27.md).
+
 ## Khởi tạo và vận hành local
 
 Từ root, sau frozen install:
