@@ -25,7 +25,6 @@ function HealthScreen({ onBack }: { onBack: () => void }) {
   const title = state.kind === 'loading' ? 'Đang kết nối API…' : state.kind === 'success' ? 'API đang hoạt động' : 'Chưa kết nối được API';
   return (
     <View style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.brand}>GoEase</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="Về chuyến đi" onPress={onBack} style={styles.button}><Text style={styles.buttonText}>Về chuyến đi</Text></Pressable>
@@ -55,7 +54,7 @@ function AppScreens() {
   const [technical, setTechnical] = useState(false);
   useEffect(() => { const subscription = BackHandler.addEventListener('hardwareBackPress', () => { if (!technical) return false; setTechnical(false); return true; }); return () => subscription.remove(); }, [technical]);
   // Keep the trip RAM bucket mounted while visiting technical checks.
-  return <SafeAreaView style={styles.safe}><View style={[styles.safe, technical && { display: 'none' }]}><TripsPanel active={!technical} onTechnical={() => setTechnical(true)} /></View>{technical && <HealthScreen onBack={() => setTechnical(false)} />}</SafeAreaView>;
+  return <SafeAreaView style={styles.safe}><StatusBar barStyle="dark-content" /><View style={[styles.safe, technical && { display: 'none' }]}><TripsPanel active={!technical} onTechnical={() => setTechnical(true)} /></View>{technical && <HealthScreen onBack={() => setTechnical(false)} />}</SafeAreaView>;
 }
 export default function App() { return <SafeAreaProvider><NativeAuthProvider><AppScreens /></NativeAuthProvider></SafeAreaProvider>; }
 
