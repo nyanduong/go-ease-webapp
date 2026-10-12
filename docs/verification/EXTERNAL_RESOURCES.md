@@ -13,6 +13,8 @@ Ngày đối chiếu: 12/10/2026. Đây là bảng điều kiện kỹ thuật, 
 
 Runbook và dữ kiện đầy đủ: [MOBILE_PREVIEW](../staging/MOBILE_PREVIEW.md), [receipt #10](GE-M0-10.md). Không tự báo hoàn tất khi chưa có preview Metro-off và UAT thật Android/iPhone. Không chạy lại Metro hoặc đổi cách thực thi để né policy đã chặn; lớp gây chặn lịch sử chưa xác định.
 
+Phần iOS độc lập đang mở: [unsigned native compile](IOS_UNSIGNED_COMPILE.md) trên standard public GitHub `xcode-27`, chỉ public development OAuth ID, không Apple Account/signing/artifact storage. Chưa có native run PASS hoặc IPA để cài từ receipt này. Đường ký/cài Windows qua bên thứ ba cần owner chọn và kiểm tương thích hai iPhone; HTTPS/Google Maps SDK/live và UAT vẫn bị chặn riêng, không suy từ compile.
+
 ## Từng dịch vụ
 
 | Dịch vụ / issue | Nơi cấu hình chính thức | Biến / định danh cần chuẩn bị | Trạng thái và việc owner cần làm | Kiểm chứng cần chạy / blocker |
