@@ -38,19 +38,22 @@ test('Fresh Android Gradle generation defers Windows selection and targets only 
   assert.equal(await generate(result), result);
 });
 
-test('Legacy prebuild output upgrades in place without changing either adjacent Gradle section', async () => {
-  const fixture = await readFile(new URL('./fixtures/windows-native-staging-legacy.gradle', import.meta.url), 'utf8');
+test('Legacy prebuild output upgrades uniform/mixed LF/CRLF without changing adjacent Gradle bytes', async () => {
+  const fixture = (await readFile(new URL('./fixtures/windows-native-staging-legacy.gradle', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+  const start = fixture.indexOf(legacyMarker);
+  const finish = fixture.indexOf('\n\n// Sentinel configuration after');
   for (const newline of ['\n', '\r\n']) {
-    const source = fixture.replaceAll('\r\n', '\n').replaceAll('\n', newline);
-    const before = source.slice(0, source.indexOf(legacyMarker));
-    const after = source.slice(source.indexOf(`${newline}${newline}// Sentinel configuration after`));
-    const result = await generate(source);
-    assert.ok(result.startsWith(before + begin));
-    assert.ok(result.endsWith(end + after));
-    assert.ok(result.includes("'expo-modules-core': 'expo'"));
-    assert.equal(result.includes(legacyMarker), false);
-    assert.equal(result.replaceAll(newline, '').includes('\n'), false);
-    assert.equal(await generate(result), result);
+    for (const blockNewline of ['\n', '\r\n']) {
+      const before = fixture.slice(0, start).replaceAll('\n', newline);
+      const after = fixture.slice(finish).replaceAll('\n', newline);
+      const source = before + fixture.slice(start, finish).replaceAll('\n', blockNewline) + after;
+      const result = await generate(source);
+      assert.ok(result.startsWith(before + begin));
+      assert.ok(result.endsWith(end + after));
+      assert.ok(result.includes("'expo-modules-core': 'expo'"));
+      assert.equal(result.includes(legacyMarker), false);
+      assert.equal(await generate(result), result);
+    }
   }
 });
 
@@ -66,6 +69,7 @@ test('Ambiguous or edited legacy markers fail before changing Gradle', async () 
   const legacy = (await readFile(new URL('./fixtures/windows-native-staging-legacy.gradle', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
   for (const source of [original + original, original.replace(end, ''), original.replace(begin, ''),
     original + legacy, legacy.replace("'nitro'", "'custom'"), `${end}\n${begin}\n`, `prefix ${original}`,
+    original.replace(begin, `${begin} trailing configuration`), original.replace(end, `prefix ${end}`),
     original.replace(end, `${end} trailing configuration`), legacy.replace(legacyMarker, `prefix ${legacyMarker}`),
     legacy.replace('\n}\n\n// Sentinel configuration after', '\n} trailing configuration\n\n// Sentinel configuration after')]) {
     await assert.rejects(generate(source), /GoEase Windows staging:/);

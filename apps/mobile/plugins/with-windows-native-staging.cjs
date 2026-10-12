@@ -67,14 +67,16 @@ function upsert(contents) {
     }
     const from = starts[0];
     const to = ends[0] + end.length;
-    if (!hasLineBoundaries(contents, from, to)) {
+    if (!hasLineBoundaries(contents, from, from + begin.length) || !hasLineBoundaries(contents, ends[0], to)) {
       throw new Error('GoEase Windows staging: mốc phải nằm trên dòng riêng; giữ nguyên Gradle để kiểm tra.');
     }
     return contents.slice(0, from) + block + contents.slice(to);
   }
   if (oldStarts.length) {
-    const oldBlock = legacy.replaceAll('\n', newline);
-    if (oldStarts.length !== 1 || contents.slice(oldStarts[0], oldStarts[0] + oldBlock.length) !== oldBlock || !hasLineBoundaries(contents, oldStarts[0], oldStarts[0] + oldBlock.length)) {
+    // The old JS template appended LF even when surrounding Gradle used CRLF.
+    const oldBlock = [legacy, legacy.replaceAll('\n', '\r\n')].find(candidate =>
+      contents.slice(oldStarts[0], oldStarts[0] + candidate.length) === candidate && hasLineBoundaries(contents, oldStarts[0], oldStarts[0] + candidate.length));
+    if (oldStarts.length !== 1 || !oldBlock) {
       throw new Error('GoEase Windows staging: block Nitro cũ đã thay đổi; giữ nguyên Gradle để kiểm tra trước khi migrate.');
     }
     return contents.slice(0, oldStarts[0]) + block + contents.slice(oldStarts[0] + oldBlock.length);

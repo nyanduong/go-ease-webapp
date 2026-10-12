@@ -16,7 +16,7 @@ Block có cặp mốc `@generated begin/end goease-windows-native-staging` để
 
 Ngày 12/10/2026, Windows; Node 24.21.0, pnpm 10.34.6; base `7e4ae5b`:
 
-- `node --test test/windows-native-staging.test.ts`: **5/5 PASS**, không skip. Gọi actual Expo `projectBuildGradle` mod; kiểm fresh generation, map/platform guard/library scope, migration legacy LF/CRLF với hai vùng sentinel, lặp idempotent, update block cũ và các marker mơ hồ/Kotlin bị từ chối.
+- `node --test test/windows-native-staging.test.ts`: **5/5 PASS**, không skip. Gọi actual Expo `projectBuildGradle` mod; kiểm fresh generation, map/platform guard/library scope, migration legacy LF/CRLF và mixed-EOL với hai vùng sentinel, lặp idempotent, update block cũ và các marker mơ hồ/Kotlin bị từ chối. Internal review phát hiện legacy template LF từng nối vào Gradle CRLF; đã sửa matcher độc lập EOL vùng ngoài và thêm ma trận regression.
 - `pnpm exec tsc -p tsconfig.test.json --noEmit` và targeted ESLint plugin/test: **PASS**.
 - `pnpm --filter @goease/mobile test` từ root: **78/78 PASS**, không skip; gồm cả regression auth/maps/trips và config/EAS hiện có.
 - Standalone Groovy 4.0.29/JDK 21, heap 256 MiB: **5/5 OS cases PASS** trên Windows host với DSL test doubles. Windows 11/Windows 10 đổi đúng ba library; Linux/Mac OS X/Darwin không đổi; application và library ngoài map giữ nguyên. Default locale `tr-TR`; mô phỏng vendor đặt staging sau plugin registration, rồi chạy finalize. Đây là kiểm hành vi generated Groovy, không phải build chạy trên Linux/macOS hoặc AGP integration.
