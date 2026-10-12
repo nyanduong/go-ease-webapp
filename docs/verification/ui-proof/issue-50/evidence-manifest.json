@@ -56,8 +56,8 @@
   },
   {
     "name": "REPRODUCE.ps1",
-    "bytes": 2435,
-    "sha256": "305D2474CE72D8C9E0BD038F8566AAF910D13A9FEC9689EC3606930315F3DA49"
+    "bytes": 4764,
+    "sha256": "49BAAF77F0807433878312605ECBCC57815046A6784DD2A1FB3004327980E2BA"
   },
   {
     "name": "small-font13-junit.xml",
@@ -73,5 +73,15 @@
     "name": "trips-layout-variant.yaml",
     "bytes": 747,
     "sha256": "B47F2BB26AEB291CB2C34A0A11AFF79E321092C2AD97EB1F7986C6F430D3D3B7"
+  },
+  {
+    "name": "admin-320.png",
+    "bytes": 33317,
+    "sha256": "D6DA4F542656315C3694048ACA4400FF9D49885E83139182961A83ABC64AF60B"
+  },
+  {
+    "name": "prototype-save-error-320.png",
+    "bytes": 41685,
+    "sha256": "9C15BE774548715A4643B8A1C07EC9D507C9FECED26DD2E30DAFF6AD1C93BB23"
   }
 ]

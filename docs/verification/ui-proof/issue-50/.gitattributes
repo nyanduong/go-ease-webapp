@@ -1,0 +1,2 @@
+# Preserve collected proof bytes so evidence-manifest hashes survive checkout.
+* -text

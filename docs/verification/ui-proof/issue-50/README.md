@@ -10,7 +10,7 @@ Android 15/API 35 Pixel 4 emulator, Release x86_64/Hermes, package riêng `vn.go
 
 ## Ảnh nguyên bản
 
-Ảnh giữ banner kiểm thử; không crop/đổi nội dung. Hash trong [evidence manifest](evidence-manifest.json). Không phải máy thật hoặc iOS.
+Ảnh giữ banner kiểm thử; không crop/đổi nội dung. Hash trong [evidence manifest](evidence-manifest.json). `.gitattributes` chỉ trong thư mục này giữ nguyên byte của bộ proof khi Git checkout, kể cả CRLF của file đã thu thập. Source manifests ghi hash bản Windows tại lúc build; mobile tree là định danh source Git để đối chiếu checkout khác hệ điều hành. Không phải máy thật hoặc iOS.
 
 | Ảnh | Điều kiện |
 | --- | --- |
@@ -24,7 +24,7 @@ Android 15/API 35 Pixel 4 emulator, Release x86_64/Hermes, package riêng `vn.go
 
 Chỉ dùng clone **riêng, sạch, ngắn** `C:/ge50`, checkout đúng commit ở trên; xác minh `git rev-parse HEAD:apps/mobile` khớp mobile tree. Không dùng đường dẫn đang thuộc công việc khác. Toolchain Node 24.21.0/pnpm 10.34.6/JDK 21/Android SDK 36/NDK 27.1/CMake 3.22.1 đã có và được phép; script không tự mua/cấp license/cài SDK. Chạy PowerShell riêng và đóng shell sau kiểm tra để env chỉ có hiệu lực trong process đó.
 
-Không đặt `.env` thật hoặc tài khoản trong clone. Trước build, đặt `$env:EXPO_NO_DOTENV = '1'` và bảo đảm process không có Google/Maps/API/signing secrets hoặc biến `EXPO_PUBLIC_*` từ công việc khác. Không in giá trị env. `REPRODUCE.ps1` nhận đường toolchain đã cài; các file entry/init/flow được đặt ngoài source sản phẩm. Script ghi lại quy trình từ lệnh đã chạy, chưa được chạy lại toàn bộ như một script độc lập.
+Không đặt `.env` thật hoặc tài khoản trong clone. Script tự đặt `EXPO_NO_DOTENV=1`, từ chối inherited Google/Maps/API/signing config bằng tên biến, kiểm checkout/commit/mobile tree/working tree sạch và không overwrite entry đã có trước install/prebuild/copy. Không in giá trị env. `REPRODUCE.ps1` nhận đường toolchain đã cài; các file entry/init/flow được đặt ngoài source sản phẩm. Hai đường từ chối env kế thừa và checkout đang có thay đổi đã kiểm PASS, không chạy build/mutation. Script ghi lại quy trình từ lệnh đã chạy, chưa được chạy lại toàn bộ như một script độc lập.
 
 ```powershell
 .\REPRODUCE.ps1 -PinnedNodeDirectory '<node-directory>' -PinnedPnpmScript '<pnpm.cjs>' -JdkDirectory '<jdk-directory>' -AndroidSdkDirectory '<sdk-directory>'
