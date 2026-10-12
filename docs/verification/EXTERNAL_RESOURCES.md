@@ -2,6 +2,14 @@
 
 Ngày đối chiếu: 12/10/2026. Đây là bảng điều kiện kỹ thuật, không thay backlog/status ở GitHub Project. Owner cấp quyền/tài nguyên là nyanduong; agent chuẩn bị và kiểm chứng trong issue tương ứng. Không ghi secret, cookie, chứng chỉ, key ký hay dữ liệu cá nhân. Tên biến bên dưới mô tả cấu hình; chỉ sự hiện diện tên biến không chứng minh tài nguyên đã tồn tại hoặc tích hợp live đạt. **Owner hiện chưa muốn chi tiền: không mua dịch vụ, thêm thẻ, nâng gói, bật billing hoặc trial có thể tính phí.**
 
+## Tiếp tục iPhone thật và backend — 12/10/2026
+
+Main nền `15b1d83` sau PR53. Owner xác nhận XS Max iOS18.7.10 có cáp USB và thao tác Trust/Developer Mode; Windows nhận Apple USB device, chưa chứng minh pairing/cài/chạy. Existing EAS preview Web/iOS IDs đã đọc bằng CLI chính thức; Web audience khớp backend, không tạo lại client. PostgreSQL GoEase riêng và backend loopback thật đã migrate/seed/schema/grants kiểm tra; HTTP health200, native challenge201, invalid identity/anonymous401; **Google positive login NOT RUN**, không doubles trong các HTTP probe này.
+
+[Đường iPhone miễn phí](../staging/IPHONE_FREE_TRIAL.md) chuẩn bị unsigned Release IPA chứa product JS/assets và public HTTPS/OAuth config, standard public runner, capped artifact100MiB/1ngày. Chưa có signed preview/native runtime/UAT. Tài khoản GitHub Free và budgets Actions/PackagesUSD0 Stop usage đã đọc, phải recheck storage trước mỗi dispatch. #54 bảo vệ trial allowlist/ingress/private Windows state trước exposure; chưa tunnel. Không gỡ container hold #46 bằng kết quả Windows. Owner còn cần chọn đường Sideloadly và tự đăng nhập/trust thiết bị tại bước ký; nếu yêu cầu payment/upgrade thì dừng, không bỏ iOS.
+
+Các snapshot trước bên dưới giữ ngữ cảnh và tiêu chí còn thiếu; không coi resource có tên/cấu hình là live đã đạt. #4/#10/#15/#11/M0 vẫn mở.
+
 ## Ưu tiên native/OAuth sau PR #41
 
 | Nhóm việc | Trạng thái / bước tiếp theo |
