@@ -1,0 +1,3 @@
+# Keep delivered text hashes stable on Windows/Linux; leave screenshots intact.
+* text eol=lf
+*.png -text

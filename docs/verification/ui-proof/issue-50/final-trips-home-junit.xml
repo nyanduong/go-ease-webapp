@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="MMA301_Pixel_4_API_35" tests="1" failures="0" time="39.025" timestamp="2026-10-12T11:09:00">
+    <testcase id="Trips home native component fixtures (no OAuth/API)" name="Trips home native component fixtures (no OAuth/API)" classname="Trips home native component fixtures (no OAuth/API)" file="trips-home.yaml" time="39.006" timestamp="2026-10-12T11:09:00" status="SUCCESS"/>
+  </testsuite>
+</testsuites>
