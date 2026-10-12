@@ -1,0 +1,22 @@
+// Sentinel configuration before the legacy plugin output.
+ext.goeaseUnrelated = 'keep-before'
+
+// GoEase: short Windows Nitro build directories
+if (System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('windows')) {
+    def goeaseNativeStages = [
+        'react-native-nitro-modules': 'nitro',
+        'react-native-nitro-google-signin': 'google-signin'
+    ]
+    subprojects { nativeProject ->
+        def stageName = goeaseNativeStages[nativeProject.name]
+        if (stageName != null) {
+            nativeProject.plugins.withId('com.android.library') {
+                nativeProject.extensions.getByName('android').externalNativeBuild.cmake.buildStagingDirectory =
+                    rootProject.file('.cxx/' + stageName)
+            }
+        }
+    }
+}
+
+// Sentinel configuration after the legacy plugin output.
+tasks.register('unrelated') { doLast { println('keep-after') } }
