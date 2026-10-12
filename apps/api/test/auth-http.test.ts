@@ -82,10 +82,11 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
   await grantRuntime(database.migrationUrl, database.runtime);
   const op = operator = createDatabaseClient(database.migrationUrl);
   const db = runtime = createDatabaseClient(database.runtimeUrl);
-  async function server(databaseUrl = database.runtimeUrl) {
+  async function server(databaseUrl = database.runtimeUrl, trial = false) {
     const verifier = new TestIdentities();
     const module = await Test.createTestingModule({ imports: [await AppModule.register({ NODE_ENV: 'test', WEB_ORIGINS: origin,
-      DATABASE_URL: databaseUrl, GOOGLE_WEB_CLIENT_ID: clientId })] })
+      DATABASE_URL: databaseUrl, GOOGLE_WEB_CLIENT_ID: clientId,
+      ...(trial ? { GOEASE_NATIVE_TRIAL_EMAILS: 'approved@test.example', GOEASE_LOCAL_STATE_DIR: 'TEST_ONLY_UNUSED_BY_CONFIGUREAPP' } : {}) })] })
       .overrideProvider(GoogleIdentityVerifier).useValue(verifier).compile();
     const app = module.createNestApplication<NestExpressApplication>({ logger: false });
     configureApp(app); apps.add(app); await app.listen(0, '127.0.0.1');
@@ -114,6 +115,51 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
     };
     return { app, verifier, url, post, get, challenge, exchange, login, close: async () => { await app.close(); apps.delete(app); } };
   }
+
+  await t.test('native trial rejects other/missing/unverified emails before writes and cannot restore a pre-trial or previous-process session', async () => {
+    const ordinary = await server();
+    const old = await ordinary.login('TRIAL-APPROVED');
+    await ordinary.close();
+    const s = await server(database.runtimeUrl, true);
+    let allowedHeaders: { Authorization: string };
+    try {
+      await fault(await s.get('auth/me', old.headers), 401, 'SESSION_REQUIRED');
+      const users = await db.user.count(), sessions = await db.session.count();
+      for (const email of [undefined, 'other@test.example', '']) {
+        const challenge = (await s.challenge()).body;
+        const token = s.verifier.token(challenge, `TRIAL-REJECT-${email ?? 'missing'}`);
+        if (email !== undefined) s.verifier.identities.get(token)!.verifiedEmail = email;
+        await fault(await s.exchange(challenge, token), 401, 'AUTH_INVALID_IDENTITY');
+        assert.equal(await db.user.count(), users); assert.equal(await db.session.count(), sessions);
+        assert.equal((await db.authChallenge.findUniqueOrThrow({ where: { id: challenge.challengeId } })).consumedAt, null);
+      }
+      const challenge = (await s.challenge()).body;
+      const token = s.verifier.token(challenge, 'TRIAL-APPROVED');
+      s.verifier.identities.get(token)!.verifiedEmail = 'approved@test.example';
+      const response = await s.exchange(challenge, token); assert.equal(response.status, 200);
+      const body: unknown = await response.json(); assert.ok(isSessionResponse(body) && body.transport === 'native');
+      assert.equal(body.user.role, 'CUSTOMER');
+      allowedHeaders = { Authorization: `Bearer ${body.accessToken}` };
+      assert.equal((await s.get('auth/me', allowedHeaders)).status, 200);
+      // A fresh allowed login never revives an older token for the same subject.
+      await fault(await s.get('auth/me', old.headers), 401, 'SESSION_REQUIRED');
+      assert.equal(await db.user.count(), users); assert.equal(await db.session.count(), sessions + 1);
+      await fault(await s.get('admin/access', allowedHeaders), 403);
+    } finally { await s.close(); }
+    const restarted = await server(database.runtimeUrl, true);
+    try {
+      await fault(await restarted.get('auth/me', allowedHeaders!), 401, 'SESSION_REQUIRED');
+      const challenge = (await restarted.challenge()).body;
+      const token = restarted.verifier.token(challenge, 'TRIAL-APPROVED');
+      restarted.verifier.identities.get(token)!.verifiedEmail = 'approved@test.example';
+      const response = await restarted.exchange(challenge, token); assert.equal(response.status, 200);
+      const body: unknown = await response.json(); assert.ok(isSessionResponse(body) && body.transport === 'native');
+      assert.equal((await restarted.get('auth/me', { Authorization: `Bearer ${body.accessToken}` })).status, 200);
+      await fault(await restarted.get('auth/me', allowedHeaders!), 401, 'SESSION_REQUIRED');
+      await fault(await restarted.get('auth/me', old.headers), 401, 'SESSION_REQUIRED');
+    }
+    finally { await restarted.close(); }
+  });
 
   await t.test('runtime UTC is enforced over URL options; non-UTC raw operator timestamps roundtrip as the same instant', async () => {
     const input = new URL(database.runtimeUrl); input.searchParams.set('options', '-c timezone=Asia/Bangkok -c application_name=goease_auth_utc_fixture');

@@ -42,6 +42,13 @@ test('Google verifier rejects signature/issuer/audience/expiry/future iat/nonce/
     await assert.rejects(verifyGoogleToken(client, audience, token), invalid);
   }
 });
+test('verified email only comes from a signed, boolean-verified Google claim; missing/false/string cannot authorize a trial', async () => {
+  assert.equal((await verifyGoogleToken(client, audience, jwt({ email: '  APPROVED@test.example ', email_verified: true }))).verifiedEmail, 'approved@test.example');
+  for (const claims of [{}, { email: 'approved@test.example' }, { email: 'approved@test.example', email_verified: false },
+    { email: 'approved@test.example', email_verified: 'true' }, { email: 'bad\n@test.example', email_verified: true }]) {
+    assert.equal((await verifyGoogleToken(client, audience, jwt(claims))).verifiedEmail, undefined);
+  }
+});
 test('Google SDK certificate retrieval is bounded and has no automatic retries; config missing makes no request', async () => {
   const verifier = new GoogleTokenVerifier(new ConfigService<Environment, true>({ GOOGLE_WEB_CLIENT_ID: audience }));
   // Test-only observation of the actual transport. No runtime URL or verification bypass.

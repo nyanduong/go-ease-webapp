@@ -8,12 +8,21 @@ import { createDatabaseClient } from '../src/database/client.js';
 import { seedCatalog } from '../src/database/seed.js';
 import { createIsolatedDatabase, LocalPostgres, runTool } from '../test/helpers/postgres.js';
 import { grantRuntime } from './lib/runtime-role.js';
+import { preparePrivateState, privateStateDirectory, verifyPrivateState } from '../src/private-state.js';
 
 const apiRoot = fileURLToPath(new URL('../../', import.meta.url));
-const local = path.join(apiRoot, '.local');
-const clusterDirectory = path.join(local, 'postgres');
-const environmentFile = path.join(local, 'database.json');
+const external = process.env['GOEASE_LOCAL_STATE_DIR'];
+let local = external === undefined ? path.join(apiRoot, '.local') : privateStateDirectory(external);
+let localEnv = external === undefined ? path.join(apiRoot, '.env.local') : path.join(local, 'database.env');
+let clusterDirectory = path.join(local, 'postgres');
+let environmentFile = path.join(local, 'database.json');
 const command = process.argv[2];
+function physicalState(directory: string) {
+  local = directory;
+  localEnv = path.join(local, 'database.env');
+  clusterDirectory = path.join(local, 'postgres');
+  environmentFile = path.join(local, 'database.json');
+}
 async function environment() {
   const data: unknown = JSON.parse(await readFile(environmentFile, 'utf8'));
   if (!data || typeof data !== 'object' || !('databaseName' in data) || data.databaseName !== 'goease_local' || !('migrationUrl' in data) || typeof data.migrationUrl !== 'string' || !('runtimeUrl' in data) || typeof data.runtimeUrl !== 'string' || !('runtime' in data) || data.runtime !== 'goease_local_app') throw new Error('Owned local database record is invalid');
@@ -28,15 +37,18 @@ async function applyMigrations(config: { migrationUrl: string; runtime: string }
   await grantRuntime(config.migrationUrl, config.runtime);
 }
 try {
+  if (external !== undefined && command !== 'init') physicalState(await verifyPrivateState(local));
   if (command === 'init') {
-    if (existsSync(environmentFile) || existsSync(path.join(apiRoot, '.env.local'))) throw new Error('Existing local config found; refusing overwrite');
-    await mkdir(local, { recursive: true, mode: 0o700 });
+    if (existsSync(environmentFile) || existsSync(localEnv)) throw new Error('Existing local config found; refusing overwrite');
+    if (external === undefined) await mkdir(local, { recursive: true, mode: 0o700 });
+    else physicalState(await preparePrivateState(local));
     const cluster = await LocalPostgres.initialize(clusterDirectory);
     await cluster.start();
     const config = await createIsolatedDatabase(cluster, 'goease_local');
     await writeFile(environmentFile, JSON.stringify(config), { mode: 0o600 });
-    await writeFile(path.join(apiRoot, '.env.local'), `DATABASE_URL=${config.runtimeUrl}\nDATABASE_MIGRATION_URL=${config.migrationUrl}\n`, { mode: 0o600 });
-    console.info('Isolated GoEase PostgreSQL initialized on loopback; private config: apps/api/.env.local. No existing service/database changed.');
+    await writeFile(localEnv, `DATABASE_URL=${config.runtimeUrl}\nDATABASE_MIGRATION_URL=${config.migrationUrl}\n`, { mode: 0o600, flag: 'wx' });
+    if (external !== undefined) console.info(`Private GoEase state physical directory: ${await verifyPrivateState(local)}`);
+    console.info('Isolated GoEase PostgreSQL initialized on loopback; configuration stays in the selected local state directory. No existing service/database changed.');
   } else if (command === 'start' || command === 'stop') {
     const cluster = await LocalPostgres.reopen(clusterDirectory);
     if (command === 'start') await cluster.start(); else await cluster.stop();
@@ -61,7 +73,7 @@ try {
     const backup = path.join(local, 'goease-local.dump');
     if (existsSync(backup)) throw new Error('Existing backup found; preserve/rename it before making another');
     await runTool(path.join(cluster.bin, 'pg_dump'), ['-h', '127.0.0.1', '-p', `${cluster.port}`, '-U', decodeURIComponent(connection.username), '-d', config.databaseName, '-Fc', '-f', backup], { ...process.env, PGPASSWORD: decodeURIComponent(connection.password) });
-    console.info('Backup saved privately at apps/api/.local/goease-local.dump (contains private data; never commit/upload).');
+    console.info('Backup saved in the selected private state directory (contains private data; never commit/upload).');
   } else if (command === 'restore-check') {
     const cluster = await LocalPostgres.reopen(clusterDirectory);
     const name = `goease_restore_${randomBytes(4).toString('hex')}`;
@@ -82,7 +94,7 @@ try {
     const database = createDatabaseClient(config.migrationUrl);
     try { await seedCatalog(database); } finally { await database.$disconnect(); }
     await writeFile(path.join(local, 'manual-test.json'), JSON.stringify(config), { mode: 0o600 });
-    console.info('Fresh isolated test DB migrated/seeded; private URLs in apps/api/.local/manual-test.json. Existing DBs untouched.');
+    console.info('Fresh isolated test DB migrated/seeded; private URLs stay in the selected state directory. Existing DBs untouched.');
   } else if (command === 'check') {
     const config = await environment();
     const client = new pg.Client({ connectionString: config.runtimeUrl });
