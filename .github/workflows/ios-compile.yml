@@ -90,7 +90,7 @@ jobs:
           test ! -e ios
           template="$(node -p "require('node:path').join(require('node:path').dirname(require.resolve('expo/package.json')), 'template.tgz')")"
           test -s "$template"
-          pnpm exec expo prebuild --platform ios --no-install --no-clean --pnpm --template "$template" --skip-dependency-update expo,react,react-native
+          pnpm exec expo prebuild --platform ios --no-install --no-clean --template "$template" --skip-dependency-update expo,react,react-native
           test -d ios/GoEaseDev.xcodeproj
           git diff --exit-code
       - name: Install native Pods

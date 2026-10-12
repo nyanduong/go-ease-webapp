@@ -26,6 +26,8 @@ PR đổi mobile/contracts/manifests/lockfile/workflow này tự chạy khi cùn
 
 Receipt phải ghi URL/run ID, PR HEAD/checkout commit, runner/toolchain, native build status, schemes/bundle/hash checks và các phần blocked. **Hiện chưa có run native PASS trong tài liệu này**; cập nhật bằng chứng thật ở issue/PR. Không dùng kết quả này đánh dấu iOS development/runtime hoặc preview acceptance đạt.
 
+Lần đầu [38196140463](https://github.com/nyanduong/go-ease-webapp/actions/runs/38196140463), source `8b8f61082cb10ff36ecf75a2e457f6ade167af9e`: runner/toolchain/public ID/frozen install/contracts PASS, prebuild FAIL vì CLI57.0.28 không cho đồng thời `--no-install` và `--pnpm`. Đã bỏ `--pnpm`, giữ `--no-install`; dependencies vẫn cài trước bằng frozen pnpm, Pods cài ở bước riêng. Đây là lỗi arguments trong workflow chưa merge, không phải thiếu quyền, policy hoặc thanh toán; chưa chạy native compile ở lần đó.
+
 ## Đường cài miễn phí từ Windows cần xác minh tiếp
 
 Có thể nghiên cứu build unsigned + ký/cài bằng [Sideloadly chính thức](https://sideloadly.io/faq.html) hoặc [AltServer Windows](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows). Đây là công cụ bên thứ ba, không phải EAS ad hoc; free Apple Account thường có hạn7ngày và giới hạn app. Tương thích **GoEase + iOS18.7.10/27.0 chưa kiểm chứng**. Không bảo đảm công cụ hỗ trợ OS mới chỉ từ mô tả “future versions”.
