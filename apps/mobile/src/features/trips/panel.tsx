@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Alert, BackHandler, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, BackHandler, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { randomUUID } from 'expo-crypto';
 import { calculateTripTotals, calculateTripWarnings } from '@goease/contracts';
 import { apiBaseUrl } from '../../lib/config';
@@ -10,15 +10,10 @@ import { createTripsClient } from './client';
 import { copyForm, emptyActivity, updateBody, type ActivityForm, type CreateForm } from './form';
 import { createTripsStore } from './store';
 import { tripMapActivities } from './map';
+import { Action, Brand, Field, PhotoCredit, TravelHero } from '../../ui/components';
+import { TripsList } from './list';
+import { colors, space } from '../../ui/theme';
 
-function Action({ label, onPress, disabled = false, secondary = false, selected }: { label: string; onPress: () => void; disabled?: boolean; secondary?: boolean; selected?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled, ...(selected === undefined ? {} : { selected }) }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [styles.button, secondary && styles.secondary, disabled && styles.disabled, pressed && styles.pressed]}><Text style={[styles.buttonText, secondary && styles.secondaryText]}>{label}</Text></Pressable>;
-}
-function Field({ label, value, onChange, numeric = false, multiline = false, editable = true, hint }: { label: string; value: string; onChange: (value: string) => void; numeric?: boolean; multiline?: boolean; editable?: boolean; hint?: string | undefined }) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChange} editable={editable}
-    inputMode={numeric ? 'numeric' : 'text'} multiline={multiline} autoCorrect={false} style={[styles.input, multiline && styles.multiline, !editable && styles.disabled]} />{hint && <Text style={styles.small}>{hint}</Text>}</View>;
-}
 function money(value: number | null) { return value === null ? 'Chưa xác định' : `${value.toLocaleString('vi-VN')} VND`; }
 export function TripsPanel({ onTechnical, active = true }: { onTechnical: () => void; active?: boolean }) {
   const { store: auth, state: session } = useNativeAuth();
@@ -63,19 +58,15 @@ export function TripsPanel({ onTechnical, active = true }: { onTechnical: () => 
   }
   const formField = (key: keyof CreateForm, label: string, hint?: string, numeric = false) => <Field label={label} value={state.create[key]} onChange={value => store.setCreate({ ...state.create, [key]: value }, state.ownerId)} hint={hint} numeric={numeric} editable={!locked} />;
   return <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <View style={styles.header}>{visible && state.screen !== 'list' ? <Action label={Platform.OS === 'ios' ? 'Chuyến đi' : 'Quay lại'} secondary onPress={() => { back(); }} /> : <Text style={styles.brand}>GoEase</Text>}<Text style={styles.headerTitle}>{visible ? state.screen === 'create' ? 'Tạo chuyến' : state.screen === 'list' ? 'Chuyến đi' : 'Lịch trình' : 'Đi cùng nhau, dễ hơn'}</Text></View>
+    <View style={styles.header}>{visible && state.screen !== 'list' ? <Action label={Platform.OS === 'ios' ? 'Chuyến đi' : 'Quay lại'} secondary onPress={() => { back(); }} /> : <Brand />}<Text style={styles.headerTitle}>{visible ? state.screen === 'create' ? 'Tạo chuyến' : state.screen === 'list' ? 'Chuyến đi' : 'Lịch trình' : 'Đi cùng nhau, dễ hơn'}</Text></View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {!visible ? <><Text style={styles.heading}>Một chuyến đi.{ '\n' }Nhiều điều để nhớ.</Text><Text style={styles.text}>Gom lịch trình, địa điểm và ngân sách cả nhóm vào một nơi. Chuyến riêng chỉ tài khoản của bạn quản lý.</Text><AuthPanel />
+      {!visible ? <><TravelHero /><Text style={styles.heading}>Một chuyến đi.{ '\n' }Nhiều điều để nhớ.</Text><Text style={styles.text}>Gom lịch trình, địa điểm và ngân sách cả nhóm vào một nơi. Chuyến riêng chỉ tài khoản của bạn quản lý.</Text><AuthPanel />
         <Text style={styles.small}>Đang kiểm tra phiên sẽ ẩn lịch trình và dừng request. Bản nháp RAM chỉ hiện lại khi máy chủ xác minh cùng tài khoản.</Text></> : <>
-        {state.screen === 'list' && <><Text style={styles.eyebrow}>CÙNG NHAU LÊN ĐƯỜNG</Text><Text style={styles.heading}>Chuyến đi của tôi</Text><AuthPanel />
-          <Action label="Tạo chuyến mẫu" disabled={locked} onPress={() => confirmDiscard(() => store.create())} />
-          {(state.saved && state.dirty || state.pending) && <Action label={state.pending ? 'Tiếp tục bản đang gửi' : 'Tiếp tục bản đang chỉnh'} secondary onPress={() => store.show('detail')} />}
-          <Text accessibilityLiveRegion="polite" style={styles.text}>{state.listMessage}</Text>
-          {state.listStatus === 'error' && <Action label="Đọc chuyến lại" secondary onPress={() => { void store.list(); }} />}
-          {state.trips.map(trip => <View style={styles.card} key={trip.id}><Text style={styles.pill}>Hà Nội · mẫu kỹ thuật</Text><Text style={styles.title}>{trip.title}</Text><Text style={styles.text}>{trip.startDate} · {trip.durationDays} ngày · {trip.groupSize} người</Text><Text style={styles.small}>{money(trip.budgetVnd)} / cả nhóm · phiên bản {trip.version}</Text>
-            <Action label={`Mở ${trip.title}`} secondary disabled={locked} onPress={() => confirmDiscard(() => { void store.open(trip.id, true); })} /></View>)}
-          {state.nextCursor && <Action label="Đọc thêm chuyến" secondary disabled={state.listStatus === 'loading'} onPress={() => { void store.list(true); }} />}
-        </>}
+        {state.screen === 'list' && <><TripsList trips={state.trips} status={state.listStatus} message={state.listMessage} locked={locked}
+          resume={state.pending ? 'pending' : state.saved && state.dirty ? 'draft' : null} hasMore={Boolean(state.nextCursor)}
+          onCreate={() => confirmDiscard(() => store.create())} onResume={() => store.show('detail')}
+          onRetry={() => { void store.list(); }} onMore={() => { void store.list(true); }}
+          onOpen={id => confirmDiscard(() => { void store.open(id, true); })} /><AuthPanel /><PhotoCredit /></>}
         {state.screen === 'create' && <><Text style={styles.pill}>Hà Nội · bộ dữ liệu thử, chưa chốt điểm đến mở thử</Text><Text style={styles.heading}>Mình đi đâu nhỉ?</Text>
           {formField('title', 'Tên chuyến đi')}{formField('startDate', 'Ngày khởi hành · YYYY-MM-DD', 'Ngày thực từ 2000 đến 2099; ngày cuối cũng phải nằm trong khoảng này.')}
           {formField('durationDays', 'Số ngày · 1–5', undefined, true)}{formField('groupSize', 'Số người · 1–50', undefined, true)}
@@ -126,13 +117,15 @@ export function TripsPanel({ onTechnical, active = true }: { onTechnical: () => 
   </KeyboardAvoidingView>;
 }
 const styles = StyleSheet.create({
-  fill: { flex: 1 }, header: { paddingHorizontal: 17, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottomWidth: 1, borderColor: '#dbe3db' },
-  brand: { color: '#145c4c', fontSize: 27, fontWeight: '800' }, headerTitle: { color: '#1e332d', fontWeight: '700', flexShrink: 1 },
-  content: { padding: 18, gap: 16, maxWidth: 680, width: '100%', alignSelf: 'center', paddingBottom: 32 }, heading: { color: '#1e332d', fontSize: 28, fontWeight: '700' },
+  fill: { flex: 1 }, header: { paddingHorizontal: space.lg, paddingVertical: space.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottomWidth: 1, borderColor: colors.line },
+  brand: { color: '#145c4c', fontSize: 27, fontWeight: '800' }, headerTitle: { color: colors.teal, fontWeight: '700', flexShrink: 1 },
+  content: { padding: space.lg, gap: space.xl, maxWidth: 680, width: '100%', alignSelf: 'center', paddingBottom: 32 }, heading: { color: '#1e332d', fontSize: 28, fontWeight: '700' },
   eyebrow: { color: '#62766d', fontSize: 12, fontWeight: '700' }, title: { color: '#1e332d', fontSize: 19, fontWeight: '700' }, text: { color: '#40594e', fontSize: 15, lineHeight: 23 }, small: { color: '#62766d', fontSize: 13, lineHeight: 20 },
-  pill: { color: '#145c4c', fontSize: 13, fontWeight: '600' }, card: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#dbe3db', padding: 17, gap: 12 },
+  pill: { color: '#145c4c', fontSize: 13, fontWeight: '600' }, card: { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: colors.line, padding: 17, gap: 12 },
   field: { gap: 7 }, label: { color: '#1e332d', fontWeight: '600', fontSize: 15 }, input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#bdcbc0', borderRadius: 10, padding: 13, minHeight: Platform.OS === 'ios' ? 44 : 48, color: '#1e332d', fontSize: 16 }, multiline: { minHeight: 110, textAlignVertical: 'top' },
-  button: { backgroundColor: '#145c4c', borderRadius: 12, minHeight: Platform.OS === 'ios' ? 44 : 48, padding: 13, alignItems: 'center', justifyContent: 'center' }, buttonText: { color: '#fff', fontSize: 14, fontWeight: '700', flexShrink: 1 }, secondary: { backgroundColor: '#edf2eb', borderWidth: 1, borderColor: '#dbe3db' }, secondaryText: { color: '#145c4c' }, disabled: { opacity: 0.5 }, pressed: { opacity: 0.75 },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, footer: { padding: 12, borderTopWidth: 1, borderColor: '#dbe3db', backgroundColor: '#fff', gap: 8 }, warning: { color: '#9c3530', fontSize: 14, lineHeight: 22 }, warningCard: { backgroundColor: '#f4e7c9', borderRadius: 15, padding: 15, gap: 12 },
+  button: { backgroundColor: '#145c4c', borderRadius: 12, minHeight: Platform.OS === 'ios' ? 44 : 48, padding: 13, alignItems: 'center', justifyContent: 'center' }, buttonText: { color: '#fff', fontSize: 14, fontWeight: '700', flexShrink: 1 }, secondary: { backgroundColor: '#edf2eb', borderWidth: 1, borderColor: colors.line }, secondaryText: { color: '#145c4c' }, disabled: { opacity: 0.5 }, pressed: { opacity: 0.75 },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, footer: { padding: 12, borderTopWidth: 1, borderColor: colors.line, backgroundColor: '#fff', gap: 8 }, warning: { color: '#9c3530', fontSize: 14, lineHeight: 22 }, warningCard: { backgroundColor: '#f4e7c9', borderRadius: 15, padding: 15, gap: 12 },
   overlay: { flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 18 }, modal: { maxHeight: '92%', backgroundColor: '#f3f4ef', borderRadius: 20 }, modalContent: { padding: 20, gap: 14 },
 });
+
+

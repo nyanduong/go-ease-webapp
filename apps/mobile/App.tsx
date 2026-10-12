@@ -8,6 +8,7 @@ import { AuthPanel } from './src/features/auth/panel';
 import { NativeAuthProvider } from './src/features/auth/context';
 import { MapsPanel } from './src/features/maps/panel';
 import { TripsPanel } from './src/features/trips/panel';
+import { colors } from './src/ui/theme';
 
 function HealthScreen({ onBack }: { onBack: () => void }) {
   const setup = useMemo(() => {
@@ -59,7 +60,7 @@ function AppScreens() {
 export default function App() { return <SafeAreaProvider><NativeAuthProvider><AppScreens /></NativeAuthProvider></SafeAreaProvider>; }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f4f7f2' },
+  safe: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 24, gap: 16, maxWidth: 640, width: '100%', alignSelf: 'center' },
   brand: { color: '#12604b', fontSize: 28, fontWeight: '800' },
   eyebrow: { color: '#47675b', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
@@ -74,3 +75,4 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.55 }, pressed: { opacity: 0.8 },
   note: { color: '#47675b', fontSize: 13, lineHeight: 20 },
 });
+
