@@ -1,4 +1,4 @@
-/* global console, setTimeout, clearTimeout */
+/* global process, console, setTimeout, clearTimeout */
 // CI-only actual container test. Never starts a Docker daemon or contacts providers.
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -10,6 +10,7 @@ import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 import { redactedContainerFailure, redactedStartupStatus } from './container-error.mjs';
 import { localHttpProbe } from './local-http.mjs';
+import { scanFinalImages } from './image-scan.mjs';
 const execute = promisify(execFile), prefix = `goease-ci-${randomBytes(6).toString('hex')}`;
 const containers = [], images = [], network = `${prefix}-net`;
 async function docker(args, input) {
@@ -61,6 +62,28 @@ try {
     console.info(`Building reviewed container target: ${target}`);
     await docker(['build', '--target', target, '-f', 'deploy/Dockerfile', '-t', image, '.']);
   }
+  const scanTargets = [];
+  for (const target of ['api', 'operator', 'admin', 'pg-tools']) {
+    const image = `${prefix}-${target}`;
+    assert.equal(await docker(['image', 'inspect', '--format', '{{.Os}}/{{.Architecture}}', image]), 'linux/amd64');
+    scanTargets.push({ target, imageID: await docker(['image', 'inspect', '--format', '{{.Id}}', image]) });
+  }
+  for (const target of ['api', 'operator']) {
+    const version = await docker(['run', '--rm', '--entrypoint', 'dpkg-query', `${prefix}-${target}`, '-W', '-f=${Version}', 'perl-base']);
+    assert.equal(version, '5.36.0-7+deb12u4');
+    await docker(['run', '--rm', '--entrypoint', 'node', `${prefix}-${target}`, '-e',
+      "const fs=require('node:fs');for(const p of ['/usr/local/lib/node_modules/npm','/usr/local/bin/npm','/usr/local/bin/npx']){try{fs.lstatSync(p);process.exit(1)}catch(e){if(e.code!=='ENOENT')throw e}}"]);
+  }
+  for (const name of ['liblzma5', 'xz-utils']) {
+    assert.equal(await docker(['run', '--rm', '--entrypoint', 'dpkg-query', `${prefix}-pg-tools`, '-W', '-f=${Version}', name]), '5.8.1-1+deb13u2');
+  }
+  await docker(['run', '--rm', '--entrypoint', 'sh', `${prefix}-pg-tools`, '-c', 'test ! -e /usr/local/bin/gosu']);
+  for (const name of ['libexpat=2.8.5-r0', 'libpng=1.6.59-r0', 'nghttp2-libs=1.70.0-r0', 'pcre2=10.49-r0', 'tiff=4.7.2-r0', 'zlib=1.3.2-r1']) {
+    await docker(['run', '--rm', '--entrypoint', 'apk', `${prefix}-admin`, 'info', '-e', name]);
+  }
+  const scan = await scanFinalImages(scanTargets, process.env.GOEASE_IMAGE_REPORT_DIR, process.env.GOEASE_TRIVY_BIN);
+  // Collect every scan and still execute all existing behavior checks before
+  // failing on available fixes. Remaining unfixed advisories are release blockers.
   await docker(['network', 'create', network]);
   console.info('Preparing owned private PostgreSQL fixture.');
   const pg = `${prefix}-db`; containers.push(pg);
@@ -152,6 +175,7 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC;`);
     assert.ok(responses.length >= 2 && responses.every(status => status === 200)); assert.deepEqual(errors, []);
   } finally { await browser.close(); }
   console.info('Actual containers: non-root runtime/operator, private PG, relative /api, proxy/deep links/cache/auth gates PASS (local HTTP CI only).');
+  assert.equal(scan.fixable, 0, 'Final images contain advisories with available fixes; see full reports');
 } finally {
   for (const name of containers.reverse()) await docker(['rm', '-f', name]).catch(() => {});
   await docker(['network', 'rm', network]).catch(() => {});
