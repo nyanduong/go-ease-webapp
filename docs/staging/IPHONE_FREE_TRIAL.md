@@ -2,6 +2,8 @@
 
 Đường thử này đóng gói **product App/index.ts**, Release iPhoneOS arm64 với JS/assets và public HTTPS API/OAuth thật; owner dùng Apple Account miễn phí ký/cài từ Windows. Đây là thử nghiệm có thời hạn, chưa thay HTTPS staging bền vững, preview đã ký hoặc UAT. Không dùng Expo Go, fixture, browser responsive hoặc Metro server để báo native đạt. #4/#10/#15/#11/M0 tiếp tục mở tới khi đủ bằng chứng riêng.
 
+Kết quả thực mới nhất ở [receipt IPA/tuyến thử ngày12/10/2026](../verification/IPHONE_TRIAL_20261012.md): đã có IPA unsigned và14ca HTTPS protocol/ca từ chối PASS; ký/cài đang chặn tại Local Anisette `IPC fail: Timed out!`. Google positive và native UAT vẫn NOT RUN. Các snapshot/quy trình bên dưới không thay receipt hoặc bảo đảm tài nguyên còn hoạt động.
+
 ## Điều kiện và giới hạn chi phí
 
 Workflow `iPhone unsigned trial package` chỉ manual trên main đã review của repo PUBLIC, standard `xcode-27`, Node24.21.0/pnpm10.34.6/Xcode27.0. Không chạy EAS cloud build, Apple paid team, TestFlight/store, cache hoặc upload archive/log/env. [GitHub Actions](https://docs.github.com/en/billing/concepts/product-billing/github-actions) miễn phí standard public compute, nhưng artifact storage tính riêng. Trước **mỗi dispatch**, kiểm tra tài khoản: còn ít nhất100MiB storage dùng chung, Actions/Packages budgets bằngUSD0 và Stop usage bật, không tăng budget/thêm thẻ/nâng plan. Nếu không xác minh được thì chưa upload. Không coi số0 làm tròn hoặc artifact riêng repo là toàn bộ quota tài khoản.

@@ -2,7 +2,32 @@
 
 Ngày đối chiếu: 12/10/2026. Đây là bảng điều kiện kỹ thuật, không thay backlog/status ở GitHub Project. Owner cấp quyền/tài nguyên là nyanduong; agent chuẩn bị và kiểm chứng trong issue tương ứng. Không ghi secret, cookie, chứng chỉ, key ký hay dữ liệu cá nhân. Tên biến bên dưới mô tả cấu hình; chỉ sự hiện diện tên biến không chứng minh tài nguyên đã tồn tại hoặc tích hợp live đạt. **Owner hiện chưa muốn chi tiền: không mua dịch vụ, thêm thẻ, nâng gói, bật billing hoặc trial có thể tính phí.**
 
-## Tiếp tục iPhone thật và backend — 12/10/2026
+## Hiện trạng mới nhất — IPA và tuyến thử iPhone, 12/10/2026
+
+Snapshot chốt lúc **15:57 Asia/Saigon ngày12/10/2026**. Local Anisette sau owner cài iTunes vẫn chờ thử lại; các thay đổi sau mốc này cần bằng chứng mới, không suy từ receipt.
+
+Main được kiểm chứng là `34ccc3443725d9e52f1a43169a1b22fc5e29908b`: [PR #55](https://github.com/nyanduong/go-ease-webapp/pull/55) đã merge workflow IPA, [PR #56](https://github.com/nyanduong/go-ease-webapp/pull/56) đã merge bảo vệ đợt thử. Quality Gate main [38221192499](https://github.com/nyanduong/go-ease-webapp/actions/runs/38221192499) success; root checks của thay đổi bảo vệ đạt328tests,0skip. [Receipt iPhone ngày12/10](IPHONE_TRIAL_20261012.md) ghi nguồn, SHA, ca thực và giới hạn bằng chứng.
+
+Đã có **IPA unsigned thực**, Release arm64/iPhoneOS, chứa JS/assets product và cấu hình HTTPS/public Web+iOS preview OAuth. [Run38224868750](https://github.com/nyanduong/go-ease-webapp/actions/runs/38224868750) success đúng main trên; CI và kiểm ZIP/CRC/SHA/config/private material local đều PASS. Đây chưa là signed preview, chưa cài/chạy iPhone, chưa Google positive login hoặc UAT.
+
+Owner đã duyệt Cloudflare Quick Tunnel miễn phí **chỉ API** tới loopback `127.0.0.1:3001`, tự dừng tối đa2giờ; không public DB/admin/web/Metro/file máy. PostgreSQL riêng mới ngoài OneDrive, ACL riêng, role tối thiểu, migrate/seed/schema/backup/restore thực đều PASS; state cũ của GoEase được giữ riêng, không sửa DB khác.14ca HTTPS thực PASS gồm health/challenge và các ca từ chối protocol/auth; không dùng Google double trong probe này. URL tạm và bằng chứng JSON giữ ngoài Git; không phải HTTPS staging bền vững. Health `api-only` không chứng minh DB readiness: đã gặp challenge500 do cluster dừng/`ECONNREFUSED`, dùng lệnh `db:local start` cho đúng cluster hiện có rồi cả14ca PASS lại.
+
+| Nhóm việc hiện tại | Điều kiện / bước tiếp theo |
+| --- | --- |
+| **1. Codex còn làm ngay** | Giữ receipt, kiểm IPA/SHA/config, chuẩn bị ca thử Google/CRUD/session/retry riêng từng nền tảng; chẩn đoán read-only Sideloadly và các điều kiện local. Trong thời hạn tuyến đã duyệt có thể kiểm API thật; hết hạn phải dừng đúng owned tunnel/API/PG. Không chạy lại Metro hoặc đổi cách thực thi để né chặn lịch sử. Chỉ triển khai fix khi có lỗi code được tái hiện, qua issue→PR→gates→browser merge. |
+| **2. Owner cấu hình tài khoản/tài nguyên** | Local Anisette Download đã báo `IPC fail: Timed out!`. Owner sau đó tự cài iTunes12.13.11.1; registry/chữ ký Apple đã kiểm, Apple Mobile Device Support20.0.0.35 và Bonjour3.1.0.1 đều chạy, VC++ x86/x64 14.51.36247 có. iCloud/Apple Application Support chưa thấy; **chưa chứng minh là nguyên nhân IPC**. Chưa chạy lại Local sau iTunes; owner cần khởi động lại Sideloadly và thử Download Local một lần, chưa Start/Apple login. Chưa báo restart Windows. Vendor yêu cầu web iTunes+iCloud nhưng iCloud7.21 là bản cũ chưa xác minh hỗ trợ/cập nhật, chưa mở/cài; không khuyến nghị cài mù. Công cụ đọc cửa sổ iTunes trước đó bị policy từ chối; không dùng đường điều khiển khác để né. Xem [receipt](IPHONE_TRIAL_20261012.md#thiết-bị-kýcài-và-blocker-hiện-tại). Owner tự xử lý EULA/UAC và Apple Account/password/2FA trực tiếp, không gửi secret trong chat. Không đổi bảo vệ hoặc tiếp tục Remote/Patreon/dịch vụ có phí. Staging bền vững/admin HTTPS, tài khoản thử B, vault backup signer độc lập và Gemini/Maps quyền/quota vẫn thiếu. |
+| **3. Chờ thiết bị/quyền build/ký** | XS Max iOS18.7.10 đã được Sideloadly0.70.1 nhận qua USB; chưa cài app, chưa free signing/certificate/profile/runtime.14ProMax iOS27.0 chưa chạy ca nào; phải có receipt riêng. Chưa có Mac/Android vật lý. IPA unsigned không thay chứng cứ ký/cài/phân phối hợp lệ; Android emulator/build không chứng minh iPhone và ngược lại. Expo Go không chạy Nitro Google Sign-In của product này. |
+| **4. Code/bảo mật trước bản thử** | #54 đã merge allowlist Google verified phía backend, giới hạn ingress native và kiểm private Windows state; actual Windows/PG/protocol kiểm chứng theo receipt. IPC của Sideloadly hiện chưa chứng minh là lỗi GoEase. Container/image residual findings ở [#46](ISSUE-46.md) vẫn giữ hold **cho đường container public staging**; kết quả Windows trial không gỡ hold đó. Render còn điều kiện private DNS/runtime secrets/DB TLS có CA+hostname verification; chưa deploy. Lỗi auth/ownership/crash thực phát hiện trong UAT phải đi fix loop trước nhận bản thử. |
+
+GitHub account Free USD0, Actions/Packages budgetUSD0 và Stop usage Yes đã đọc trước dispatch; usage snapshot Actions5.56GB-hours, Packages chưa có usage. Artifact IPA+receipt8,263,151bytes, thấp hơn cap100MiB, retention1ngày. Đây là bằng chứng của lần chạy, **không bảo đảm miễn phí/quota lần sau**: phải kiểm lại remaining shared storage và budget trước mỗi dispatch, không tăng budget/thêm thẻ/nâng plan.
+
+[Đường iPhone miễn phí](../staging/IPHONE_FREE_TRIAL.md) hướng dẫn bước còn thiếu. [Changelog chính thức Sideloadly](https://sideloadly.io/changelog) ghi Remote Anisette thuộc Patreon. Remote đang được chọn trong settings khi Local disabled, nhưng chưa dùng để ký/đăng nhập, chưa bấm Start; agent không đổi Local/Remote. Không tiếp tục Remote/Patreon, gặp thanh toán thì dừng. #4/#10/#15/#11 và M0 vẫn mở; signed preview Metro-off, Google native positive và UAT thật vẫn **NOT RUN**.
+
+## Lịch sử trước khi tạo IPA — snapshot main15b1d83, 12/10/2026
+
+Phần từ đây xuống ghi dữ kiện tại các mốc trước; các câu “chưa có IPA/chưa tunnel/cluster đã dừng” là lịch sử, không thay hiện trạng mới nhất ở trên. Cấu hình và tiêu chí dịch vụ còn thiếu vẫn dùng để chuẩn bị; không suy trạng thái runtime hiện tại từ snapshot.
+
+### Tiếp tục iPhone thật và backend
 
 Main nền `15b1d83` sau PR53. Owner xác nhận XS Max iOS18.7.10 có cáp USB và thao tác Trust/Developer Mode; Windows nhận Apple USB device, chưa chứng minh pairing/cài/chạy. Existing EAS preview Web/iOS IDs đã đọc bằng CLI chính thức; Web audience khớp backend, không tạo lại client. PostgreSQL GoEase riêng và backend loopback thật đã migrate/seed/schema/grants kiểm tra; HTTP health200, native challenge201, invalid identity/anonymous401; **Google positive login NOT RUN**, không doubles trong các HTTP probe này.
 
@@ -10,7 +35,7 @@ Main nền `15b1d83` sau PR53. Owner xác nhận XS Max iOS18.7.10 có cáp USB 
 
 Các snapshot trước bên dưới giữ ngữ cảnh và tiêu chí còn thiếu; không coi resource có tên/cấu hình là live đã đạt. #4/#10/#15/#11/M0 vẫn mở.
 
-## Ưu tiên native/OAuth sau PR #41
+### Ưu tiên native/OAuth sau PR #41 — lịch sử
 
 | Nhóm việc | Trạng thái / bước tiếp theo |
 | --- | --- |
@@ -25,7 +50,7 @@ Runbook và dữ kiện đầy đủ: [MOBILE_PREVIEW](../staging/MOBILE_PREVIEW
 
 Phần iOS độc lập: [unsigned native compile](IOS_UNSIGNED_COMPILE.md) trên standard public GitHub `xcode-27`, chỉ public development OAuth ID, không Apple Account/signing/artifact storage. Run38196364492/source7105bab đã PASS archive Release iPhoneOS/arm64, JS và callback schemes; sau kế thừa PR48 phải kiểm lại HEAD cuối theo receipt PR49. Chưa có IPA để cài, signing hoặc runtime PASS. Đường ký/cài Windows qua bên thứ ba cần owner chọn và kiểm tương thích hai iPhone; HTTPS/Google Maps SDK/live và UAT vẫn bị chặn riêng, không suy từ compile.
 
-## Từng dịch vụ
+### Từng dịch vụ — snapshot trước IPA
 
 | Dịch vụ / issue | Nơi cấu hình chính thức | Biến / định danh cần chuẩn bị | Trạng thái và việc owner cần làm | Kiểm chứng cần chạy / blocker |
 | --- | --- | --- | --- | --- |
