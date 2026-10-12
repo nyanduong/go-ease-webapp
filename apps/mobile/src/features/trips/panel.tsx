@@ -60,7 +60,7 @@ export function TripsPanel({ onTechnical, active = true }: { onTechnical: () => 
   return <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={styles.header}>{visible && state.screen !== 'list' ? <Action label={Platform.OS === 'ios' ? 'Chuyến đi' : 'Quay lại'} secondary onPress={() => { back(); }} /> : <Brand />}<Text style={styles.headerTitle}>{visible ? state.screen === 'create' ? 'Tạo chuyến' : state.screen === 'list' ? 'Chuyến đi' : 'Lịch trình' : 'Đi cùng nhau, dễ hơn'}</Text></View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {!visible ? <><TravelHero /><Text style={styles.heading}>Một chuyến đi.{ '\n' }Nhiều điều để nhớ.</Text><Text style={styles.text}>Gom lịch trình, địa điểm và ngân sách cả nhóm vào một nơi. Chuyến riêng chỉ tài khoản của bạn quản lý.</Text><AuthPanel />
+      {!visible ? <><TravelHero /><Text style={styles.text}>Gom lịch trình, địa điểm và ngân sách cả nhóm vào một nơi. Chuyến riêng chỉ tài khoản của bạn quản lý.</Text><AuthPanel />
         <Text style={styles.small}>Đang kiểm tra phiên sẽ ẩn lịch trình và dừng request. Bản nháp RAM chỉ hiện lại khi máy chủ xác minh cùng tài khoản.</Text><PhotoCredit /></> : <>
         {state.screen === 'list' && <><TripsList trips={state.trips} status={state.listStatus} message={state.listMessage} locked={locked}
           resume={state.pending ? 'pending' : state.saved && state.dirty ? 'draft' : null} hasMore={Boolean(state.nextCursor)}
@@ -121,7 +121,6 @@ const styles = StyleSheet.create({
   heading: { ...typography.heading, color: colors.ink }, title: { ...typography.title, color: colors.ink },
   text: { ...typography.body, color: colors.muted }, small: { ...typography.small, color: colors.muted },
   pill: { ...typography.small, color: colors.teal, fontWeight: '600' },
-  card: { backgroundColor: colors.white, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line, padding: space.xl, gap: space.md },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }, dayTabs: { gap: space.sm, alignItems: 'center', paddingVertical: space.xs },
   footer: { padding: space.md, borderTopWidth: 1, borderColor: colors.line, backgroundColor: colors.white, gap: space.sm },
   warning: { ...typography.small, color: colors.warning }, warningCard: { backgroundColor: colors.warningSurface, borderRadius: radius.card, padding: space.lg, gap: space.md, borderWidth: 1, borderColor: colors.warning },
