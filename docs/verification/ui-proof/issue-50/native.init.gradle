@@ -28,5 +28,3 @@ gradle.projectsEvaluated {
     r.entryFile.set(p.file('../.goease-ui-proof.tsx'))
     r.extraPackagerArgs.addAll(['--max-workers', '1'])
 }
-
-

@@ -42,4 +42,3 @@ Process-local Maestro settings: `JAVA_HOME` existingJDK21, `MAESTRO_OPTS=-Xmx256
 For layout variants, use owned AVD only: `adb -s emulator-5554 shell wm size 1080x2400`, `adb -s emulator-5554 shell wm density 480`, `adb -s emulator-5554 shell settings put system font_scale 1.3`. Run trips-layout-variant.yaml. Large uses size1290x2796/density480/font1.0. Reset size/density/font1.0, then `adb -s emulator-5554 emu kill`. Never apply these settings to a user's real phone.
 
 Artifacts remain local outside Git: final-maestro (seven screenshots), small-font13-maestro (three), large-font10-maestro (three), JUnit reports, app-specific logs and build logs. Public docs should copy only this test entry/init/flow/recipe/manifests and a concise log summary; no raw device logcat, APK, credentials or generated native output.
-

@@ -10,7 +10,7 @@ Android 15/API 35 Pixel 4 emulator, Release x86_64/Hermes, package riêng `vn.go
 
 ## Ảnh nguyên bản
 
-Ảnh giữ banner kiểm thử; không crop/đổi nội dung. Hash trong [evidence manifest](evidence-manifest.json). `.gitattributes` chỉ trong thư mục này giữ nguyên byte của bộ proof khi Git checkout, kể cả CRLF của file đã thu thập. Source manifests ghi hash bản Windows tại lúc build; mobile tree là định danh source Git để đối chiếu checkout khác hệ điều hành. Không phải máy thật hoặc iOS.
+Ảnh giữ banner kiểm thử; không crop/đổi nội dung. Hash của các file bàn giao trong [evidence manifest](evidence-manifest.json). Text được chuẩn hóa LF và một newline cuối file; `.gitattributes` chỉ trong thư mục này giữ LF qua checkout Windows/Linux, không biến đổi PNG. Source manifests giữ hash raw Windows của source/fixture/init tại lúc build; vì chuẩn hóa newline, hash template text bàn giao có thể khác raw hash đó. Mobile tree là định danh source Git để đối chiếu checkout khác hệ điều hành. Không hứa rebuild tạo APK giống từng byte. Không phải máy thật hoặc iOS.
 
 | Ảnh | Điều kiện |
 | --- | --- |
