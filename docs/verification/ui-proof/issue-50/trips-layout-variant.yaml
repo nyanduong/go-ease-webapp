@@ -1,0 +1,22 @@
+appId: vn.goease.mobile.uiproof
+name: Trips native layout variant (fixture only)
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "CÙNG NHAU LÊN ĐƯỜNG"
+    timeout: 120000
+- takeScreenshot: trips-variant-top-native
+- scrollUntilVisible:
+    element: "＋  Tạo chuyến mẫu"
+    direction: DOWN
+- tapOn: "＋  Tạo chuyến mẫu"
+- assertVisible: "Fixture nhận thao tác: Tạo chuyến mẫu."
+- takeScreenshot: trips-variant-hero-native
+- scrollUntilVisible:
+    element: "Mở Cuối tuần cùng nhau"
+    direction: DOWN
+- assertVisible: "6.000.000 VND"
+- takeScreenshot: trips-variant-card-native
+- tapOn: "Mở Cuối tuần cùng nhau"
+- assertVisible: "Fixture nhận thao tác: Mở chuyến mẫu."
