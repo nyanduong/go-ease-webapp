@@ -6,3 +6,9 @@ onlyBuiltDependencies:
   - '@nestjs/core'
   - '@tailwindcss/oxide'
   - esbuild
+
+# #46: Prisma7's pinned CLI dependencies have published security fixes.
+# Narrow parent selectors; verify config/generate/migrate and final image inventory.
+overrides:
+  '@prisma/config@7.10.0>deepmerge-ts': 8.0.0
+  'prisma@7.10.0>mysql2': 3.23.1

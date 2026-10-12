@@ -37,6 +37,8 @@ Pin không tự chứng minh image không có CVE. Cập nhật pin cần review
 
 Node được cập nhật đồng bộ lên24.21.0 LTS sau các security releases June/July2026; [assessment và kiểm chứng #38](../verification/ISSUE-38.md) ghi checksum/digest, bề mặt liên quan và giới hạn reachability. **Trước kích hoạt ngoài vẫn phải scan image thực và đánh giá OS packages/residual advisories** theo [Node security releases](https://nodejs.org/en/blog/vulnerability/). Pin mới không chứng minh security-clean; không bulk upgrade hoặc bỏ audit/scanner.
 
+[Fix #46](../verification/ISSUE-46.md) giữ base pins, vá exact OS packages qua kho ký chính thức và bỏ global npm khỏi final API/operator, gosu khỏi custom pg-tools. CI quét đủ bốn final image IDs bằng Trivy checksum-pinned, giữ full JSON có checksum trong CI logs riêng khỏi fixture secrets; không dùng artifact storage khi quota miễn phí chưa xác minh. Findings có bản vá làm gate fail; residual unfixed vẫn giữ blocker/review trước bản dùng thử. Không coi CI success là security-clean hoặc upstream database service đã được vá.
+
 ## Điều kiện owner phải cung cấp
 
 1. HTTPS ingress và DNS thật được owner cho phép, chứng chỉ hợp lệ, giữ nguyên Host/Origin/cookie. Ingress nằm cùng host với proxy loopback hoặc owner thiết kế riêng kết nối private. Không publish trực tiếp API/PG.
