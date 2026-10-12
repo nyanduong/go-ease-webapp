@@ -1,0 +1,32 @@
+allprojects { p ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        p.plugins.withId(pluginId) {
+            p.extensions.getByName('android').defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+                '-DCMAKE_JOB_POOLS=goease_native=1',
+                '-DCMAKE_JOB_POOL_COMPILE=goease_native',
+                '-DCMAKE_JOB_POOL_LINK=goease_native'
+            ])
+        }
+    }
+    p.plugins.withId('com.android.library') {
+        if (p.name == 'expo-modules-core') {
+            p.extensions.getByName('androidComponents').finalizeDsl { androidDsl ->
+                androidDsl.externalNativeBuild.cmake.buildStagingDirectory = new File('C:/ge50-cxx/expo')
+            }
+        }
+    }
+    p.plugins.withId('com.android.application') {
+        p.extensions.getByName('androidComponents').finalizeDsl { androidDsl ->
+            androidDsl.defaultConfig.applicationId = 'vn.goease.mobile.uiproof'
+        }
+    }
+}
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.findProject(':app')
+    if (p == null || !p.plugins.hasPlugin('com.android.application')) return
+    def r = p.extensions.getByName('react')
+    r.entryFile.set(p.file('../.goease-ui-proof.tsx'))
+    r.extraPackagerArgs.addAll(['--max-workers', '1'])
+}
+
+

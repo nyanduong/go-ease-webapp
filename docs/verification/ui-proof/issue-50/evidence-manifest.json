@@ -1,0 +1,77 @@
+[
+  {
+    "name": "final-source-manifest.json",
+    "bytes": 1286,
+    "sha256": "D547B964FEC3D79B5327491613093BCF0B220585B38B1CD223C610C045DA3787"
+  },
+  {
+    "name": "final-trips-home-junit.xml",
+    "bytes": 501,
+    "sha256": "58F12433F613FD333E7FAFE5F405F33FB5F1A436A33E390494C95A17BCC56842"
+  },
+  {
+    "name": "first-bc09e4f-source-manifest.json",
+    "bytes": 1068,
+    "sha256": "D16E3EC5DB39AFE5C6EC1D0A9FC63996BADEAFAC3C1193EB91C06F4E1A19565E"
+  },
+  {
+    "name": "fixture-entry.tsx",
+    "bytes": 3712,
+    "sha256": "DE606D60BFE4BAE9F40B8230FD155E7EB0432A7FE809182A968BF3237C3C4664"
+  },
+  {
+    "name": "fixture-native-forwarder.tsx",
+    "bytes": 31,
+    "sha256": "629757EEE668E4FB2C0950BCE16E4E9A74FA1D46A55C56F09BBF79D348A44A53"
+  },
+  {
+    "name": "large-font10-junit.xml",
+    "bytes": 484,
+    "sha256": "F1E5864DF4F253E17A29D40BF4632724AA80875F4CA614102637112656DB5CD4"
+  },
+  {
+    "name": "native-error.png",
+    "bytes": 620427,
+    "sha256": "0C6B7E86DB79D00222FCE0AF0E032140D0A37208F7D21589CDF9BF00E7673989"
+  },
+  {
+    "name": "native-large-home.png",
+    "bytes": 772829,
+    "sha256": "3313C90D4A77B6C6E3592B6FE387C6E08857AAB0D0D9E24A12C9C7088EF5F049"
+  },
+  {
+    "name": "native-small-font13-card.png",
+    "bytes": 288195,
+    "sha256": "12CC653DDD57FA25C284174345BC1B424FC2964EA84893AAABBC744846C22FB2"
+  },
+  {
+    "name": "native.init.gradle",
+    "bytes": 1286,
+    "sha256": "01F59D02638D01EED8BAE967E9E4ED797A64D3A7DA2B63AC668CBD6A1E761E54"
+  },
+  {
+    "name": "PROOF_SUMMARY.md",
+    "bytes": 5972,
+    "sha256": "E2D329FAE86582B12C9D731FA6C1F08C2AC73E68E74088E75D3E9C0FD714E997"
+  },
+  {
+    "name": "REPRODUCE.ps1",
+    "bytes": 2435,
+    "sha256": "305D2474CE72D8C9E0BD038F8566AAF910D13A9FEC9689EC3606930315F3DA49"
+  },
+  {
+    "name": "small-font13-junit.xml",
+    "bytes": 483,
+    "sha256": "CB775053E0753901A28CDF858C248EC18DA3D676C04641AA7E543EB782B94661"
+  },
+  {
+    "name": "trips-home.yaml",
+    "bytes": 1569,
+    "sha256": "56857C87D49EC0E996B05D9AD90EA178BB1AAC9C72F86D6944D950CA36A3AD69"
+  },
+  {
+    "name": "trips-layout-variant.yaml",
+    "bytes": 747,
+    "sha256": "B47F2BB26AEB291CB2C34A0A11AFF79E321092C2AD97EB1F7986C6F430D3D3B7"
+  }
+]
