@@ -1,5 +1,7 @@
 # Prototype app và quản trị M0
 
+Hướng nhận diện mới ngày12/10/2026 ở [BRAND](BRAND.md), theo [issue50](https://github.com/nyanduong/go-ease-webapp/issues/50): teal/cam hoàng hôn/cream, logo thật từ fanpage và ảnh có nguồn. Nội dung foundation/receipt bên dưới là **baseline lịch sử #14**, không phải xác nhận owner đã duyệt. Prototype source hiện cập nhật theo hướng mới; xem [bằng chứng UI](../verification/ISSUE-50.md). Không thay bằng chứng cũ thành kết quả mới.
+
 Baseline thiết kế nội bộ cho [#14](https://github.com/nyanduong/go-ease-webapp/issues/14), theo [ủy quyền 11/10/2026](https://github.com/nyanduong/go-ease-webapp/issues/14#issuecomment-6106556732). Nyanduong nghiệm thu sản phẩm cuối tại #11; **chưa ghi nyanduong đã xem/duyệt prototype**. Bản này tách khỏi source sản phẩm, không cần Figma, tài khoản ngoài hoặc dependency mới.
 
 ## Mở và bấm thử
@@ -10,9 +12,9 @@ Từ root checkout chứa thay đổi này, dùng Node theo repo:
 node docs/design/prototype/serve.mjs
 ```
 
-Mở [prototype local](http://127.0.0.1:4184), Ctrl+C để dừng. Server chỉ bind loopback và phục vụ ba file prototype; không mở LAN/staging, không đọc `.env`. Thành viên checkout cùng commit có thể chạy lệnh này; đây chưa phải link hosting chia sẻ. Source: [HTML](prototype/index.html), [CSS](prototype/styles.css), [JS](prototype/prototype.js).
+Mở [prototype local](http://127.0.0.1:4184), Ctrl+C để dừng. Server chỉ bind loopback và phục vụ allowlist HTML/CSS/JS cùng hai ảnh logo/Hạ Long; không mở LAN/staging, không đọc `.env`. Thành viên checkout cùng commit có thể chạy lệnh này; đây chưa phải link hosting chia sẻ. Có thể chọn port khác bằng `node docs/design/prototype/serve.mjs 4185` (1024–65535), vẫn chỉ127.0.0.1. Source: [HTML](prototype/index.html), [CSS](prototype/styles.css), [JS](prototype/prototype.js).
 
-Thanh trên chọn **Android / iOS / Quản trị**; bảng bên phải (bên dưới ở viewport nhỏ) chọn trạng thái thử. Label cố định nói rõ HTML prototype, đăng nhập/lưu/map/mạng giả lập. Hình phong cảnh và bản đồ là vector/CSS do dự án dựng, không tải ảnh/font bên ngoài. Mọi dữ liệu là mẫu; Đà Nẵng chưa phải quyết định điểm đến mở thử chính thức.
+Thanh trên chọn **Android / iOS / Quản trị**; bảng bên phải (bên dưới ở viewport nhỏ) chọn trạng thái thử. Label cố định nói rõ HTML prototype, đăng nhập/lưu/map/mạng giả lập. Nhận diện hiện theo BRAND: ảnh Hạ Long và logo đóng gói local có nguồn/credit; bản đồ vẫn là mô phỏng CSS/vector. Không tải ảnh/font bên ngoài khi mở trang. Mọi dữ liệu là mẫu; Đà Nẵng chưa phải quyết định điểm đến mở thử chính thức.
 
 1. Chọn Android → Tiếp tục với Google → hộp thoại “Google chưa kết nối” → Dùng khách mẫu → empty state → Tạo chuyến mẫu.
 2. Nhập tên, ngày, 1–5 ngày, 1–50 người và ngân sách tổng nhóm VND; để trống ngân sách khi chưa biết. Tạo → xem lịch trình, đổi tab ngày, thêm/sửa hoạt động.
@@ -38,7 +40,7 @@ Thanh trên chọn **Android / iOS / Quản trị**; bảng bên phải (bên d�
 
 Khách sạn/vé máy bay vẫn trong MVP; prototype chỉ phác thảo luồng **yêu cầu → đối tác → xác nhận có bằng chứng**, không booking engine M0. AI M0 là spike/report; không tạo nút “AI lập lịch” trả fixture như live. Không thêm web lịch trình khách hàng; khu app trong trang này chỉ là preview thiết kế.
 
-## Tokens và component
+## Tokens và component — baseline lịch sử #14
 
 | Foundation | Baseline |
 | --- | --- |

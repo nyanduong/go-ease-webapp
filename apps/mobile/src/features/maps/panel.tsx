@@ -11,6 +11,7 @@ import { createLocationStore } from './location';
 import { foregroundLocation } from './location-runtime';
 import { createMapsStore } from './store';
 import { routeablePlaces } from './pins';
+import { colors, radius, space, typography } from '../../ui/theme';
 
 export function MapsPanel({ activities, dayLabel }: { activities?: TripActivity[]; dayLabel?: string }) {
   const { store: auth, state: session } = useNativeAuth();
@@ -71,7 +72,7 @@ export function MapsPanel({ activities, dayLabel }: { activities?: TripActivity[
       {activities ? pins.map(activity => <Marker key={activity.id} coordinate={activity.place!} title={activity.title} description={activity.place!.active ? activity.place!.name : `${activity.place!.name} · Địa điểm cũ đã ngừng dùng`} />)
         : places.map(place => <Marker key={place.id} coordinate={place} title={place.name} description="Địa điểm mẫu có nguồn Wikidata; không xác nhận giờ mở cửa/giá." />)}
       {position.fix && <Marker coordinate={position.fix.coords} title="Một vị trí vừa nhận" pinColor="#2761a4" />}
-      {route && <Polyline coordinates={route.coordinates} strokeColor="#12604b" strokeWidth={4} />}
+      {route && <Polyline coordinates={route.coordinates} strokeColor={colors.teal} strokeWidth={4} />}
     </MapView>}
     {configured && <Text style={styles.text}>{state.map === 'loaded' ? 'Bản đồ đã báo tải tiles.' : state.map === 'error' ? 'Bản đồ chưa tải xong trong thời gian cho phép. Kiểm tra mạng/cấu hình key hoặc thử lại.' : state.sdkReady ? 'SDK sẵn sàng; đang chờ bản đồ tải tiles…' : 'Đang chờ bản đồ native…'}</Text>}
     {configured && state.map === 'error' && <Pressable accessibilityRole="button" style={styles.button} onPress={store.retryMap}><Text style={styles.buttonText}>Tải bản đồ lại</Text></Pressable>}
@@ -81,8 +82,8 @@ export function MapsPanel({ activities, dayLabel }: { activities?: TripActivity[
       <Text style={styles.title}>{place.name}</Text><Text style={styles.small}>{place.attribution}</Text>
       <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(place.sourceUrl).catch(() => {}); }}><Text style={styles.link}>Nguồn Wikidata và revision</Text></Pressable>
       <View style={styles.row}>
-        <Pressable accessibilityRole="radio" accessibilityState={{ checked: originId === place.id }} style={styles.choice} onPress={() => chooseOrigin(place.id)}><Text>{originId === place.id ? '●' : '○'} Điểm đi</Text></Pressable>
-        <Pressable accessibilityRole="radio" accessibilityState={{ checked: destinationId === place.id }} style={styles.choice} onPress={() => chooseDestination(place.id)}><Text>{destinationId === place.id ? '●' : '○'} Điểm đến</Text></Pressable>
+        <Pressable accessibilityRole="radio" accessibilityState={{ checked: originId === place.id }} style={[styles.choice, originId === place.id && styles.choiceSelected]} onPress={() => chooseOrigin(place.id)}><Text style={[styles.choiceText, originId === place.id && styles.selectedText]}>{originId === place.id ? '●' : '○'} Điểm đi</Text></Pressable>
+        <Pressable accessibilityRole="radio" accessibilityState={{ checked: destinationId === place.id }} style={[styles.choice, destinationId === place.id && styles.choiceSelected]} onPress={() => chooseDestination(place.id)}><Text style={[styles.choiceText, destinationId === place.id && styles.selectedText]}>{destinationId === place.id ? '●' : '○'} Điểm đến</Text></Pressable>
       </View>
     </View>)}
     <Text style={styles.text}>{position.message}</Text>
@@ -101,11 +102,14 @@ export function MapsPanel({ activities, dayLabel }: { activities?: TripActivity[
   </View>;
 }
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, gap: 14, borderWidth: 1, borderColor: '#dbe7dc' },
-  heading: { color: '#17382d', fontSize: 22, fontWeight: '700' }, title: { color: '#17382d', fontSize: 16, fontWeight: '700' },
-  text: { color: '#40594e', fontSize: 15, lineHeight: 23 }, small: { color: '#47675b', fontSize: 12, lineHeight: 18 },
-  map: { height: 300, width: '100%' }, place: { gap: 8, borderTopWidth: 1, borderColor: '#dbe7dc', paddingTop: 12 },
-  row: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' }, choice: { padding: 12, backgroundColor: '#f4f7f2', borderRadius: 10 },
-  link: { color: '#12604b', textDecorationLine: 'underline', paddingVertical: 8 },
-  button: { backgroundColor: '#12604b', padding: 14, borderRadius: 12, minHeight: 48, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '700' }, disabled: { opacity: 0.5 },
+  card: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.xl, gap: space.lg, borderWidth: 1, borderColor: colors.line },
+  heading: { ...typography.title, color: colors.ink }, title: { ...typography.body, color: colors.ink, fontWeight: '700' },
+  text: { ...typography.body, color: colors.muted }, small: { ...typography.small, color: colors.muted },
+  map: { height: 300, width: '100%', borderRadius: radius.input }, place: { gap: space.sm, borderTopWidth: 1, borderColor: colors.line, paddingTop: space.md },
+  row: { flexDirection: 'row', gap: space.md, flexWrap: 'wrap' },
+  choice: { padding: space.md, backgroundColor: colors.soft, borderRadius: radius.input, minHeight: 48, justifyContent: 'center', borderWidth: 1, borderColor: colors.teal },
+  choiceText: { ...typography.body, color: colors.teal }, choiceSelected: { backgroundColor: colors.selected }, selectedText: { color: colors.white },
+  link: { ...typography.small, color: colors.teal, textDecorationLine: 'underline', paddingVertical: space.md, minHeight: 48 },
+  button: { backgroundColor: colors.teal, padding: space.md, borderRadius: radius.button, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { ...typography.body, color: colors.white, fontWeight: '700' }, disabled: { opacity: 0.5 },
 });

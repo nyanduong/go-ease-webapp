@@ -1,5 +1,7 @@
 # Bàn giao kiểm chứng M0
 
+Cập nhật UI ngày12/10/2026: [nhận diện theo mẫu](../design/BRAND.md) và [receipt #50](../verification/ISSUE-50.md). Bằng chứng lịch sử bên dưới giữ SHA/bản chạy gốc; UI mới phải đọc theo receipt mới. Owner chưa nghiệm thu M0; preview thật và UAT Android/iPhone còn thiếu.
+
 Ngày đối chiếu 11/10/2026 · **Refs #11**. Đã triển khai và merge các phần nền có thể kiểm tra độc lập; **M0 chưa hoàn tất**. Chưa xác minh được HTTPS staging/preview Android+iOS/Maps/Gemini hoặc OAuth runtime; client Console đã được cấu hình ở lượt tiếp theo theo receipt #4, chưa có bằng chứng login live hoặc thiết bị thật hai nền tảng. #11 và milestone M0 giữ mở, nyanduong nghiệm thu sản phẩm cuối. Đây là snapshot bằng chứng, không thay backlog trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
 [UAT-01–12](UAT.md) là hướng dẫn thử và kết quả riêng Android/iOS/admin/API. Owner thực hiện các thao tác cấp quyền/tài nguyên tại [EXTERNAL_RESOURCES](../verification/EXTERNAL_RESOURCES.md); không gửi secret vào chat/Issue/PR. URL admin/API staging và bản cài preview: **chưa có bản đã kiểm chứng để bàn giao**.

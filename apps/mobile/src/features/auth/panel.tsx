@@ -1,11 +1,12 @@
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GoogleSignInButton } from 'react-native-nitro-google-signin';
 import { useNativeAuth } from './context';
+import { colors, radius, space, typography } from '../../ui/theme';
 
 export function AuthPanel() {
   const { store, state } = useNativeAuth();
   return <View style={styles.card} accessibilityLiveRegion="polite">
-    <Text style={styles.title} accessibilityRole="header">Đăng nhập Google</Text>
+    <Text style={styles.title} accessibilityRole="header">{state.kind === 'signedIn' ? 'Tài khoản của bạn' : 'Đăng nhập Google'}</Text>
     <Text style={styles.text}>{state.message}</Text>
     {state.user && <Text style={styles.text}>Tài khoản: {state.user.displayName ?? 'Người dùng GoEase'}{ '\n' }Quyền máy chủ cấp: {state.user.role}</Text>}
     {state.kind === 'signedOut' && <GoogleSignInButton signInBehavior="none" disabled={false} colorScheme="light" onPress={() => store.login()} accessibilityLabel="Đăng nhập bằng Google" size="standard" />}
@@ -21,8 +22,8 @@ export function AuthPanel() {
   </View>;
 }
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, gap: 16, borderWidth: 1, borderColor: '#dbe7dc' },
-  title: { color: '#17382d', fontSize: 22, fontWeight: '700' }, text: { color: '#40594e', fontSize: 16, lineHeight: 24 },
-  note: { color: '#47675b', fontSize: 13, lineHeight: 20 }, button: { backgroundColor: '#12604b', padding: 16, borderRadius: 12 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  card: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.xl, gap: space.lg, borderWidth: 1, borderColor: colors.line },
+  title: { ...typography.title, color: colors.ink }, text: { ...typography.body, color: colors.muted },
+  note: { ...typography.small, color: colors.muted }, button: { backgroundColor: colors.teal, padding: space.md, borderRadius: radius.button, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { ...typography.body, color: colors.white, fontWeight: '700' },
 });

@@ -1,4 +1,5 @@
 import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
 import { colors, radius, space, typography } from './theme';
 import logo from '../../assets/brand/goease-logo.jpg';
 import sunset from '../../assets/halong-sunset.jpg';
@@ -14,7 +15,8 @@ export function Action({ label, onPress, disabled = false, secondary = false, se
 }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={label}
     accessibilityState={{ disabled, ...(selected === undefined ? {} : { selected }) }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [styles.button, secondary && styles.secondary, accent && styles.accent, selected && styles.selected, disabled && styles.disabled, pressed && styles.pressed]}>
+    style={({ pressed }) => [styles.button, secondary && styles.secondary, accent && styles.accent, selected && styles.selected, disabled && styles.disabled,
+      pressed && { backgroundColor: accent ? colors.sunsetPressed : selected || !secondary ? colors.tealPressed : colors.softPressed }]}>
     <Text style={[styles.buttonText, secondary && styles.secondaryText, accent && styles.accentText, selected && styles.selectedText]}>{label}</Text>
   </Pressable>;
 }
@@ -38,10 +40,14 @@ export function TravelHero({ onCreate, disabled = false }: { onCreate?: () => vo
   </View>;
 }
 export function PhotoCredit() {
-  return <View style={styles.credit}><Text style={styles.small}>Ảnh minh họa Hạ Long · Vyacheslav Argenberg</Text>
-    <Pressable accessibilityRole="link" accessibilityLabel="Giấy phép ảnh Hạ Long: Creative Commons BY 4.0" onPress={() => { void Linking.openURL('https://creativecommons.org/licenses/by/4.0/'); }} style={styles.creditLink}>
-      <Text style={styles.linkText}>CC BY 4.0 · ảnh từ Wikimedia Commons</Text>
-    </Pressable></View>;
+  const [failed, setFailed] = useState(false);
+  function open(url: string) { setFailed(false); void Linking.openURL(url).catch(() => setFailed(true)); }
+  return <View style={styles.credit}><Text style={styles.small}>Ảnh minh họa Hạ Long · © Vyacheslav Argenberg. Ảnh thu nhỏ, cắt khung khi trình bày.</Text>
+    <Pressable accessibilityRole="link" onPress={() => open('https://commons.wikimedia.org/wiki/File:Ha_Long_Bay,_Vietnam,_Sunset_in_Ha_Long_Bay.jpg')} style={styles.creditLink}>
+      <Text style={styles.linkText}>Nguồn ảnh · Wikimedia Commons</Text></Pressable>
+    <Pressable accessibilityRole="link" accessibilityLabel="Giấy phép ảnh Hạ Long: Creative Commons BY 4.0" onPress={() => open('https://creativecommons.org/licenses/by/4.0/')} style={styles.creditLink}>
+      <Text style={styles.linkText}>Giấy phép · CC BY 4.0</Text></Pressable>
+    {failed && <Text accessibilityLiveRegion="polite" style={styles.small}>Chưa mở được liên kết. Bạn có thể bấm lại để thử.</Text>}</View>;
 }
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: space.xs, flexShrink: 1 },
@@ -52,7 +58,7 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: colors.soft, borderWidth: 1, borderColor: colors.teal }, secondaryText: { color: colors.teal },
   accent: { backgroundColor: colors.sunset, borderWidth: 0 }, accentText: { color: colors.ink },
   selected: { backgroundColor: colors.selected }, selectedText: { color: colors.white },
-  disabled: { opacity: 0.5 }, pressed: { opacity: 0.75 }, field: { gap: space.sm },
+  disabled: { opacity: 0.5 }, field: { gap: space.sm },
   label: { ...typography.body, color: colors.ink, fontWeight: '600' },
   input: { ...typography.body, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.input, padding: space.md, minHeight: 48, color: colors.ink },
   multiline: { minHeight: 120, textAlignVertical: 'top' }, small: { ...typography.small, color: colors.muted },

@@ -8,7 +8,7 @@ import { AuthPanel } from './src/features/auth/panel';
 import { NativeAuthProvider } from './src/features/auth/context';
 import { MapsPanel } from './src/features/maps/panel';
 import { TripsPanel } from './src/features/trips/panel';
-import { colors } from './src/ui/theme';
+import { colors, radius, space, typography } from './src/ui/theme';
 
 function HealthScreen({ onBack }: { onBack: () => void }) {
   const setup = useMemo(() => {
@@ -34,7 +34,7 @@ function HealthScreen({ onBack }: { onBack: () => void }) {
         <Text style={styles.description}>Một codebase Android và iOS. Màn này kiểm tra đăng nhập và kết nối API; lịch trình ở mục Chuyến đi.</Text>
         <AuthPanel />
         <View style={styles.card} accessibilityLiveRegion="polite">
-          {state.kind === 'loading' && <ActivityIndicator size="large" color="#12604b" accessibilityLabel="Đang kiểm tra kết nối" />}
+          {state.kind === 'loading' && <ActivityIndicator size="large" color={colors.teal} accessibilityLabel="Đang kiểm tra kết nối" />}
           <Text style={styles.title} accessibilityRole="header">{title}</Text>
           <Text style={styles.description}>{setup.message ?? (state.kind === 'success' ? 'Đã nhận phản hồi health hợp lệ từ máy chủ.' : state.kind === 'error' ? state.message : 'Đang chờ phản hồi. Không tự gửi lại vô hạn.')}</Text>
           <Text style={styles.label}>Địa chỉ API công khai</Text>
@@ -61,18 +61,17 @@ export default function App() { return <SafeAreaProvider><NativeAuthProvider><Ap
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: 24, gap: 16, maxWidth: 640, width: '100%', alignSelf: 'center' },
-  brand: { color: '#12604b', fontSize: 28, fontWeight: '800' },
-  eyebrow: { color: '#47675b', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
-  heading: { color: '#17382d', fontSize: 30, fontWeight: '700' },
-  description: { color: '#40594e', fontSize: 16, lineHeight: 24 },
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, gap: 16, borderWidth: 1, borderColor: '#dbe7dc' },
-  title: { color: '#17382d', fontSize: 22, fontWeight: '700' },
-  label: { color: '#40594e', fontSize: 13, fontWeight: '600' },
-  endpoint: { color: '#17382d', fontSize: 14 },
-  button: { backgroundColor: '#12604b', padding: 16, borderRadius: 12, minHeight: 52, alignItems: 'center' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  disabled: { opacity: 0.55 }, pressed: { opacity: 0.8 },
-  note: { color: '#47675b', fontSize: 13, lineHeight: 20 },
+  content: { padding: space.xl, gap: space.lg, maxWidth: 640, width: '100%', alignSelf: 'center' },
+  brand: { color: colors.teal, fontSize: 28, fontWeight: '800' },
+  eyebrow: { color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  heading: { color: colors.ink, fontSize: 30, fontWeight: '700' },
+  description: { color: colors.muted, fontSize: 16, lineHeight: 24 },
+  card: { backgroundColor: colors.white, borderRadius: radius.card, padding: space.xl, gap: space.lg, borderWidth: 1, borderColor: colors.line },
+  title: { color: colors.ink, fontSize: 22, fontWeight: '700' },
+  label: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  endpoint: { color: colors.ink, fontSize: 14 },
+  button: { backgroundColor: colors.teal, padding: 16, borderRadius: radius.button, minHeight: 52, alignItems: 'center' },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  disabled: { opacity: 0.55 }, pressed: { backgroundColor: colors.tealPressed },
+  note: { color: colors.muted, ...typography.small },
 });
-
