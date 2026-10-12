@@ -16,6 +16,11 @@ const CHALLENGE_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
+  // A restarted trial requires another verified Google login. Never restore a
+  // pre-trial or previously allowed identity merely because its bearer exists.
+  private readonly trialCandidates = new Set<string>();
+  private readonly trialSessions = new Set<string>();
+  private trialPendingSessions = 0;
   constructor(private readonly database: AuthDatabase, private readonly verifier: GoogleIdentityVerifier,
     private readonly config: ConfigService<Environment, true>, private readonly limit: AbuseLimit) {}
 
@@ -70,7 +75,19 @@ export class AuthService {
     // Network verification outside DB transaction; 8 concurrent SDK calls maximum.
     const identity = await this.limit.verification(() => this.verifier.verify(body.idToken));
     if (!equalHash(hash(identity.nonce), row.nonceHash)) throw new ApiFault('AUTH_INVALID_IDENTITY', 401);
+    const allowedEmails = this.config.get('GOEASE_NATIVE_TRIAL_EMAILS', { infer: true });
+    if (allowedEmails && (!identity.verifiedEmail || !allowedEmails.includes(identity.verifiedEmail))) throw new ApiFault('AUTH_INVALID_IDENTITY', 401);
+    if (allowedEmails) {
+      // Reserve synchronously before any transaction wait; parallel valid
+      // exchanges cannot grow either in-memory set past ten identities.
+      if (!this.trialCandidates.has(identity.subject) && this.trialCandidates.size >= 10) throw new ApiFault('AUTH_RATE_LIMITED', 429);
+      this.trialCandidates.add(identity.subject);
+    }
     const token = opaque(), csrfToken = csrfFor(token), now = new Date();
+    if (allowedEmails) {
+      if (this.trialSessions.size + this.trialPendingSessions >= 128) throw new ApiFault('AUTH_RATE_LIMITED', 429);
+      this.trialPendingSessions++;
+    }
     const result = await db.$transaction(async tx => {
       // Observe expiry after any row-lock wait, and use a single millisecond
       // timestamp so rounding cannot consume at/after the expiry boundary.
@@ -93,7 +110,10 @@ export class AuthService {
         csrfTokenHash: kind === 'web' ? hash(csrfToken) : null, createdAt: now, expiresAt: new Date(now.getTime() + SESSION_MS),
       } });
       return { user: { id: user.id, displayName: user.displayName, role: user.role }, expiresAt: session.expiresAt.toISOString() };
-    }, { maxWait: 3000, timeout: 5000 });
+    }, { maxWait: 3000, timeout: 5000 }).then(result => {
+      if (allowedEmails) { this.trialPendingSessions--; this.trialSessions.add(hash(token)); }
+      return result;
+    }, error => { if (allowedEmails) this.trialPendingSessions--; throw error; });
     if (kind === 'web') {
       clearCookie(response, LOGIN_COOKIE);
       setCookie(response, SESSION_COOKIE, token, SESSION_MS);
@@ -119,6 +139,7 @@ export class AuthService {
     if (!session || session.transport !== kind.toUpperCase() || session.revokedAt || session.expiresAt.getTime() <= Date.now() || session.user.disabledAt) {
       throw new ApiFault('SESSION_REQUIRED', 401);
     }
+    if (this.config.get('GOEASE_NATIVE_TRIAL_EMAILS', { infer: true }) && !this.trialSessions.has(session.tokenHash)) throw new ApiFault('SESSION_REQUIRED', 401);
     if (kind === 'web' && (!session.csrfTokenHash || !equalHash(session.csrfTokenHash, hash(csrfFor(token))))) throw new ApiFault('SESSION_REQUIRED', 401);
     return { id: session.id, token, transport: kind, expiresAt: session.expiresAt, csrfTokenHash: session.csrfTokenHash,
       user: { id: session.user.id, displayName: session.user.displayName, role: session.user.role as AuthUser['role'] } };
@@ -144,6 +165,7 @@ export class AuthService {
     }
     this.assertMutation(request, context);
     await this.database.db.session.updateMany({ where: { id: context.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    if (this.config.get('GOEASE_NATIVE_TRIAL_EMAILS', { infer: true })) this.trialSessions.delete(hash(context.token));
     clearCookie(response, SESSION_COOKIE); clearCookie(response, LOGIN_COOKIE);
   }
 }

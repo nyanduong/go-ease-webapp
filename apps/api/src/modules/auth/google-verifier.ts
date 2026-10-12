@@ -8,6 +8,8 @@ export interface VerifiedGoogleIdentity {
   subject: string;
   displayName: string | null;
   nonce: string;
+  /** Only supplied from a cryptographically verified Google claim; never persisted. */
+  verifiedEmail?: string;
 }
 export abstract class GoogleIdentityVerifier {
   abstract verify(idToken: string): Promise<VerifiedGoogleIdentity>;
@@ -31,7 +33,9 @@ export async function verifyGoogleToken(client: OAuth2Client, audience: string, 
         const point = character.codePointAt(0)!;
         return point < 32 || (point >= 127 && point <= 159) ? ' ' : character;
       }).join('').trim()).slice(0, 120).join('') : '';
-    return { subject: payload.sub, displayName: name || null, nonce };
+    const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+    return { subject: payload.sub, displayName: name || null, nonce,
+      ...(payload.email_verified === true && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? { verifiedEmail: email } : {}) };
   } catch (error) {
     if (error instanceof ApiFault) throw error;
     // SDK error details can contain the JWT. Never return/log them.

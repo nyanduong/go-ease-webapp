@@ -7,6 +7,8 @@ export interface Environment {
   GOOGLE_WEB_CLIENT_ID?: string;
   GOOGLE_MAPS_SERVER_API_KEY?: string;
   MAPS_ROUTES_ENABLED?: true;
+  GOEASE_NATIVE_TRIAL_EMAILS?: string[];
+  GOEASE_LOCAL_STATE_DIR?: string;
 }
 
 export function validateEnvironment(input: Record<string, unknown>): Environment {
@@ -39,6 +41,21 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
   const googleClient = input.GOOGLE_WEB_CLIENT_ID;
   const mapsKey = input.GOOGLE_MAPS_SERVER_API_KEY;
   const mapsEnabled = input.MAPS_ROUTES_ENABLED;
+  const trial = input.GOEASE_NATIVE_TRIAL_EMAILS;
+  const state = input.GOEASE_LOCAL_STATE_DIR;
+  let trialEmails: string[] | undefined;
+  if (trial !== undefined) {
+    if (mode !== 'production' && mode !== 'test') throw new Error('Native trial requires explicit production mode (test only in automated fixtures).');
+    if (typeof trial !== 'string' || trial.length > 2560) throw new Error('GOEASE_NATIVE_TRIAL_EMAILS must explicitly list approved verified emails.');
+    trialEmails = [...new Set(trial.split(',').map(value => value.trim().toLowerCase()))];
+    if (!trialEmails.length || trialEmails.length > 10 || trialEmails.some(value => !/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,63}$/.test(value) || value.length > 254)) {
+      throw new Error('GOEASE_NATIVE_TRIAL_EMAILS is empty or invalid.');
+    }
+    if (host !== '127.0.0.1' || mapsEnabled === 'true') throw new Error('Native trial requires loopback and paid Routes disabled.');
+    if (typeof state !== 'string' || !state.trim()) throw new Error('Native trial requires GOEASE_LOCAL_STATE_DIR.');
+    if (database === undefined || googleClient === undefined) throw new Error('Native trial requires PostgreSQL and Google audience.');
+  }
+  if (state !== undefined && (typeof state !== 'string' || !state.trim())) throw new Error('GOEASE_LOCAL_STATE_DIR is invalid.');
   if (mapsKey !== undefined && (typeof mapsKey !== 'string' || !/^[A-Za-z0-9_-]{1,512}$/.test(mapsKey))) {
     throw new Error('GOOGLE_MAPS_SERVER_API_KEY phải là cấu hình server hợp lệ.');
   }
@@ -55,5 +72,7 @@ export function validateEnvironment(input: Record<string, unknown>): Environment
     ...(database === undefined ? {} : { DATABASE_URL: database }),
     ...(googleClient === undefined ? {} : { GOOGLE_WEB_CLIENT_ID: googleClient }),
     ...(mapsKey === undefined ? {} : { GOOGLE_MAPS_SERVER_API_KEY: mapsKey }),
+    ...(trialEmails === undefined ? {} : { GOEASE_NATIVE_TRIAL_EMAILS: trialEmails }),
+    ...(state === undefined ? {} : { GOEASE_LOCAL_STATE_DIR: state as string }),
     ...(mapsEnabled === 'true' ? { MAPS_ROUTES_ENABLED: true as const } : {}) };
 }

@@ -7,6 +7,9 @@ import { ApiFault } from './api-fault.js';
 export class ApiExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
+    const response = http.getResponse<Response>();
+    // A bounded ingress timeout/client abort may already have completed output.
+    if (response.headersSent || response.writableEnded || response.destroyed) return;
     const oversizedJson = exception instanceof Error && 'type' in exception && exception.type === 'entity.too.large' &&
       'status' in exception && exception.status === 413;
     const statusCode = exception instanceof HttpException ? exception.getStatus() : oversizedJson ? 413 : 500;
@@ -19,6 +22,6 @@ export class ApiExceptionFilter implements ExceptionFilter {
       path: request.originalUrl.split('?')[0] ?? request.path,
       timestamp: new Date().toISOString(),
     };
-    http.getResponse<Response>().status(statusCode).json(body);
+    response.status(statusCode).json(body);
   }
 }
