@@ -137,6 +137,22 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
     } finally { await raw.end(); await bounded.$disconnect(); }
   });
 
+  await t.test('challenge lifetime accepts exactly five minutes and rejects a one-millisecond clock drift in real PostgreSQL', async () => {
+    const raw = new pg.Client({ connectionString: database.migrationUrl });
+    try {
+      await raw.connect(); await raw.query('BEGIN');
+      const createdAt = new Date(Date.now() - 600_000);
+      const expiresAt = new Date(createdAt.getTime() + 300_000);
+      const inserted = await raw.query('INSERT INTO "AuthChallenge" (transport,"nonceHash","proofHash","createdAt","expiresAt") VALUES (\'NATIVE\',$1,$2,$3::timestamptz,$4::timestamptz) RETURNING id,"createdAt","expiresAt"',
+        [hash(opaque()), hash(opaque()), createdAt.toISOString(), expiresAt.toISOString()]);
+      assert.equal((inserted.rows[0].expiresAt as Date).getTime() - (inserted.rows[0].createdAt as Date).getTime(), 300_000);
+      await assert.rejects(raw.query('UPDATE "AuthChallenge" SET "expiresAt"=$1::timestamptz WHERE id=$2',
+        [new Date(expiresAt.getTime() + 1).toISOString(), inserted.rows[0].id]),
+      (error: unknown) => Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23514'
+        && 'constraint' in error && error.constraint === 'challenge_expiry'));
+    } finally { await raw.end(); } // Disconnect rolls back the owned test transaction.
+  });
+
   await t.test('A/B identity separation, opaque hashes only, current role and disabled flags, no default admin', async () => {
     const s = await server();
     try {
@@ -191,7 +207,8 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
       const again = await s.login('HTTP-race'); assert.equal(again.body.user.id, user.id);
       assert.equal(await op.session.count({ where: { userId: user.id } }), 2);
       const expired = await s.challenge();
-      await op.authChallenge.update({ where: { id: expired.body.challengeId }, data: { createdAt: new Date(Date.now() - 600_000), expiresAt: new Date(Date.now() - 300_000) } });
+      const expiredAt = new Date(Date.now() - 300_000);
+      await op.authChallenge.update({ where: { id: expired.body.challengeId }, data: { createdAt: new Date(expiredAt.getTime() - 300_000), expiresAt: expiredAt } });
       await fault(await s.exchange(expired.body, s.verifier.token(expired.body, 'HTTP-expired')), 400, 'AUTH_INVALID_CHALLENGE');
       const native = await s.challenge();
       await fault(await s.post('auth/google/web', { challengeId: native.body.challengeId, idToken: s.verifier.token(native.body, 'HTTP-cross') },
@@ -349,8 +366,9 @@ test('Auth HTTP with isolated real PostgreSQL + runtime role; identity doubles o
       await fault(await s.post('auth/google/native', { challengeId: randomUUID(), idToken: 'a'.repeat(20_000) }), 400, 'INVALID_REQUEST');
       const expiredIds: string[] = [];
       for (let i = 0; i < 3; i++) {
+        const expiredAt = new Date(Date.now() - 300_000);
         const row = await op.authChallenge.create({ data: { transport: 'NATIVE', nonceHash: hash(opaque()), proofHash: hash(opaque()),
-          createdAt: new Date(Date.now() - 600_000), expiresAt: new Date(Date.now() - 300_000) } }); expiredIds.push(row.id);
+          createdAt: new Date(expiredAt.getTime() - 300_000), expiresAt: expiredAt } }); expiredIds.push(row.id);
       }
       for (let i = 0; i < 10; i++) assert.equal((await s.post('auth/challenges/native')).status, 201);
       await fault(await s.post('auth/challenges/native'), 429, 'AUTH_RATE_LIMITED');
