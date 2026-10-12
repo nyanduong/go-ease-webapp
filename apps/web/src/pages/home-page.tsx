@@ -22,7 +22,7 @@ export function AdminShell() {
   return <div className="admin-shell">
     <a className="skip-link" href="#main">Đến nội dung chính</a>
     <aside className="admin-sidebar">
-      <RouteLink href="/admin/catalog" className="brand" aria-label="GoEase — Quản trị"><span className="admin-brand-mark" aria-hidden="true">g</span>GoEase<span className="brand-dot">.</span></RouteLink>
+      <RouteLink href="/admin/catalog" className="brand" aria-label="GoEase — Quản trị"><img className="admin-brand-logo" src="/brand/goease-logo.jpg" alt="" width={52} height={52} />GoEase</RouteLink>
       <p className="eyebrow">KHÔNG GIAN VẬN HÀNH</p>
       <nav aria-label="Điều hướng quản trị" className="admin-nav">
         <RouteLink href="/admin/catalog" aria-current={catalog ? 'page' : undefined}>Dữ liệu tham chiếu</RouteLink>
