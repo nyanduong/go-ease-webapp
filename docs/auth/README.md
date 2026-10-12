@@ -30,7 +30,7 @@ Web dùng popup/callback GIS, không dùng redirect flow, nên chưa có callbac
 | --- | --- | --- | --- |
 | GoEase M0 Web Audience | Web application, audience chung API/mobile/admin | Một Web ID thật, cùng giá trị trong ba biến Web ID bên trên | Origins/redirects để trống; chưa có HTTPS admin được cấp. Không lưu/dùng client secret tự sinh bởi Console. |
 | GoEase Android Development Debug | Android development | `vn.goease.mobile.dev`; SHA-1 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25` từ APK/debug certificate thật | Chỉ đúng chứng chỉ development đã đối chiếu; chưa Google runtime. |
-| GoEase Android Preview — bổ sung12/10 | Android preview | `vn.goease.mobile.preview`; SHA-1 `58:68:98:3D:95:89:30:4A:34:FF:CF:4A:DF:22:14:9B:6A:EF:4A:3A` từ signer PKCS12 riêng được owner cho phép | Client đã lưu; EAS signer upload còn lỗi frontend và chưa có binary để đối chiếu cert. Không dùng SHA-1 debug thay preview. |
+| GoEase Android Preview — bổ sung12/10 | Android preview | `vn.goease.mobile.preview`; SHA-1 `58:68:98:3D:95:89:30:4A:34:FF:CF:4A:DF:22:14:9B:6A:EF:4A:3A` từ signer PKCS12/JKS cùng entry được owner cho phép | Client và signer EAS đã lưu/reload, fingerprint khớp; xem [receipt #10](../verification/GE-M0-10.md). Chưa có preview binary để đối chiếu cert hoặc Google sign-in live. Không dùng SHA-1 debug thay preview. |
 | GoEase iOS Development | iOS development | Bundle `vn.goease.mobile.dev`, iOS ID thật | Local đang chọn ID development; cần native binary mới có reversed scheme/plugin. |
 | GoEase iOS Preview | iOS preview | Bundle `vn.goease.mobile.preview`, iOS ID thật riêng | Client đã lưu; ngày12/10 đã lưu đúng EAS preview environment, development dùng ID khác. Signing/build/cài iPhone chưa đạt. |
 
