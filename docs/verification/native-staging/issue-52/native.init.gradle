@@ -1,0 +1,30 @@
+// Test-only resource limits. No entry, application ID, signing or staging override.
+allprojects { p ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        p.plugins.withId(pluginId) {
+            p.extensions.getByName('android').defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+                '-DCMAKE_JOB_POOLS=goease_native=1',
+                '-DCMAKE_JOB_POOL_COMPILE=goease_native',
+                '-DCMAKE_JOB_POOL_LINK=goease_native'
+            ])
+        }
+    }
+}
+gradle.projectsEvaluated {
+    def p = gradle.rootProject.findProject(':app')
+    if (p == null || !p.plugins.hasPlugin('com.android.application')) return
+    def r = p.extensions.getByName('react')
+    def expectedEntry = new File('C:/ge52/apps/mobile/index.ts').canonicalFile
+    if (r.entryFile.get().asFile.canonicalFile != expectedEntry) throw new GradleException('Expected real product index.ts entry.')
+    if (p.extensions.getByName('android').defaultConfig.applicationId != 'vn.goease.mobile.dev') throw new GradleException('Unexpected product application ID.')
+    r.extraPackagerArgs.addAll(['--max-workers', '1'])
+    println 'GOEASE_VERIFIED_PRODUCT_ENTRY=' + expectedEntry
+    ['expo-modules-core': 'expo', 'react-native-nitro-modules': 'nitro', 'react-native-nitro-google-signin': 'google-signin'].each { name, stage ->
+        def nativeProject = gradle.rootProject.findProject(':' + name)
+        if (nativeProject == null) throw new GradleException('Missing expected native library: ' + name)
+        def actual = nativeProject.extensions.getByName('android').externalNativeBuild.cmake.buildStagingDirectory.canonicalFile
+        def expected = new File(gradle.rootProject.projectDir, '.cxx/' + stage).canonicalFile
+        if (actual != expected) throw new GradleException('Unexpected product staging: ' + name)
+        println 'GOEASE_VERIFIED_PRODUCT_STAGING=' + name + ':' + actual
+    }
+}

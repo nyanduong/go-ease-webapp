@@ -13,6 +13,8 @@ Ngày đối chiếu: 12/10/2026. Đây là bảng điều kiện kỹ thuật, 
 
 Runbook và dữ kiện đầy đủ: [MOBILE_PREVIEW](../staging/MOBILE_PREVIEW.md), [receipt #10](GE-M0-10.md). Không tự báo hoàn tất khi chưa có preview Metro-off và UAT thật Android/iPhone. Không chạy lại Metro hoặc đổi cách thực thi để né policy đã chặn; lớp gây chặn lịch sử chưa xác định.
 
+Đường compile Android Windows đã kiểm lại ở [fix #52](ISSUE-52.md): source `663d155`, mobile tree `ed2931bd`, Release x86_64 từ product `index.ts` trên clone cô lập PASS sau khi rút staging Expo; JS/assets đóng gói một lần, debug test signer, chưa cài/chạy. Đây là phần Codex làm được không cần tài khoản/key, không thay preview/OAuth/UAT. Kết quả iOS mới hơn nằm trong [receipt UI #50](ISSUE-50.md#ios--kiểm-chứng-riêng): unsigned compile riêng, chưa signing/IPA/iPhone runtime; không suy từ Android.
+
 Phần iOS độc lập: [unsigned native compile](IOS_UNSIGNED_COMPILE.md) trên standard public GitHub `xcode-27`, chỉ public development OAuth ID, không Apple Account/signing/artifact storage. Run38196364492/source7105bab đã PASS archive Release iPhoneOS/arm64, JS và callback schemes; sau kế thừa PR48 phải kiểm lại HEAD cuối theo receipt PR49. Chưa có IPA để cài, signing hoặc runtime PASS. Đường ký/cài Windows qua bên thứ ba cần owner chọn và kiểm tương thích hai iPhone; HTTPS/Google Maps SDK/live và UAT vẫn bị chặn riêng, không suy từ compile.
 
 ## Từng dịch vụ

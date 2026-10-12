@@ -32,8 +32,26 @@ node -e "const p=require('./plugins/with-windows-native-staging.cjs'); const fs=
 & '<JDK_21>/bin/java.exe' -Xmx256m -cp '<GRADLE_9.3.1>/lib/groovy-4.0.29.jar' groovy.ui.GroovyMain test/fixtures/windows-native-staging-runtime.groovy (Join-Path $taskProof 'generated-staging.gradle')
 ```
 
-## Product-entry Release và bàn giao
+## Product-entry Windows Release
 
-**Chưa chạy** ở receipt đầu: đang chờ main có UI #50 đã merge rồi dùng clone ngắn riêng, không `.env`/credentials và entry thật `apps/mobile/index.ts`. Không dùng init script để override Expo staging, fixture entry hoặc application ID; plugin sản phẩm phải tạo đúng staging. Giới hạn một Gradle worker/JS worker/CMake job vì RAM 16 GB; chỉ debug test signer mặc định, không signer preview. Không cài APK đè app/session.
+Ngày 12/10/2026, source `663d1552777fffcda5ffe931b386e854303e1c36`, kế thừa main/UI PR #51 `d2e5e27ebb45cb0f91ae76d5a454d8b336d3b408`; mobile tree `ed2931bd3c6468e5aac3f136696d158944ed2da5`. Clone riêng `C:/ge52`, frozen offline install, không `.env` thật, tài khoản hoặc private signing credentials. Entry giữ nguyên **`apps/mobile/index.ts`**, app ID `vn.goease.mobile.dev`, variant development/build type Release. Init chỉ giới hạn tài nguyên và assert entry/app ID/staging, không override chúng hoặc signing.
 
-Root `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, internal review và Quality Gate trên PR HEAD còn chờ điều phối; không đánh dấu issue hoàn tất từ configuration tests. Build receipt sẽ bổ sung source SHA, entry, generated configuration, toolchain, command/result và APK hash ngoài Git. Không Metro, cloud build hoặc payment. Android compile không chứng minh runtime, Google OAuth, preview/UAT hay iOS; các blocker đó vẫn riêng.
+Fresh Android prebuild PASS. Expo 57 mặc định recreate native folder: lần kiểm đầu giữ log nhưng **không dùng làm bằng chứng migration**. Kiểm lại bằng tùy chọn chính thức `--no-clean`: repeated prebuild và upgrade từ block Nitro lịch sử đều PASS; hai comment sentinel ngoài block giữ nguyên, whole-file SHA256 cùng `557e5eb9…65ee826`. Sau kiểm, restore đúng fresh generated Gradle hash `aa3abda7…57a419c` trước compile. Xem full hashes trong [manifest](native-staging/issue-52/manifest.json).
+
+Toolchain thực: Windows, Node 24.21.0/pnpm 10.34.6, JDK 21.0.5, Gradle 9.3.1, SDK/build tools 36, NDK 27.1.12297006, CMake 3.22.1, Ninja 1.10.2. Chỉ x86_64, một Gradle/JS/CMake worker, heap 1024 MiB/metaspace 384 MiB. Lệnh từ `C:/ge52/apps/mobile/android`:
+
+```powershell
+.\gradlew.bat :app:assembleRelease --no-daemon --max-workers=1 '-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=384m' '-Dorg.gradle.parallel=false' '-Pkotlin.compiler.execution.strategy=in-process' '-PreactNativeArchitectures=x86_64' -I <PROOF_DIRECTORY>/native.init.gradle
+```
+
+**PASS, exit 0, 12m12s; 667/667 actionable tasks executed**, gồm Expo/Nitro CMake và Release lint vital. Log có cả bốn marker xác minh real product entry + ba staging do plugin tạo, rồi `BUILD SUCCESSFUL`. Expo regeneration input `ReactAndroidConfigVersion.cmake` tồn tại, decoded/normalized length **158** ký tự; không còn vòng lặp Ninja cũ ở build này. Có warning vendor deprecation, SDK XML và metaspace; không bỏ check hoặc đổi SDK/global config để qua build. Owned Gradle daemon đã dừng.
+
+APK ngoài Git: `app-release.apk`, **31,369,504 byte**, SHA256 `c97715eef054360e5b7295172d551bc50929aa16bd80a8f1a0244e6adeb98f31`. Inspection PASS package `vn.goease.mobile.dev`, minSDK24/target36, chỉ ABI x86_64, `assets/index.android.bundle` 1,429,028 byte; logo và ảnh Hạ Long có SHA256 khớp source dù resource names đã optimize. `apksigner verify --verbose` PASS v2, một signer; generated debug test signer, không private signer preview. **Không cài hoặc mở APK**, không đè app/session.
+
+JS/assets được đóng gói một lần qua Expo `export:embed` (694 modules, hai assets), không Metro dev server; snapshot port8081 sau build không có listener. Câu CLI “Starting Metro Bundler” ở log thuộc export một lần theo cơ chế đã đối chiếu trong [receipt iOS compile](IOS_UNSIGNED_COMPILE.md), không có lần chạy `expo start` hoặc khởi động lại server bị chặn.
+
+## Recipe và bàn giao
+
+[REPRODUCE.ps1](native-staging/issue-52/REPRODUCE.ps1), [helper scratch](native-staging/issue-52/check-prebuild.ps1) và [init](native-staging/issue-52/native.init.gradle) giữ exact commands/configuration. Helper chỉ dùng trong guarded recipe trên clone thử nghiệm, trước build; **không chạy độc lập trên native checkout có việc/build dở**. Các bước install/prebuild/helper/build/inspection đã chạy riêng như receipt; final combined recipe chưa chạy trọn lần nữa. PowerShell syntax và hai guard từ chối trước mutation (external-config names only/existing native folder) PASS. Text bàn giao LF; manifest ghi hash/size recipe cùng raw-log hashes ngoài Git. Không commit APK, keys, raw logs hoặc generated native project.
+
+Internal source và recipe review **CLEAR** sau sửa mixed-EOL; không P1/P2 còn lại trong phạm vi đã review. Root `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` và Quality Gate trên PR HEAD còn chờ điều phối/receipt cuối; không đánh dấu issue hoàn tất trước các gate này. Không cloud build/payment. Android compile không chứng minh runtime, Google OAuth, preview/UAT hay iOS; xem [receipt UI #50](ISSUE-50.md) cho iOS unsigned compile riêng và các giới hạn còn giữ.
