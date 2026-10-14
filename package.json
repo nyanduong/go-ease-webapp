@@ -4,13 +4,14 @@
   "packageManager": "pnpm@10.34.6",
   "engines": { "node": ">=24.15.0 <25" },
   "scripts": {
-    "dev:mobile": "pnpm --filter @goease/mobile start",
-    "dev:mobile:tunnel": "pnpm --filter @goease/mobile start --tunnel",
-    "dev:web": "pnpm --filter @goease/mobile web",
+    "dev:mobile": "pnpm --filter @goease/contracts build && pnpm --filter @goease/mobile start",
+    "dev:mobile:tunnel": "pnpm --filter @goease/contracts build && pnpm --filter @goease/mobile start --tunnel",
+    "dev:web": "pnpm --filter @goease/contracts build && pnpm --filter @goease/mobile web",
     "check:docs": "python .github/scripts/check-docs.py",
     "check:expo": "pnpm --filter @goease/mobile exec expo install --check",
-    "typecheck": "pnpm --filter @goease/mobile typecheck",
-    "lint": "pnpm --filter @goease/mobile lint",
-    "build": "pnpm --filter @goease/mobile build"
+    "typecheck": "pnpm --filter @goease/contracts build && pnpm -r typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm --filter @goease/contracts test",
+    "build": "pnpm --filter @goease/contracts build && pnpm --filter @goease/mobile build"
   }
 }
