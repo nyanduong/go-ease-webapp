@@ -20,7 +20,7 @@ export function geminiBody(input: CreateTripInput, catalog: CatalogEntry[], conf
     generationConfig: {
       candidateCount: 1, maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
       thinkingConfig: { thinkingLevel: 'MINIMAL', includeThoughts: false },
-      responseFormat: { text: { mimeType: 'application/json', schema: planJsonSchema(input, catalog) } },
+      responseMimeType: 'application/json', responseJsonSchema: planJsonSchema(input, catalog),
     },
   });
   if (Buffer.byteLength(body, 'utf8') > AI_MAX_INPUT_BYTES) throw new ApiFailure(413, 'PAYLOAD_TOO_LARGE', 'Prompt/catalog vượt giới hạn AI 16 KiB.');
