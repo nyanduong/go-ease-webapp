@@ -1,0 +1,15 @@
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <Stack screenOptions={{ headerTintColor: '#125C46', contentStyle: { backgroundColor: '#F6F8F5' } }}>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="about" options={{ title: 'Về GoEase', headerBackTitle: 'Quay lại' }} />
+      </Stack>
+    </SafeAreaProvider>
+  );
+}

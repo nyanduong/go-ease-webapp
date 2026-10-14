@@ -1,4 +1,4 @@
-"""Validate the documentation-only restart; reject source until its CI is added."""
+"""Check handover documents, local links and credential patterns in tracked text."""
 
 import re
 import subprocess
@@ -16,6 +16,15 @@ REQUIRED = {
     '.gitignore',
     '.github/workflows/quality.yml',
     '.github/scripts/check-docs.py',
+    'package.json',
+    'pnpm-workspace.yaml',
+    'pnpm-lock.yaml',
+    '.node-version',
+    'apps/mobile/package.json',
+    'apps/mobile/app.json',
+    'apps/mobile/src/app/_layout.tsx',
+    'apps/mobile/src/app/index.tsx',
+    'apps/mobile/src/app/about.tsx',
 }
 LINK = re.compile(r'!?\[[^\]\n]*\]\(([^\s)]+)\)')
 SECRETS = re.compile(
@@ -32,12 +41,14 @@ def check(root, tracked):
         path = root / name
         if not path.is_file() or path.is_symlink():
             errors.append(f'Missing regular file: {name}')
-    for name in sorted(set(tracked) - REQUIRED):
-        errors.append(f'Unexpected tracked file: {name}; add its real checks before source.')
-
-    for name in sorted(REQUIRED):
+    for name in sorted(set(tracked) | REQUIRED):
         path = root / name
+        if (path.name.startswith('.env') and path.name != '.env.example') or path.suffix in {'.pem', '.key', '.p12', '.p8', '.jks', '.keystore', '.mobileprovision'}:
+            errors.append(f'Potential credential file: {name}')
+            continue
         if not path.is_file() or path.is_symlink():
+            continue
+        if path.suffix.lower() not in {'.md', '.ts', '.tsx', '.js', '.json', '.yaml', '.yml', '.py', '.example'} and path.name not in {'.gitignore', '.node-version'}:
             continue
         try:
             text = path.read_text(encoding='utf-8-sig')
@@ -72,4 +83,4 @@ if __name__ == '__main__':
     problems = check(ROOT, tracked)
     if problems:
         raise SystemExit('\n'.join(problems))
-    print('PASS: restart documents, local links, allowed files and credential patterns.')
+    print('PASS: required documents/source, local links and credential patterns.')
