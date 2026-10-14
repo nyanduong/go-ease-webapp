@@ -20,6 +20,7 @@ export default function TripListScreen() {
         <Text style={{ color: '#125C46', fontSize: 28, fontWeight: '800' }}>GoEase</Text>
         <Text accessibilityRole="header" style={styles.heading}>Chuyến đi của tôi</Text>
         <Text style={styles.text}>Chế độ khách · Lưu trên thiết bị này</Text>
+        <Action title="Tài khoản · Chuyến trên server" secondary onPress={() => router.push('/account')} />
         <Action title="+ Tạo chuyến" disabled={!writable} onPress={() => router.push('/trips/new')} />
         <Action title="Về GoEase" secondary onPress={() => router.push('/about')} />
         <Text style={styles.text}>Nguồn mẫu local hoặc đề xuất AI được ghi trên từng chuyến; hãy kiểm tra thông tin trước khi đi.</Text>

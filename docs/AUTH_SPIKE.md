@@ -120,3 +120,5 @@ Không ghi nghiệm thu chỉ từ việc mở màn QA hoặc có hai user trên
 - Offline API tests tăng lên 43, mobile 96. Auth-only HTTP tests xác minh allowlist, native Origin, JWT forwarding/provider verification, route AI/catalog bị chặn, unsafe config/AI credentials từ chối, TTL/rate và cấm kết hợp hai loại demo. Fixtures/doubles không thay live evidence. PR #98 phải có Quality Gate + GitGuardian đạt trên HEAD cuối trước merge.
 
 Không hứa JWT bị revoke tức thì: access JWT có thể còn tới exp, verifier giới hạn TTL tối đa 2 giờ. #76 phải thiết kế ownership/authorization và chốt revocation cho dữ liệu riêng; #75 chưa có dữ liệu server, RLS trip, admin, signup email/reset, Google/Apple OAuth hoặc web credential persistence.
+
+Mobile đã có màn tài khoản sản phẩm ở #77, tách riêng credential/persistence khỏi pilot dev mô tả ở trên. Xem [runbook mobile account](MOBILE_ACCOUNT_SYNC.md); native sync #77 chưa được nghiệm thu.

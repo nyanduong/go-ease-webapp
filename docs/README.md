@@ -24,3 +24,4 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 - [Mobile AI: tạo, review, chỉnh/lưu và nghiệm thu còn chờ](MOBILE_AI.md)
 - [Auth spike: email/password Expo Go và backend xác minh](AUTH_SPIKE.md)
 - [PostgreSQL, CRUD chuyến riêng, backup và pilot đồng bộ #76](SERVER_TRIPS.md)
+- [Đăng nhập sản phẩm và đồng bộ chuyến tài khoản #77](MOBILE_ACCOUNT_SYNC.md)
