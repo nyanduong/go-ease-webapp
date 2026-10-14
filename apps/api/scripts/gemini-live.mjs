@@ -12,19 +12,24 @@ if (!process.argv.includes('--ack-one-call') || process.env.GEMINI_ENABLED !== '
   process.exitCode = 2;
 } else {
   let app;
+  let upstreamStatus;
   try {
     const config = readConfig(process.env);
     const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
     if (!/^[a-f0-9]{40}$/.test(commit)) throw new Error();
     if (execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim()) throw new Error();
-    ({ app } = await createApi()); await app.listen(0, '127.0.0.1');
+    // Pass through to the real network; capture only the numeric status, never headers/body.
+    const observedFetch = async (url, options) => {
+      const response = await fetch(url, options); upstreamStatus = response.status; return response;
+    };
+    ({ app } = await createApi(process.env, undefined, { fetcher: observedFetch })); await app.listen(0, '127.0.0.1');
     const response = await fetch(`${await app.getUrl()}/v1/ai/itineraries`, {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${config.AI_ACCESS_TOKEN}` },
       body: JSON.stringify({ name: 'QA Gemini live', destinationId: 'da-lat', startDate: todayAtDestination(new Date()), durationDays: 1, people: 2, budgetVnd: null }),
       signal: AbortSignal.timeout(config.API_REQUEST_TIMEOUT_MS + 2000),
     });
     const body = await response.json();
-    const evidence = { kind: 'live', attemptedAt: new Date().toISOString(), commit, node: process.version, model: config.GEMINI_MODEL, httpStatus: response.status, requestId: response.headers.get('x-request-id'), passed: false };
+    const evidence = { kind: 'live', attemptedAt: new Date().toISOString(), commit, node: process.version, model: config.GEMINI_MODEL, upstreamStatus, httpStatus: response.status, requestId: response.headers.get('x-request-id'), passed: false };
     if (response.ok) {
       const data = aiItineraryResponseSchema.parse(body); evidence.passed = true;
       evidence.days = data.trip.days.length; evidence.placeIds = data.trip.days.flatMap((day) => day.activities.map((activity) => activity.location.kind === 'catalog' ? activity.location.placeId : 'invalid'));
