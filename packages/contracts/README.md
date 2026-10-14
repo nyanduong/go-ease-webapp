@@ -78,3 +78,7 @@ Schema strict từ chối field lạ, version chưa hỗ trợ và kiểu sai; k
 `pnpm test` build package rồi chạy Node test runner trên public exports, thất bại nếu test lỗi hoặc không có file test. Test hành vi bao phủ biên ngày nhuận/cuối năm, 1/5 ngày, tiền sai kiểu/tràn/null/0, tổng nhóm, ID/ngày không nhất quán, overlap, reorder/move atomic và catalog references. `pnpm typecheck`, `pnpm lint` và Quality Gate bao gồm contracts; CI xuất bundle Android/iOS/web để kiểm tra nối package với Metro. Bundle không thay thử native.
 
 Tài liệu công cụ: [Zod schemas](https://zod.dev/api), [Node test runner](https://nodejs.org/docs/latest-v24.x/api/test.html), [Expo monorepo](https://docs.expo.dev/guides/monorepos/).
+
+## HTTP API v1
+
+api.ts export API_VERSION, catalogQuerySchema, healthResponseSchema, catalogResponseSchema và apiErrorResponseSchema cùng types. Prefix /v1 và apiVersion '1' độc lập với Trip schemaVersion; không đổi dữ liệu chuyến đã lưu. API validate request/response, mobile validate dữ liệu nhận; contracts vẫn chỉ Zod/logic thuần, không import NestJS/Node/backend. [DTO và hướng dẫn API](../../apps/api/README.md).

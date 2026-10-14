@@ -61,3 +61,7 @@ Development build và EAS Build dành cho thư viện native tùy chỉnh hoặc
 - Gemini key, DB URL có mật khẩu và khóa ký không vào app, Git hoặc ảnh chụp.
 - Điện thoại không truy cập backend PC qua localhost của điện thoại; dùng địa chỉ LAN được phép hoặc HTTPS phù hợp.
 - Chạy smoke trên Expo Go thật ở cả Android và iPhone trước khi thêm thư viện native tiếp theo.
+
+## Backend hiện có sau #71
+
+Đã có NestJS 12.1.3 tại apps/api, health chỉ báo tiến trình và catalog dùng contracts runtime; chưa DB/Gemini. [Chạy API và kiểm tra từ Expo Go](../apps/api/README.md). Giữ SDK/native dependencies mobile hiện tại; không thêm key cloud cho bước này.

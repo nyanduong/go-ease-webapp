@@ -99,3 +99,7 @@ Chế độ khách dùng local repository. Chế độ tài khoản dùng API re
 Mobile/web chỉ gọi API và import contracts. Prisma, secret và Gemini SDK server-side nằm trong API. Contracts không phụ thuộc UI/backend. API xác minh dữ liệu dù client đã validate.
 
 Trong mốc đầu, team chỉ cần mobile và các phần contracts thực sự dùng. Web admin, migration và cấu hình triển khai bổ sung khi có nhu cầu cụ thể.
+
+## API đã triển khai ở #71
+
+apps/api hiện có app factory NestJS, controller/service catalog, config validation, error filter và HTTP tests thật. packages/contracts/src/api.ts là DTO runtime dùng chung; mobile có client thuần và route dev catalog-check. [Hướng dẫn API hiện tại](../apps/api/README.md) là cấu trúc đã chạy; các phần DB/admin trong cây đích vẫn thuộc issue tiếp theo.
