@@ -5,13 +5,13 @@ export interface RefreshStorage { get(): Promise<string | null>; set(value: stri
 export interface AuthPilotState { busy: boolean; phase: 'signed-out' | 'provider-verified' | 'backend-verified' | 'unverified'; userId: string | null; message: string }
 type Session = { access: string; refresh: string; expires: number };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-class PilotError extends Error {}
+class PilotError extends Error { constructor(message: string, readonly transient = false) { super(message); } }
 const fail = (message: string): never => { throw new PilotError(message); };
 export function authProject(url: string | undefined, key: string | undefined) {
   if (!url || !/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(url) || !key || !/^sb_publishable_[A-Za-z0-9_-]{16,200}$/.test(key)) fail('Chưa cấu hình Supabase project/publishable key hợp lệ.');
   return { url: url!, key: key! };
 }
-export function createAuthPilot(options: { url?: string; key?: string; storage: RefreshStorage; fetcher?: typeof fetch; now?: () => number; timeoutMs?: number; onChange?: (state: AuthPilotState) => void }) {
+export function createAuthPilot(options: { url?: string; key?: string; storage: RefreshStorage; fetcher?: typeof fetch; now?: () => number; timeoutMs?: number; preserveRefreshOnTransient?: boolean; onChange?: (state: AuthPilotState) => void }) {
   let state: AuthPilotState = { busy: false, phase: 'signed-out', userId: null, message: 'Chưa có phiên được xác minh.' };
   let session: Session | null = null, epoch = 0, current: AbortController | null = null, pending: Promise<void> | null = null;
   let verifiedBackend: string | null = null;
@@ -23,14 +23,14 @@ export function createAuthPilot(options: { url?: string; key?: string; storage: 
     if (!Number.isInteger(ms) || ms < 100 || ms > 15000) fail('Timeout Auth không hợp lệ.');
     let timer: ReturnType<typeof setTimeout> | undefined, cancel: (() => void) | undefined;
     const stopped = new Promise<never>((_, reject) => {
-      cancel = () => { controller.abort(); reject(new PilotError('Đã hủy Auth; không tự thử lại.')); };
+      cancel = () => { controller.abort(); reject(new PilotError('Đã hủy Auth; không tự thử lại.', true)); };
       if (signal.aborted) cancel(); else signal.addEventListener('abort', cancel, { once: true });
-      timer = setTimeout(() => { controller.abort(); reject(new PilotError('Auth quá thời gian; cần thử lại bằng tay.')); }, ms);
+      timer = setTimeout(() => { controller.abort(); reject(new PilotError('Auth quá thời gian; cần thử lại bằng tay.', true)); }, ms);
     });
     const work = async () => {
       if (controller.signal.aborted) fail('Đã hủy Auth.');
       const response = await (options.fetcher ?? fetch)(url, { ...init, signal: controller.signal, redirect: 'error' });
-      if (!response.ok) { void response.body?.cancel().catch(() => {}); fail(response.status === 400 || response.status === 401 || response.status === 403 ? 'Provider/API từ chối phiên hoặc thông tin đăng nhập.' : 'Auth chưa đáp ứng; không tự retry hoặc dùng phiên giả.'); }
+      if (!response.ok) { void response.body?.cancel().catch(() => {}); throw new PilotError(response.status === 400 || response.status === 401 || response.status === 403 ? 'Provider/API từ chối phiên hoặc thông tin đăng nhập.' : 'Auth chưa đáp ứng; không tự retry hoặc dùng phiên giả.', response.status >= 500 || response.status === 429); }
       if (!json) { void response.body?.cancel().catch(() => {}); return null; }
       // Stream on runtimes that expose it; bounded fallback for React Native fetch.
       let raw = '';
@@ -64,7 +64,11 @@ export function createAuthPilot(options: { url?: string; key?: string; storage: 
     const generation = ++epoch, controller = new AbortController(); current = controller; publish({ busy: true, message: 'Đang xác minh…' });
     pending = (async () => {
       try { await work(controller.signal, generation); }
-      catch (error) { session = null; let message = error instanceof PilotError ? error.message : 'Lỗi mạng/storage Auth; không log credential và không tự retry.'; try { await erase(); } catch { message = 'Không xóa được credential trên thiết bị. Cần xử lý storage trước khi tiếp tục.'; } publish({ phase: 'unverified', userId: null, message }); }
+      catch (error) { session = null; verifiedBackend = null; let message = error instanceof PilotError ? error.message : 'Lỗi mạng/storage Auth; không log credential và không tự retry.';
+        const preserve = options.preserveRefreshOnTransient && (!(error instanceof PilotError) || error.transient);
+        if (!preserve) { try { await erase(); } catch { message = 'Không xóa được credential trên thiết bị. Cần xử lý storage trước khi tiếp tục.'; } }
+        else message += ' Dữ liệu riêng đang ẩn; thử Khôi phục khi kết nối lại.';
+        publish({ phase: 'unverified', userId: null, message }); }
       finally { current = null; pending = null; publish({ busy: false }); }
     })();
     return pending;

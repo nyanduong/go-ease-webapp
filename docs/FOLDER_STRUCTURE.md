@@ -111,3 +111,7 @@ apps/api/src/ai gồm controller, service, Gemini transport, projection và quot
 ## PostgreSQL và chuyến riêng #76
 
 `prisma/schema.prisma`, `prisma/migrations/` và `prisma.config.ts` mô tả schema/migration; `src/trips.ts` chứa CRUD theo identity, transaction, version và idempotency. `scripts/db-local.mjs`, `db-tools.mjs`, `test-db.mjs` vận hành cluster riêng và test DB thật. Generated Prisma client trong `src/generated/prisma` bị Git ignore và được build tạo lại. `packages/contracts/src/server-trips.ts` dùng chung với client/pilot trong `apps/mobile/src/features/trips`. [Runbook](SERVER_TRIPS.md).
+
+## Mobile account #77
+
+Route `apps/mobile/src/app/account.tsx` mở màn tài khoản; `account-session.ts` nối Auth/SecureStore với lifecycle. `account-trip-controller.ts` quản lý state và draft/pending owner-bound, màn account và các component editor/new-trip dùng lại activity/budget/map logic. Namespace dữ liệu riêng tách khỏi kho guest. [Hướng dẫn và checklist native còn chờ](MOBILE_ACCOUNT_SYNC.md).

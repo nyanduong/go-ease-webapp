@@ -6,6 +6,12 @@ const id = '12345678-1234-4234-8234-123456789abc', other = 'b5aa7f8a-1711-4c09-b
 const token = { access_token: 'offline.fixture.signature', refresh_token: 'fixture_refresh', token_type: 'bearer', expires_in: 3600, expires_at: 1800003600 };
 const response = (value, status = 200) => new Response(JSON.stringify(value), { status });
 const user = userId => ({ id: userId, aud: 'authenticated', role: 'authenticated', email: 'DO_NOT_LEAK', is_anonymous: false });
+test('product opt-in keeps refresh on temporary offline restore, hides identity, and still erases rejected credentials', async () => {
+  let saved='fixture_refresh'; const storage={get:async()=>saved,set:async v=>{saved=v;},remove:async()=>{saved=null;}};
+  const offline=createAuthPilot({url,key,storage,preserveRefreshOnTransient:true,fetcher:async()=>{throw new TypeError('offline');}});
+  await offline.restore(); assert.equal(saved,'fixture_refresh'); assert.equal(offline.snapshot().userId,null); assert.equal(offline.snapshot().phase,'unverified');
+  const rejected=createAuthPilot({url,key,storage,preserveRefreshOnTransient:true,fetcher:async()=>new Response('{}',{status:401})});await rejected.restore();assert.equal(saved,null);assert.equal(rejected.snapshot().userId,null);
+});
 function fixture(patch = {}) {
   let saved = null; const calls = [];
   const storage = { get: async () => saved, set: async value => { saved = value; }, remove: async () => { saved = null; } };

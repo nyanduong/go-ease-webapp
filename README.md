@@ -210,3 +210,9 @@ Hai mức QA: `provider-verified` khác `backend-verified`. Nút backend cần `
 Đã có PostgreSQL 18 + Prisma 7.10, migration/seed catalog và CRUD theo identity backend xác minh. Trip version chống ghi đè; mutationId chống ghi trùng khi retry; mọi ghi dùng transaction và RLS theo issuer/subject. `pnpm db:local` tạo database riêng trên loopback, `pnpm test:db` chạy DB test cô lập, `pnpm db:backup` lưu backup private ngoài repo.
 
 [Runbook, API contracts, backup và checklist native #76](docs/SERVER_TRIPS.md). Pilot thủ công nằm trong màn kiểm tra tài khoản sau backend-verified, giữ riêng chuyến khách. Chưa có đồng bộ nền/outbox. DB/HTTP tests đã đạt; nghiệm thu đồng bộ HTTPS trên thiết bị #76 còn chờ do bước tunnel bị kiểm duyệt tự động chặn. Không coi bundle hoặc kết quả Auth #75 là native pass #76. Không bật billing, không nâng Expo Go.
+
+## Đăng nhập và chuyến tài khoản (#77)
+
+Từ danh sách khách chọn **Tài khoản · Chuyến trên server** để đăng nhập và xem/tạo/sửa/xóa chuyến qua API thật. Nhập chuyến khách cần xác nhận, tạo bản sao có ID mới; bản khách giữ nguyên. Draft/pending request lưu riêng theo project + UUID, giữ payload/key khi retry; conflict cho đọc/đối chiếu và lựa chọn rõ ràng. [Hướng dẫn cấu hình, cách dùng và checklist](docs/MOBILE_ACCOUNT_SYNC.md).
+
+Không nâng SDK/Expo Go, không bật billing. Native Android/iPhone #77 chưa nghiệm thu vì hiện chủ repo chưa tiện thử; issue giữ mở. Test HTTP/PostgreSQL và export bundle không thay cho kết quả thiết bị.

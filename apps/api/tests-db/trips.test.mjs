@@ -11,6 +11,9 @@ import { getDalatCatalog } from '@goease/catalog';
 import { tripMutationResponseSchema, serverTripResponseSchema, serverTripListResponseSchema } from '@goease/contracts';
 import { isolatedUrl, pgControl } from '../scripts/db-tools.mjs';
 import { callServerTripApi } from '../../mobile/.logic-tests/server-trip-controller.js';
+import { createAccountTrips } from '../../mobile/.logic-tests/account-trip-controller.js';
+import { createAuthPilot } from '../../mobile/.logic-tests/auth-pilot-controller.js';
+import { ServerTripError } from '../../mobile/.logic-tests/server-trip-controller.js';
 if(process.env.GOEASE_DB_TEST_ACK!=='isolated') throw Error('Real isolated database test harness required');
 const adminUrl=process.env.GOEASE_DB_TEST_ADMIN_URL, runtimeUrl=process.env.GOEASE_DB_TEST_RUNTIME_URL;
 isolatedUrl(adminUrl,'test');isolatedUrl(runtimeUrl,'test');
@@ -97,4 +100,29 @@ test('private backup restores into a NEW isolated database with owner/RLS/versio
   await admin.query(`CREATE DATABASE "${destination}"`);restore();const target=new URL(original);target.pathname='/'+destination;env.DATABASE_URL=target.toString();await start();const read=await ok(await request('A','GET','/'+t.id));assert.deepEqual(read.trip,t);assert.equal(read.version,1);
  }catch{throw Error('Fixture backup/restore failed; no credential/dump content printed');}
  finally{await stop();env.DATABASE_URL=original;await admin.query(`DROP DATABASE IF EXISTS "${destination}"`);}
+}));
+test('product account login/restore/logout + workspace CRUD/conflict use real HTTP/Postgres; A/B remain isolated (Auth provider double)',()=>fixture(async({A,B,tokens,transport,request})=>{
+ const bytes=new Map();let refresh=null,workspace;
+ const auth=createAuthPilot({url:project,key:'sb_publishable_offline_fixture_00000000',storage:{get:async()=>refresh,set:async value=>{refresh=value;},remove:async()=>{refresh=null;}},onChange:state=>{if(state.phase!=='backend-verified')workspace?.lock();},fetcher:async(url,options)=>{
+  if(url.startsWith(project)){
+   if(url.includes('/token?')){const body=JSON.parse(options.body),who=(body.email==='b@example.test'||body.refresh_token==='fixture_refresh_B')?'B':'A';return new Response(JSON.stringify({access_token:tokens[who],refresh_token:'fixture_refresh_'+who,token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600}));}
+   if(url.endsWith('/user'))return new Response(JSON.stringify({id:options.headers.authorization==='Bearer '+tokens.A?A:B,aud:'authenticated',role:'authenticated'}));
+   if(url.includes('/logout?'))return new Response(null,{status:204});assert.fail('Unexpected fixture Auth route');
+  }return transport(url,options);
+ }});
+ workspace=createAccountTrips({storage:{get:async key=>bytes.get(key)??null,set:async(key,value)=>{bytes.set(key,value);}},request:op=>auth.serverTrips(op),newId:randomUUID});
+ async function login(who){await auth.login(who.toLowerCase()+'@example.test','offline_fixture_password');await auth.verifyBackend('https://fixture-api.example.test');assert.equal(auth.snapshot().phase,'backend-verified');await workspace.activate('abcdefghijklmnopqrst.'+(who==='A'?A:B));}
+ await login('A');const t=trip();await workspace.begin(t);assert.equal(await workspace.save(),true);await workspace.read(t.id);assert.equal(workspace.getSnapshot().selected.version,1);
+ await workspace.begin({...t,name:'My account draft'},1);
+ await ok(await request('A','PUT','/'+t.id,{mutationId:randomUUID(),expectedVersion:1,trip:{...t,name:'Other device'}}));
+ assert.equal(await workspace.save(),false);assert.equal(workspace.getSnapshot().conflict,true);assert.equal(workspace.getSnapshot().draft.trip.name,'My account draft');await workspace.read(t.id);assert.equal(workspace.getSnapshot().latest.trip.name,'Other device');await workspace.rebase();await workspace.save();assert.equal(workspace.getSnapshot().selected.version,3);
+ await auth.logout();assert.equal(workspace.getSnapshot().selected,null);await login('B');await workspace.list();assert.equal(workspace.getSnapshot().items.length,0);assert.equal(await workspace.read(t.id),false);assert.equal(workspace.getSnapshot().selected,null);
+ await auth.logout();await login('A');workspace.lock();auth.cancel();await auth.restore();await auth.verifyBackend('https://fixture-api.example.test');await workspace.activate('abcdefghijklmnopqrst.'+A);await workspace.read(t.id);assert.equal(workspace.getSnapshot().selected.trip.name,'My account draft');await workspace.remove(workspace.getSnapshot().selected);await error(await request('A','GET','/'+t.id),404,'NOT_FOUND');
+ const raw=JSON.stringify([...bytes]);assert.equal(raw.includes(tokens.A),false);assert.equal(raw.includes('offline_fixture_password'),false);assert.equal(raw.includes('fixture_refresh_A'),false);
+}));
+test('product workspace lost response survives app recreation and same-owner replay does not create duplicate Postgres trips',()=>fixture(async({A,B,tokens,transport,request})=>{
+ const bytes=new Map(),storage={get:async key=>bytes.get(key)??null,set:async(key,value)=>{bytes.set(key,value);}},t=trip();let lose=true;
+ const options={storage,newId:randomUUID,request:async op=>{const result=await callServerTripApi('https://fixture-api.example.test',tokens.A,op,{fetcher:transport});if(lose&&op.kind==='create'){lose=false;throw new ServerTripError('NETWORK','lost response');}return result;}};
+ const first=createAccountTrips(options);await first.activate('abcdefghijklmnopqrst.'+A);await first.begin(t);assert.equal(await first.save(),false);const pending=first.getSnapshot().pending;first.lock();
+ const restored=createAccountTrips(options);await restored.activate('abcdefghijklmnopqrst.'+B);assert.equal(restored.getSnapshot().pending,null);await restored.activate('abcdefghijklmnopqrst.'+A);assert.deepEqual(restored.getSnapshot().pending,pending);assert.equal(await restored.retry(),true);assert.equal(restored.getSnapshot().selected,null);await restored.read(t.id);assert.equal(restored.getSnapshot().selected.version,1);assert.equal((await ok(await request('A','GET'))).items.length,1);
 }));
