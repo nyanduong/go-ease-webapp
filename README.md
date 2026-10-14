@@ -168,3 +168,5 @@ Lịch sử source cũ vẫn ở Git; các issue cũ đã xóa theo quyết đ�
 - [Cây thư mục đích](docs/FOLDER_STRUCTURE.md)
 - [Phạm vi MVP Expo Go](docs/MVP_EXPO_GO.md)
 - [Hướng dẫn mobile và kiểm chứng](apps/mobile/README.md)
+
+[Checklist và biên bản bàn giao demo cốt lõi #70](docs/CORE_DEMO_QA.md): ca 1/5 ngày, lỗi storage một lần trong dev, retry, draft và cách ghi kết quả riêng từng nền tảng. Giữ nguyên lockfile và Expo Go đang tương thích; không nâng phiên bản chỉ để chạy checklist.

@@ -80,3 +80,7 @@ Build Android/iOS/web bằng `pnpm build` từ root. Artifact ở `apps/mobile/d
 ## Nguồn template
 
 Khởi tạo từ `expo-template-default@sdk-57` chính thức, giữ LICENSE đi kèm. UI tutorial/animation đã bỏ; ảnh icon/splash kỹ thuật từ template chưa phải nhận diện thương hiệu cuối. Không tạo EAS project hoặc thêm plugin native ngoài Expo Go.
+
+## Nghiệm thu demo cốt lõi
+
+Theo [checklist #70](../../docs/CORE_DEMO_QA.md). Dev có nút arm lỗi đọc/ghi một lần tại Về GoEase → Kiểm tra lưu chuyến và banner nhắc lỗi trên các màn. Retry dùng AsyncStorage thật, không thay kho bằng mock. Bản production không cho arm lỗi và route QA chuyển về danh sách. Màn QA hiện OS/model/Expo Go/fontScale và log runtime khi mở; thông tin không có phải ghi chưa xác định.

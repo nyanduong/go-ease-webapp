@@ -1,7 +1,8 @@
 import { Redirect } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, StyleSheet } from 'react-native';
-import { useLocalTrips } from '@/features/trips/local-trip-store';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import Constants from 'expo-constants';
+import { qaStorageControls, useLocalTrips } from '@/features/trips/local-trip-store';
 import type { Trip } from '@goease/contracts';
 
 const QA_ID = 'qa-local-storage-smoke-v1';
@@ -17,6 +18,11 @@ function sample(): Trip {
 
 function StorageCheck() {
   const { state, actions } = useLocalTrips();
+  const { fontScale } = useWindowDimensions();
+  const model = Platform.OS === 'ios' ? Constants.platform?.ios?.model ?? Constants.platform?.ios?.platform ?? 'chưa có' : Platform.OS === 'android' ? Platform.constants.Model : 'browser';
+  useEffect(() => {
+    if (__DEV__) console.info('[GoEase QA runtime]', JSON.stringify({ os: Platform.OS, version: String(Platform.Version), expoGo: Constants.expoVersion, model, fontScale }));
+  }, [fontScale, model]);
   const [message, setMessage] = useState('Chỉ thao tác chuyến QA riêng, không xóa các chuyến khác.');
   const saved = state.trips.find((item) => item.trip.id === QA_ID);
   const busy = state.loadStatus === 'loading' || state.writeStatus === 'saving' || state.writeStatus === 'deleting';
@@ -27,6 +33,11 @@ function StorageCheck() {
   );
   return <ScrollView contentContainerStyle={styles.page}>
     <Text accessibilityRole="header" style={styles.heading}>Kiểm tra lưu chuyến (dev)</Text>
+    <Text>Thiết bị: {Platform.OS} {String(Platform.Version)} • {model} • Expo Go {Constants.expoVersion ?? 'không có'} • fontScale {fontScale.toFixed(2)}</Text>
+    <Text>Lỗi QA một lần, xảy ra trước I/O thật. Không sửa/xóa kho. Retry sau lỗi dùng lại AsyncStorage thật. Chỉ dành dev; flags mất khi đóng hẳn app.</Text>
+    {button('QA: Gây lỗi đọc kế tiếp', () => { qaStorageControls.arm('read'); setMessage('Đã arm lỗi đọc. Bấm Tải lại kho hoặc quay lại luồng sản phẩm cần đọc.'); })}
+    {button('QA: Gây lỗi ghi kế tiếp', () => { qaStorageControls.arm('write'); setMessage('Đã arm lỗi ghi. Quay về tạo/sửa/xóa chuyến và kiểm tra lỗi + retry.'); })}
+    {button('QA: Tắt lỗi có kiểm soát', () => { qaStorageControls.reset(); setMessage('Đã tắt lỗi QA; kho dữ liệu không thay đổi.'); })}
     <Text>Đọc: {state.loadStatus} • Ghi: {state.writeStatus}</Text>
     <Text testID="storage-saved">Đã lưu: {saved ? `${saved.trip.name} • revision ${saved.revision} • giá ${String(saved.trip.days[0]?.activities[0]?.costVnd)}` : 'Chưa có chuyến QA'}</Text>
     <Text>Draft RAM: {state.draft?.trip.name ?? 'không có'}</Text>

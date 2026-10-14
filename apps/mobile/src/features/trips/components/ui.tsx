@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function Action({ title, onPress, disabled = false, secondary = false }: { title: string; onPress: () => void; disabled?: boolean; secondary?: boolean }) {
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
@@ -10,12 +11,12 @@ export function ConfirmDialog({ visible, title, message, confirm, onConfirm, onC
   visible: boolean; title: string; message: string; confirm: string; onConfirm: () => void; onCancel: () => void; busy?: boolean; error?: string;
 }) {
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => { if (!busy) onCancel(); }}>
-    <View style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+    <SafeAreaView style={styles.overlay}><ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}><View style={styles.dialog} accessibilityViewIsModal>
       <Text accessibilityRole="header" style={styles.heading}>{title}</Text><Text style={styles.text}>{message}</Text>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <Action title={busy ? 'Đang xử lý…' : confirm} disabled={busy} onPress={onConfirm} />
       <Action title="Ở lại / Hủy" secondary disabled={busy} onPress={onCancel} />
-    </View></View>
+    </View></ScrollView></SafeAreaView>
   </Modal>;
 }
 export const styles = StyleSheet.create({
