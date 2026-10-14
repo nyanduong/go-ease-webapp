@@ -14,13 +14,15 @@ import { projectDayMap } from '../map-controller';
 import DayMapCanvas from './day-map';
 
 export function AccountEditor() {
-  const { trips } = useAccount(); const draft = trips.draft, trip = draft?.trip ?? trips.selected?.trip;
+  const { trips, catalog } = useAccount(); const draft = trips.draft, trip = draft?.trip ?? trips.selected?.trip;
   const [dayId, setDayId] = useState(''), [form, setForm] = useState<{ id: string; editingId?: string; dayId: string; initial: ActivityForm } | null>(null);
   const [group, setGroup] = useState(false), [map, setMap] = useState(false), [message, setMessage] = useState('');
   const [nameDirty, setNameDirty] = useState(false);
   const [confirm, setConfirm] = useState<'save' | 'discard' | 'delete' | 'rebase' | 'latest' | { remove: string } | null>(null);
   const day = trip?.days.find(day => day.id === dayId) ?? trip?.days[0];
-  const busy = trips.busy || !trips.ready, locked = busy || !!trips.pending, places = getDalatPlaces();
+  const busy = trips.busy || !trips.ready, locked = busy || !!trips.pending;
+  const originalLocation = form?.editingId ? trip?.days.flatMap(d=>d.activities).find(a=>a.id===form.editingId)?.location : undefined;
+  const places = catalog.filter(p=>p.enabled||(originalLocation?.kind==='catalog'&&originalLocation.placeId===p.entry.id)).map(p=>{const {id,name,destinationId,coordinates,sources}=p.entry;return {id,name,destinationId,coordinates,sources};});
   async function change(input: Trip) { try { await accountTrips.change(input); } catch (cause) { setMessage(cause instanceof Error ? cause.message : 'Không áp dụng được thay đổi.'); } }
   function mutate(work: () => Trip) { try { void change(work()); return true; } catch { setMessage('Kiểm tra ngày, tối đa 12 hoạt động/ngày và giới hạn chi phí. Bản nháp trước đó giữ nguyên.'); return false; } }
   const id = draft?.trip.id ?? (trips.pending?.kind === 'create' ? trips.pending.trip.id : trips.pending?.id) ?? trip?.id;
@@ -52,7 +54,7 @@ export function AccountEditor() {
       <Text style={styles.heading}>{day.date}</Text>
       {findTimeOverlaps(day).length > 0 && <Text style={styles.error}>Có hoạt động trùng giờ. Kiểm tra giờ trước khi đi.</Text>}
       <Action title={map ? 'Ẩn bản đồ ngày' : 'Xem bản đồ ngày'} secondary disabled={busy || !!form || group} onPress={() => setMap(!map)} />
-      {map && <AccountMap trip={trip} dayId={day.id} />}
+      {map && <AccountMap trip={trip} dayId={day.id} places={catalog.map(p=>{const {id,name,destinationId,coordinates,sources}=p.entry;return {id,name,destinationId,coordinates,sources};})} />}
       {draft && !form && !group && <><Action title="Đổi ngân sách / số người" secondary disabled={locked} onPress={() => setGroup(true)} /><Action title="+ Thêm hoạt động vào bản nháp" disabled={locked || day.activities.length >= 12} onPress={() => setForm({ id: randomUUID(), dayId: day.id, initial: activityForm() })} /></>}
       {group && <GroupBudgetEditor trip={trip} disabled={locked} onApply={input => { void change(input); setGroup(false); }} onCancel={() => setGroup(false)} />}
       {form && <ActivityEditor key={form.id} initial={form.initial} activityId={form.id} places={places} disabled={locked} onApply={activity => { if (mutate(() => putActivity(trip, form.dayId, activity, form.editingId))) setForm(null); }} onCancel={() => setForm(null)} />}
@@ -79,9 +81,9 @@ export function AccountEditor() {
     }} />
   </View>;
 }
-function AccountMap({ trip, dayId }: { trip: Trip; dayId: string }) {
+function AccountMap({ trip, dayId, places }: { trip: Trip; dayId: string; places: ReturnType<typeof getDalatPlaces> }) {
   let model: ReturnType<typeof projectDayMap> | null = null;
-  try { model = projectDayMap(trip, dayId, getDalatPlaces()); } catch { /* Projection failure is shown below. */ }
+  try { model = projectDayMap(trip, dayId, places); } catch { /* Projection failure is shown below. */ }
   if (!model) return <Text style={styles.error}>Không đọc được tọa độ/ngày; không vẽ pin thay thế.</Text>;
   return model.region ? <DayMapCanvas key={`${model.dayId}:${JSON.stringify(model.pins)}`} model={model} /> : <Text style={styles.text}>Ngày này không có địa điểm có tọa độ.</Text>;
 }

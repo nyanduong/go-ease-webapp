@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { parseEnv } from 'node:util';
 import { join } from 'node:path';
-import { apiRoot, devRoot, localCluster, pgControl, seedCatalog } from './db-tools.mjs';
+import { apiRoot, devRoot, localCluster, pgControl, seedCatalog, migrateDatabase } from './db-tools.mjs';
 import { Pool } from 'pg';
 try {
   const operation=process.argv[2];
@@ -14,6 +14,7 @@ try {
     let alive=false;const pool=new Pool({connectionString:meta.runtimeUrl,connectionTimeoutMillis:1000,max:1});
     try {await pool.query('SELECT 1');alive=true;}catch{}finally{await pool.end();}
     if(!alive)pgControl(meta,'start');
+    if(operation==='start') { migrateDatabase(meta.adminUrl); await seedCatalog(meta.adminUrl); }
     if(operation==='seed'){await seedCatalog(meta.adminUrl);console.info('Catalog seed applied from the committed sourced catalog; no private trips seeded.');}
     else if(operation==='backup'){
       const u=new URL(meta.adminUrl), directory=join(meta.root,'backups');await mkdir(directory,{recursive:true,mode:0o700});const path=join(directory,'goease-'+new Date().toISOString().replaceAll(':','-')+'.dump');

@@ -15,7 +15,7 @@ export function isolatedUrl(value, kind) {
 }
 export async function seedCatalog(url) {
   const pool = new Pool({ connectionString: url, max: 1 }); const client = await pool.connect();
-  try { await client.query('BEGIN'); for (const place of getDalatCatalog()) await client.query('INSERT INTO "Place" (id,name,snapshot) VALUES ($1,$2,$3::jsonb) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,snapshot=EXCLUDED.snapshot', [place.id,place.name,JSON.stringify(place)]); await client.query('COMMIT'); }
+  try { await client.query('BEGIN'); for (const place of getDalatCatalog()) await client.query('INSERT INTO "Place" (id,name,snapshot) VALUES ($1,$2,$3::jsonb) ON CONFLICT(id) DO NOTHING', [place.id,place.name,JSON.stringify(place)]); await client.query('INSERT INTO "PlaceRevision" ("placeId",version,snapshot,enabled) SELECT id,version,snapshot,enabled FROM "Place" ON CONFLICT DO NOTHING'); await client.query('COMMIT'); }
   catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); await pool.end(); }
 }
 export async function prepareDatabase(adminUrl) {
@@ -33,6 +33,10 @@ export async function prepareDatabase(adminUrl) {
   } finally { await pool.end(); }
   parsed.username='goease_runtime'; parsed.password=password;
   return parsed.toString();
+}
+export function migrateDatabase(adminUrl) {
+  const u=new URL(adminUrl);isolatedUrl(adminUrl,u.pathname.startsWith('/goease_test_')?'test':'dev');
+  execFileSync(process.execPath,[join(apiRoot,'node_modules/prisma/build/index.js'),'migrate','deploy'],{cwd:apiRoot,env:{...process.env,MIGRATION_DATABASE_URL:adminUrl},stdio:'pipe'});
 }
 export function pgControl(meta, operation) {
   if (!/^goease_(dev|test)_[a-z0-9_]+$/.test(meta.database)) throw Error('Dedicated DB required');

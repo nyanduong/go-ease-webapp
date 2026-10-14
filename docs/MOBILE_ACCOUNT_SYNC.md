@@ -66,3 +66,5 @@ Ghi kết quả từng nền tảng và commit; không gửi mật khẩu/JWT/re
 ## Bằng chứng tự động
 
 Mobile có tests owner-bound draft, replay qua app recreation, phản hồi A đến muộn sau B, storage hỏng, conflict/rebase rõ ràng, discard/delete/receipt và Auth offline opt-in. `pnpm test:db` có thêm hai ca product Auth/workspace → Nest HTTP → PostgreSQL thật, kiểm tra A/B CRUD/conflict/restore/logout và mất response/replay. Auth provider là double, transport HTTPS được shim sang loopback cho test; không phải native TLS proof. CI chạy DB service PostgreSQL 18 thật trên Linux. Không gọi Gemini, không bật billing.
+
+Từ #78, kho tài khoản tải catalog public có trạng thái active/disabled từ cùng HTTPS backend trước khi mở workspace. Cập nhật catalog qua nút xác minh lại phiên; không fallback bundled cho tài khoản. Chế độ khách offline giữ dataset bundled. Xem [runbook admin](ADMIN_CATALOG.md).

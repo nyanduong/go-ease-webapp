@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHash } from 'node:crypto';
-import { isDeepStrictEqual } from 'node:util';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Prisma } from './generated/prisma/client.js';
-import { getDalatPlaces, getDalatCatalog } from '@goease/catalog';
+import { getDalatCatalog } from '@goease/catalog';
+import { catalogEntrySchema, managedCatalogSchema } from '@goease/contracts';
 import { createServerTripSchema, updateServerTripSchema, deleteServerTripSchema, idSchema, tripSchemaWithCatalog, tripMutationResultSchema, tripMutationResponseSchema, serverTripResponseSchema, serverTripListQuerySchema, serverTripListResponseSchema, type Trip } from '@goease/contracts';
 import type { ApiConfig } from './config.js';
 import { AuthVerifier } from './auth.js';
@@ -14,7 +14,6 @@ import { requestSignal } from './request-signal.js';
 type Owner = { ownerIssuer: string; ownerSubject: string };
 type Stored = Prisma.TripGetPayload<{ include: { days: { include: { activities: true } } } }>;
 const include = { days: { orderBy: { position: 'asc' as const }, include: { activities: { orderBy: { position: 'asc' as const } } } } };
-const validation = tripSchemaWithCatalog(getDalatPlaces());
 function alive(signal: AbortSignal) { if (signal.aborted) throw new ApiFailure(499, 'TRIPS_CANCELLED', 'Đã hủy thao tác. Nếu mất phản hồi, đối soát bằng mutationId cũ.'); }
 function record(row: Stored) {
   return serverTripResponseSchema.parse({ apiVersion: '1', version: row.version, updatedAt: row.updatedAt.toISOString(), trip: {
@@ -34,13 +33,28 @@ export class TripsService {
       if (roles.length !== 1 || roles[0]!.unsafe) throw Error();
       const protectedTables = await this.client.$queryRaw<{ name: string; safe: boolean }[]>`SELECT c.relname AS name, (c.relrowsecurity AND c.relforcerowsecurity AND EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid=c.oid AND p.polname='owner_only')) AS safe FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('AppUser','Trip','TripDay','TripActivity','TripMutation')`;
       if (protectedTables.length !== 5 || protectedTables.some(table => !table.safe)) throw Error();
+      const catalogTables=await this.client.$queryRaw<{safe:boolean}[]>`SELECT (c.relrowsecurity AND c.relforcerowsecurity) AS safe FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('Place','CatalogAdmin','PlaceRevision')`;
+      if(catalogTables.length!==3||catalogTables.some(t=>!t.safe))throw Error();
       const places = await this.client.place.findMany({ orderBy: { id: 'asc' } });
-      const expected = getDalatCatalog().sort((a, b) => a.id.localeCompare(b.id));
-      if (places.length !== expected.length || places.some((place, i) => place.id !== expected[i]!.id || place.name !== expected[i]!.name || !isDeepStrictEqual(place.snapshot, JSON.parse(JSON.stringify(expected[i]))))) throw Error();
+      if (places.length < 8 || places.length > 20 || places.filter(p => p.enabled).length < 8 || places.some(place => { const entry = catalogEntrySchema.parse(place.snapshot); return place.id !== entry.id || place.name !== entry.name; })) throw Error();
     } catch { await this.client.$disconnect(); throw new Error('Private trip database unavailable, unsafe role or catalog seed missing'); }
   }
   async onModuleDestroy() { await this.client?.$disconnect(); }
   healthState() { return this.client ? 'configured-unverified' as const : 'not-configured' as const; }
+  async managedCatalog() {
+    if (!this.client) return managedCatalogSchema.parse({apiVersion:'1',places:getDalatCatalog().map(entry=>({entry,enabled:true,version:1}))});
+    try { const rows = await this.client!.place.findMany({orderBy:{id:'asc'},take:21});return managedCatalogSchema.parse({apiVersion:'1',places:rows.map(p=>({entry:p.snapshot,version:p.version,enabled:p.enabled}))}); }
+    catch { throw new ApiFailure(503,'DB_UNAVAILABLE','Catalog database chưa đáp ứng.'); }
+  }
+  async admin<T>(req: Request, action: (tx: Prisma.TransactionClient, owner: Owner) => Promise<T>) {
+    if (!this.config.CATALOG_ADMIN_ENABLED) throw new ApiFailure(503,'ADMIN_DISABLED','Quản lý catalog đang tắt.');
+    const owner = await this.identity(req);
+    return this.transaction(owner,requestSignal(req),async tx=>{
+      const permitted=await tx.$queryRaw<{enabled:boolean}[]>`SELECT enabled FROM "CatalogAdmin" WHERE issuer=${owner.ownerIssuer} AND subject=${owner.ownerSubject}::uuid`;
+      if(!permitted[0]?.enabled)throw new ApiFailure(403,'ADMIN_FORBIDDEN','Tài khoản chưa được server cấp quyền catalog.');
+      return action(tx,owner);
+    });
+  }
   async identity(req: Request): Promise<Owner> {
     if (!this.config.TRIPS_ENABLED) throw new ApiFailure(503, 'TRIPS_DISABLED', 'Chuyến server đang tắt; chuyến khách trên máy được giữ nguyên.');
     if (!this.client) throw new ApiFailure(503, 'TRIPS_NOT_CONFIGURED', 'Chưa cấu hình database riêng cho chuyến.');
@@ -79,7 +93,7 @@ export class TripsService {
     const parsed = (operation === 'create' ? createServerTripSchema : operation === 'update' ? updateServerTripSchema : deleteServerTripSchema).safeParse(input);
     if (!parsed.success) throw new ApiFailure(400, 'BAD_REQUEST', 'Mutation cần mutationId, dữ liệu chuyến/version đúng contract; không nhận owner/role.');
     const data = parsed.data, trip: Trip | undefined = 'trip' in data ? data.trip : undefined, expected = 'expectedVersion' in data ? data.expectedVersion : undefined;
-    if (trip && (trip.id !== id || !validation.safeParse(trip).success)) throw new ApiFailure(400, 'BAD_REQUEST', 'ID hoặc catalog/ngày/giờ/tiền của chuyến không hợp lệ.');
+    if (trip && trip.id !== id) throw new ApiFailure(400, 'BAD_REQUEST', 'ID chuyến không hợp lệ.');
     const hash = createHash('sha256').update(JSON.stringify({ operation, id, data })).digest('hex');
     return this.transaction(owner, signal, async tx => {
       await tx.$executeRaw`INSERT INTO "AppUser" (issuer,subject) VALUES (${owner.ownerIssuer},${owner.ownerSubject}::uuid) ON CONFLICT DO NOTHING`;
@@ -93,6 +107,16 @@ export class TripsService {
       }
       if (await tx.tripMutation.count({ where: owner }) >= 200) throw new ApiFailure(429, 'TRIP_LIMIT', 'Đạt 200 thao tác mới trong 24 giờ của tài khoản.');
       const current = await tx.trip.findUnique({ where: { ownerIssuer_ownerSubject_id: { ...owner, id } } });
+      if(trip){
+        const catalog=await tx.place.findMany({take:21});
+        const places=catalog.map(p=>{const {id,name,destinationId,coordinates,sources}=catalogEntrySchema.parse(p.snapshot);return {id,name,destinationId,coordinates,sources};});
+        const previous=await tx.tripActivity.findMany({where:{...owner,tripId:id},select:{id:true,placeId:true,name:true}});
+        const old=new Map(previous.map(a=>[a.id,a]));
+        // Validate legacy names against their saved activity, while new references need the current canonical name.
+        const checking={...trip,days:trip.days.map(d=>({...d,activities:d.activities.map(a=>{const location=a.location,prior=old.get(a.id);return location.kind==='catalog'&&prior?.placeId===location.placeId&&prior.name===a.name?{...a,name:places.find(p=>p.id===location.placeId)?.name??a.name}:a;})}))};
+        if(!tripSchemaWithCatalog(places).safeParse(checking).success)throw new ApiFailure(400,'BAD_REQUEST','Catalog/ngày/giờ/tiền không hợp lệ.');
+        if(trip.days.some(d=>d.activities.some(a=>{const location=a.location;return location.kind==='catalog'&&catalog.find(p=>p.id===location.placeId)?.enabled===false&&old.get(a.id)?.placeId!==location.placeId;})))throw new ApiFailure(400,'BAD_REQUEST','Địa điểm đã vô hiệu hóa chỉ được giữ trong hoạt động đã lưu trước đó.');
+      }
       if (operation === 'create') {
         if (current) throw new ApiFailure(409, 'TRIP_CONFLICT', 'ID chuyến đã tồn tại hoặc đã xóa; không tạo lại với ID này.');
         if (await tx.trip.count({ where: owner }) >= 200 || await tx.trip.count({ where: { ...owner, deletedAt: null } }) >= 50) throw new ApiFailure(429, 'TRIP_LIMIT', 'Giới hạn MVP: 50 chuyến đang lưu, 200 ID đã dùng/tài khoản.');

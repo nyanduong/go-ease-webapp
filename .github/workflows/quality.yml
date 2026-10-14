@@ -53,6 +53,8 @@ jobs:
         run: pnpm lint
       - name: Kiểm thử packages, mobile và HTTP API thật
         run: pnpm test
+      - name: Cài Chromium cho kiểm tra web admin với DB thật
+        run: pnpm --filter @goease/web exec playwright install --with-deps chromium
       - name: Migration, ownership, rollback và restart PostgreSQL thật cô lập
         env:
           GOEASE_DB_TEST_ADMIN_URL: postgresql://goease_ci_admin:${{ github.run_id }}_fixture@127.0.0.1:55476/goease_test_ci

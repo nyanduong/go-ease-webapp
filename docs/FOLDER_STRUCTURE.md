@@ -115,3 +115,7 @@ apps/api/src/ai gồm controller, service, Gemini transport, projection và quot
 ## Mobile account #77
 
 Route `apps/mobile/src/app/account.tsx` mở màn tài khoản; `account-session.ts` nối Auth/SecureStore với lifecycle. `account-trip-controller.ts` quản lý state và draft/pending owner-bound, màn account và các component editor/new-trip dùng lại activity/budget/map logic. Namespace dữ liệu riêng tách khỏi kho guest. [Hướng dẫn và checklist native còn chờ](MOBILE_ACCOUNT_SYNC.md).
+
+## Web admin #78
+
+`apps/web/src/main.tsx` là UI React, `controller.ts` giữ phiên RAM và API client, `vite.config.ts` cấu hình loopback. API `src/admin-catalog.ts`, Prisma CatalogAdmin/PlaceRevision và migration bổ sung quản lý catalog theo quyền. `scripts/catalog-role.mjs` chỉ cho operator DB local cấp/thu hồi quyền. Root CI chạy web build/tests/browser. [Runbook](ADMIN_CATALOG.md).

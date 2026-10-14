@@ -22,14 +22,14 @@ after(async()=>{await admin.end();});
 const project='https://abcdefghijklmnopqrst.supabase.co',issuer=project+'/auth/v1';
 function trip(id='trip-'+randomUUID(),days=1){const r=generateSampleTrip({name:'DB fixture',destinationId:'da-lat',startDate:'2026-10-15',durationDays:days,people:2,budgetVnd:null},getDalatCatalog(),{tripId:id,today:'2026-10-15'});assert.equal(r.ok,true);return r.trip;}
 function token(subject){const now=Math.floor(Date.now()/1000),enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url');return enc({alg:'HS256'})+'.'+enc({sub:subject,iss:issuer,aud:'authenticated',role:'authenticated',iat:now,exp:now+3600})+'.offline_fixture_signature';}
-async function fixture(run){
+async function fixture(run, patch={}){
   const A=randomUUID(),B=randomUUID(),tokens={A:token(A),B:token(B)};
-  const env={TRIPS_ENABLED:'true',DATABASE_URL:runtimeUrl,AUTH_ENABLED:'true',AUTH_TIMEOUT_MS:'1000',API_REQUEST_TIMEOUT_MS:'8000',SUPABASE_AUTH_URL:project,SUPABASE_PUBLISHABLE_KEY:'sb_publishable_offline_fixture_00000000'};
+  const env={TRIPS_ENABLED:'true',DATABASE_URL:runtimeUrl,AUTH_ENABLED:'true',AUTH_TIMEOUT_MS:'1000',API_REQUEST_TIMEOUT_MS:'8000',SUPABASE_AUTH_URL:project,SUPABASE_PUBLISHABLE_KEY:'sb_publishable_offline_fixture_00000000',...patch};
   let app,base;
   async function start(){({app}=await createApi(env,undefined,{provider:{generate:async()=>assert.fail('DB tests never call Gemini')}},undefined,{fetcher:async(_url,options)=>{const subject=options.headers.authorization==='Bearer '+tokens.A?A:options.headers.authorization==='Bearer '+tokens.B?B:null;return new Response(JSON.stringify(subject?{id:subject,aud:'authenticated',role:'authenticated'}:{}),{status:subject?200:401});}}));await app.listen(0,'127.0.0.1');base=await app.getUrl();}
   async function stop(){await app?.close();app=undefined;}
   async function request(who,method,path='',body,extra={}){return fetch(base+'/v1/trips'+path,{method,headers:{authorization:'Bearer '+tokens[who],...(body?{'content-type':'application/json'}:{}),...extra},...(body?{body:JSON.stringify(body)}:{})});}
-  await start();try{await run({A,B,request,start,stop,env,tokens,transport:async(target,options)=>fetch(target.replace('https://fixture-api.example.test',base),options)});}finally{await stop();}
+  await start();try{await run({A,B,request,start,stop,env,tokens,http:async(path,options)=>fetch(base+path,options),transport:async(target,options)=>fetch(target.replace('https://fixture-api.example.test',base),options)});}finally{await stop();}
 }
 async function ok(response,status=200){assert.equal(response.status,status);return response.json();}
 async function error(response,status,code){assert.equal(response.status,status);const b=await response.json();assert.equal(b.error.code,code);const raw=JSON.stringify(b);for(const secret of [runtimeUrl,adminUrl,'offline_fixture_signature','DO_NOT_LEAK'])assert.equal(raw.includes(secret),false);}
@@ -126,3 +126,44 @@ test('product workspace lost response survives app recreation and same-owner rep
  const first=createAccountTrips(options);await first.activate('abcdefghijklmnopqrst.'+A);await first.begin(t);assert.equal(await first.save(),false);const pending=first.getSnapshot().pending;first.lock();
  const restored=createAccountTrips(options);await restored.activate('abcdefghijklmnopqrst.'+B);assert.equal(restored.getSnapshot().pending,null);await restored.activate('abcdefghijklmnopqrst.'+A);assert.deepEqual(restored.getSnapshot().pending,pending);assert.equal(await restored.retry(),true);assert.equal(restored.getSnapshot().selected,null);await restored.read(t.id);assert.equal(restored.getSnapshot().selected.version,1);assert.equal((await ok(await request('A','GET'))).items.length,1);
 }));
+test('catalog admin is DB-granted, versioned and revocable; disabled referenced places preserve trips and admin cannot read other owners',()=>fixture(async({A,B,tokens,request,http})=>{
+ const adminRequest=(who,method,path='',body,extra={})=>http('/v1/admin/catalog'+path,{method,headers:{...(who?{authorization:'Bearer '+tokens[who]}:{}),'content-type':'application/json',...extra},...(body?{body:JSON.stringify(body)}:{})});
+ await error(await adminRequest(null,'GET'),401,'AUTH_INVALID');await error(await adminRequest('B','GET','',undefined,{'x-role':'admin'}),403,'ADMIN_FORBIDDEN');
+ await admin.query('INSERT INTO "CatalogAdmin" (issuer,subject) VALUES ($1,$2::uuid)',[issuer,A]);
+ const original=getDalatCatalog()[0],entry={...original,id:'admin-created-'+randomUUID(),name:'Admin fixture Place'};
+ await error(await adminRequest('B','POST','',{entry}),403,'ADMIN_FORBIDDEN');
+ await error(await adminRequest('A','POST','',{entry,role:'admin'}),400,'BAD_REQUEST');
+ const created=await ok(await adminRequest('A','POST','',{entry}),201);assert.equal(created.version,1);
+ const runtime=new Pool({connectionString:runtimeUrl,max:1});try{await assert.rejects(runtime.query('INSERT INTO "CatalogAdmin" (issuer,subject) VALUES ($1,$2::uuid)',[issuer,B]));await assert.rejects(runtime.query('UPDATE "PlaceRevision" SET enabled=false'));}finally{await runtime.end();}
+ await error(await adminRequest('A','POST','',{entry}),409,'CATALOG_CONFLICT');
+ const edited={...entry,name:'Edited sourced Place'};await ok(await adminRequest('A','PUT','/'+entry.id,{entry:edited,enabled:true,expectedVersion:1}));
+ await admin.query(`CREATE FUNCTION fail_catalog_revision() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."placeId"='${entry.id}' AND NEW.version=3 THEN RAISE EXCEPTION 'fixture'; END IF; RETURN NEW; END $$`);await admin.query('CREATE TRIGGER fail_catalog_revision BEFORE INSERT ON "PlaceRevision" FOR EACH ROW EXECUTE FUNCTION fail_catalog_revision()');
+ try{await error(await adminRequest('A','PUT','/'+entry.id,{entry:{...edited,name:'Must rollback'},enabled:true,expectedVersion:2}),503,'DB_UNAVAILABLE');const rows=await admin.query('SELECT name,version FROM "Place" WHERE id=$1',[entry.id]);assert.equal(rows.rows[0].name,edited.name);assert.equal(rows.rows[0].version,2);}finally{await admin.query('DROP TRIGGER fail_catalog_revision ON "PlaceRevision"');await admin.query('DROP FUNCTION fail_catalog_revision()');}
+ await error(await adminRequest('A','PUT','/'+entry.id,{entry,enabled:false,expectedVersion:1}),409,'CATALOG_CONFLICT');
+ await error(await adminRequest('A','PUT','/'+entry.id,{entry:{...edited,coordinates:{...entry.coordinates,latitude:entry.coordinates.latitude+.00001}},enabled:true,expectedVersion:2}),400,'BAD_REQUEST');
+ const t=trip();const place=t.days[0].activities.find(a=>a.location.kind==='catalog').location.placeId;const before=getDalatCatalog().find(p=>p.id===place);await ok(await request('A','POST','',{mutationId:randomUUID(),trip:t}),201);const b=trip();await ok(await request('B','POST','',{mutationId:randomUUID(),trip:b}),201);
+ try{
+  await ok(await adminRequest('A','PUT','/'+place,{entry:{...before,name:'New display name'},enabled:false,expectedVersion:1}));
+  const publicFeed=await ok(await http('/v1/catalog?destinationId=da-lat'));assert.ok(!publicFeed.catalog.entries.some(p=>p.id===place));assert.ok(publicFeed.catalog.entries.some(p=>p.id===entry.id));
+  const all=await ok(await http('/v1/catalog/places'));assert.equal(all.places.find(p=>p.entry.id===place).enabled,false);
+  assert.deepEqual((await ok(await request('A','GET','/'+t.id))).trip,t);
+  await ok(await request('A','PUT','/'+t.id,{mutationId:randomUUID(),expectedVersion:1,trip:{...t,name:'Keep historical Place'}}));
+  await error(await request('A','POST','',{mutationId:randomUUID(),trip:{...t,id:'disabled-new-'+randomUUID()}}),400,'BAD_REQUEST');
+  await error(await request('A','GET','/'+b.id),404,'NOT_FOUND');await error(await http('/v1/admin/trips',{headers:{authorization:'Bearer '+tokens.A}}),404,'NOT_FOUND');
+  const revisions=await admin.query('SELECT version,enabled FROM "PlaceRevision" WHERE "placeId"=$1 ORDER BY version',[place]);assert.deepEqual(revisions.rows.map(r=>r.version),[1,2]);
+  await admin.query('UPDATE "CatalogAdmin" SET enabled=false WHERE subject=$1::uuid',[A]);await error(await adminRequest('A','GET'),403,'ADMIN_FORBIDDEN');
+ }finally{await admin.query('UPDATE "Place" SET name=$2,snapshot=$3::jsonb,enabled=true,version=1 WHERE id=$1',[place,before.name,JSON.stringify(before)]);await admin.query('DELETE FROM "PlaceRevision" WHERE "placeId"=$1 AND version>1',[place]);}
+},{CATALOG_ADMIN_ENABLED:'true'}));
+
+
+
+test('web browser login/edit/disable/refresh/deep-link uses real Nest/PostgreSQL with isolated provider fixtures',()=>fixture(async({A,tokens,http})=>{
+ await admin.query('INSERT INTO "CatalogAdmin" (issuer,subject) VALUES ($1,$2::uuid)',[issuer,A]);
+ const entry={...getDalatCatalog()[0],id:'browser-fixture-'+randomUUID(),name:'Browser initial Place'};
+ await ok(await http('/v1/admin/catalog',{method:'POST',headers:{authorization:'Bearer '+tokens.A,'content-type':'application/json'},body:JSON.stringify({entry})}),201);
+ const {checkAdminBrowser}=await import('../../web/tests/browser-runner.mjs');
+ // Browser runner only receives a generated fixture JWT, never a real user's credential.
+ const url=await http('/v1/health');const base=new URL(url.url).origin;
+ await checkAdminBrowser({base,token:tokens.A,entry});
+ const result=await ok(await http('/v1/catalog/places'));const saved=result.places.find(p=>p.entry.id===entry.id);assert.equal(saved.entry.name,'Browser edited Place');assert.equal(saved.enabled,false);assert.equal(saved.version,3);
+},{CATALOG_ADMIN_ENABLED:'true',API_CORS_ORIGINS:'http://127.0.0.1:5178'}));

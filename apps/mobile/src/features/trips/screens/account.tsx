@@ -32,6 +32,7 @@ export default function AccountScreen() {
         {session.busy && <><ActivityIndicator accessibilityLabel="Đang xác minh tài khoản" /><Action title="Hủy chờ / ẩn phiên" secondary onPress={() => { setPassword(''); accountSession.cancel(); }} /></>}
         <Text accessibilityLiveRegion="polite" style={styles.text}>{session.message}</Text>
         {session.userId && <Text selectable style={styles.text}>Tài khoản: {session.userId}</Text>}
+        {session.phase==='backend-verified' && <Action title="Cập nhật catalog và xác minh lại phiên" secondary disabled={session.busy||trips.busy} onPress={()=>{void accountSession.restore();}} />}
         {session.phase === 'backend-verified' && !trips.ready && <Action title="Thử khôi phục lại kho bản nháp tài khoản" secondary disabled={session.busy || trips.busy} onPress={() => { void accountSession.restore(); }} />}
         <Action title="Đăng xuất / đổi tài khoản" secondary disabled={session.busy || trips.busy} onPress={() => { setEmail(''); setPassword(''); void accountSession.logout(); }} />
         {session.phase === 'backend-verified' && trips.owner && <Workspace key={trips.owner} />}
@@ -41,7 +42,7 @@ export default function AccountScreen() {
   </SafeAreaView>;
 }
 function Workspace() {
-  const { trips } = useAccount(); const { state: guest } = useLocalTrips();
+  const { trips, catalog } = useAccount(); const { state: guest } = useLocalTrips();
   const [creating, setCreating] = useState(false), [importing, setImporting] = useState<Trip | null>(null);
   const [message, setMessage] = useState('');
   const blocked = trips.busy || !trips.ready, locked = blocked || !!trips.draft || !!trips.pending;
@@ -62,7 +63,7 @@ function Workspace() {
       <Action title={`Mở chuyến server: ${item.name}`} disabled={locked} onPress={() => { void accountTrips.read(item.id); }} />
     </View>)}
     {trips.ready && !creating && <Action title="+ Tạo chuyến mới trên tài khoản" disabled={locked} onPress={() => setCreating(true)} />}
-    {creating && <AccountNewTrip disabled={locked} onCreate={start} onCancel={() => setCreating(false)} />}
+    {creating && <AccountNewTrip disabled={locked} onCreate={start} onCancel={() => setCreating(false)} catalog={catalog.filter(p=>p.enabled).map(p=>p.entry)} />}
     {trips.ready && !trips.draft && !trips.pending && <View style={styles.card}>
       <Text style={styles.heading}>Nhập chuyến khách</Text><Text style={styles.text}>Chọn một chuyến trên máy. Bản sao có ID mới và chỉ gửi lên tài khoản khi bạn bấm Lưu server; bản khách giữ nguyên.</Text>
       {guest.loadStatus !== 'ready' && <Text style={styles.text}>Chưa đọc được chuyến khách. Quay về danh sách khách để tải lại.</Text>}

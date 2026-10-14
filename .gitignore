@@ -16,6 +16,7 @@ build/
 .expo/
 coverage/
 .logic-tests/
+test-results/
 .ai-runtime/
 .demo-runtime/
 .db-runtime/

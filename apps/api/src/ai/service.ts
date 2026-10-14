@@ -20,7 +20,7 @@ export class AiService {
     this.quota = new AiQuota(config); this.provider = options.provider ?? new GeminiProvider(config, options.fetcher ?? fetch);
   }
   healthState() { return this.config.GEMINI_ENABLED && this.config.GEMINI_API_KEY && this.config.AI_ACCESS_TOKEN ? 'configured-unverified' as const : 'not-configured' as const; }
-  generate(body: unknown, query: unknown, authorization: string | undefined, requestSignal: AbortSignal) {
+  async generate(body: unknown, query: unknown, authorization: string | undefined, requestSignal: AbortSignal) {
     if (!this.config.GEMINI_ENABLED) throw new ApiFailure(503, 'AI_DISABLED', 'Gemini đang tắt. Không trả lịch trình mẫu thay AI.');
     if (!this.config.GEMINI_API_KEY || !this.config.AI_ACCESS_TOKEN) throw new ApiFailure(503, 'AI_NOT_CONFIGURED', 'Thiếu cấu hình Gemini/key hoặc quyền gọi AI.');
     const supplied = Buffer.from(authorization ?? ''), expected = Buffer.from(`Bearer ${this.config.AI_ACCESS_TOKEN}`);
@@ -30,7 +30,9 @@ export class AiService {
     if (!parsed.success || !z.strictObject({}).safeParse(query).success) throw new ApiFailure(400, 'BAD_REQUEST', 'Nhu cầu AI không hợp lệ; chỉ nhận fields CreateTripInput, không prompt/model/tools/query.');
     if (this.closed || requestSignal.aborted) throw new ApiFailure(499, 'AI_CANCELLED', 'Yêu cầu AI đã hủy.');
     if (this.pending) throw new ApiFailure(409, 'AI_BUSY', 'AI đang xử lý một lượt. Hãy chờ rồi thử lại.');
-    const catalogResult = catalogEntriesSchema.safeParse((this.options.catalog ?? getDalatCatalog)());
+    const catalogResult = catalogEntriesSchema.safeParse(await (this.options.catalog ?? getDalatCatalog)());
+    if (this.closed || requestSignal.aborted) throw new ApiFailure(499, 'AI_CANCELLED', 'Yêu cầu AI đã hủy.');
+    if (this.pending) throw new ApiFailure(409, 'AI_BUSY', 'AI đang xử lý một lượt.');
     if (!catalogResult.success) throw new ApiFailure(500, 'RESPONSE_INVALID', 'Catalog server không hợp lệ.');
     const payload = geminiBody(parsed.data, catalogResult.data, this.config);
     const controller = new AbortController(); this.controller = controller;

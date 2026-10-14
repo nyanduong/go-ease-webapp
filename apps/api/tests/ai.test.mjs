@@ -215,7 +215,7 @@ test('AI config rejects arbitrary models/bad tokens and mismatched deadlines wit
 test('already cancelled request never reserves quota or invokes provider', async () => {
   const controller = new AbortController(); controller.abort();
   const service = new AiService(readConfig(settings), { provider: { generate: () => assert.fail('must not invoke') } });
-  assert.throws(() => service.generate(input, {}, `Bearer ${TOKEN}`, controller.signal), { code: 'AI_CANCELLED' }); await service.onModuleDestroy();
+  await assert.rejects(service.generate(input, {}, `Bearer ${TOKEN}`, controller.signal), { code: 'AI_CANCELLED' }); await service.onModuleDestroy();
 });
 test('AI HTTP rejects an unknown provider place instead of returning/falling back to a sample Trip', () => fixture(async (base) => {
   await expectError(await post(base), 502, 'AI_OUTPUT_INVALID');
