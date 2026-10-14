@@ -18,3 +18,5 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 - [Checklist và biên bản demo cốt lõi #70](CORE_DEMO_QA.md)
 
 - [API NestJS local v1, catalog dùng chung và mobile fetch](../apps/api/README.md)
+
+- [Gemini backend: adapter, giới hạn và live còn thiếu key](../apps/api/GEMINI.md)

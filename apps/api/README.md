@@ -1,6 +1,6 @@
 # GoEase API v1 — NestJS và catalog dùng chung
 
-Nền API local cho [issue #71](https://github.com/nyanduong/go-ease-webapp/issues/71), NestJS 12.1.3 + TypeScript trên Node 24 theo root repo. Dùng `@goease/contracts` và `@goease/catalog`, cùng 15 địa điểm, ID/tọa độ/nguồn với app. Chưa DB, Gemini, tài khoản hoặc deployment. Giá chưa xác minh giữ unknown/null.
+Nền API local cho [issue #71](https://github.com/nyanduong/go-ease-webapp/issues/71), NestJS 12.1.3 + TypeScript trên Node 24 theo root repo. Dùng `@goease/contracts` và `@goease/catalog`, cùng 15 địa điểm, ID/tọa độ/nguồn với app. Chưa DB, tài khoản hoặc deployment. Adapter Gemini #72 đã có nhưng mặc định tắt, chưa test live vì thiếu key; xem GEMINI.md. Giá chưa xác minh giữ unknown/null.
 
 ## Chạy từ root repo
 
@@ -38,7 +38,7 @@ Schemas runtime nằm tại [contracts API](../../packages/contracts/src/api.ts)
 | GET /v1/health | Không query | `{apiVersion:'1', service:'goease-api', status:'ok', scope:'process', dependencies:{database:'not-configured', gemini:'not-configured'}}` |
 | GET /v1/catalog | `destinationId=da-lat`, bỏ query mặc định Đà Lạt | `{apiVersion:'1', catalog:{destinationId, accessedOn, label, sourceName, sourceUrl, entries}}`; entries theo CatalogEntry, hiện 15 địa điểm |
 
-Health chỉ xác nhận tiến trình HTTP trả lời được, **không kiểm tra/readiness DB/Gemini/catalog**. Hai dependency chưa tích hợp, kể cả khi đặt biến key. Catalog validate mỗi lần trước khi gửi; dữ liệu server sai trả 500 thay vì danh sách rỗng/thành công giả. Query sai/không hỗ trợ/key lạ/lặp/nested trả 400. Chưa có ghi dữ liệu; route/method không có trả 404. HEAD theo GET của Express nhưng không body; CORS preflight hợp lệ trả 204.
+Health chỉ xác nhận tiến trình HTTP trả lời được, **không kiểm tra/readiness DB/Gemini/catalog**. Database chưa tích hợp; Gemini báo not-configured khi tắt/thiếu biến hoặc configured-unverified khi đủ cấu hình, không báo provider/quota ready. Catalog validate mỗi lần trước khi gửi; dữ liệu server sai trả 500 thay vì danh sách rỗng/thành công giả. Query sai/không hỗ trợ/key lạ/lặp/nested trả 400. Catalog không có POST/ghi chuyến; POST AI tạo đề xuất riêng theo GEMINI.md. Route/method không có trả 404. HEAD theo GET của Express nhưng không body; CORS preflight hợp lệ trả 204.
 
 Lỗi ứng dụng có envelope chung:
 
@@ -78,7 +78,7 @@ Server tự tạo request ID, trả header `x-request-id` và envelope lỗi; kh
 
 Cấu hình sai thoát mã 1 trước listen, không in giá trị env. Chỉ parse các biến API trên. Deadline handler giới hạn chờ Promise/Observable, không ngắt CPU đồng bộ; khi thêm Gemini phải thêm AbortSignal/deadline riêng cho upstream. Body chỉ JSON, không nén, giới hạn 8 KiB cho Content-Length/chunked. Chưa auth/rate limit/deployment hardening; catalog public local, CORS không là kiểm soát danh tính. Không public API này để thay triển khai production.
 
-Key Gemini/credential DB chỉ ở backend khi issue tương ứng tích hợp, không trong app, EXPO_PUBLIC_*, contracts hoặc source Git. Mốc này không dùng key hoặc gọi cloud.
+Key Gemini/credential DB chỉ ở backend khi issue tương ứng tích hợp, không trong app, EXPO_PUBLIC_*, contracts hoặc source Git. Catalog/health không dùng key. AI chỉ gọi cloud khi đã bật, đủ cấu hình và caller được phép; mặc định không gọi.
 
 ## Expo Go thử fetch catalog
 
@@ -97,3 +97,7 @@ HTTP success/error/query/invalid config/parser/oversize chunked/CORS/deadline/re
 Chưa smoke màn API mới trên Android/iPhone: chủ repo báo hiện không tiện thử thiết bị. Node HTTP/export không thay native networking; ghi giới hạn này trong PR. Không cần key/DB để chạy lại.
 
 Tài liệu framework: [Nest controllers](https://docs.nestjs.com/controllers), [exception filters](https://docs.nestjs.com/exception-filters), [CORS](https://docs.nestjs.com/security/cors), [Node HTTP timeouts](https://nodejs.org/docs/latest-v24.x/api/http.html).
+
+## Gemini backend #72
+
+[Adapter, endpoint, quota và runbook Gemini live](GEMINI.md). Mặc định tắt; chưa có key/live evidence nên #72 còn mở. Endpoint cần bearer credential backend; không nhúng token/key vào app. HTTP/doubles kiểm tra độc lập với live; không tự mua quota/bật billing hoặc fallback sample giả AI.

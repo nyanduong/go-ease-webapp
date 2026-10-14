@@ -7,7 +7,7 @@ export const catalogQuerySchema = z.strictObject({ destinationId: z.literal('da-
 export const healthResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION), service: z.literal('goease-api'),
   status: z.literal('ok'), scope: z.literal('process'),
-  dependencies: z.strictObject({ database: z.literal('not-configured'), gemini: z.literal('not-configured') }),
+  dependencies: z.strictObject({ database: z.literal('not-configured'), gemini: z.enum(['not-configured', 'configured-unverified']) }),
 });
 export const catalogResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION),
@@ -20,6 +20,9 @@ export const catalogResponseSchema = z.strictObject({
 export const apiErrorCodeSchema = z.enum([
   'BAD_REQUEST', 'BAD_JSON', 'NOT_FOUND', 'PAYLOAD_TOO_LARGE', 'URI_TOO_LONG',
   'UNSUPPORTED_MEDIA_TYPE', 'ORIGIN_NOT_ALLOWED', 'REQUEST_TIMEOUT', 'RESPONSE_INVALID', 'INTERNAL_ERROR',
+  'AI_DISABLED', 'AI_NOT_CONFIGURED', 'AI_ACCESS_DENIED', 'AI_BUSY', 'AI_RATE_LIMITED', 'AI_BUDGET_EXCEEDED',
+  'AI_GUARD_UNAVAILABLE', 'AI_CANCELLED', 'AI_UPSTREAM_DENIED', 'AI_UPSTREAM_RATE_LIMITED',
+  'AI_UPSTREAM_UNAVAILABLE', 'AI_OUTPUT_INVALID', 'AI_OUTPUT_TOO_LARGE',
 ]);
 export const apiErrorResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION), statusCode: z.number().int().min(400).max(599),

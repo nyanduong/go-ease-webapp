@@ -16,6 +16,9 @@ importers:
       '@goease/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@goease/itinerary':
+        specifier: workspace:*
+        version: link:../../packages/itinerary
       '@nestjs/common':
         specifier: 12.1.3
         version: 12.1.3(reflect-metadata@0.2.2)(rxjs@7.8.2)

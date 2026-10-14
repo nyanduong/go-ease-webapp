@@ -1,7 +1,7 @@
 import {
   addCalendarDays, calendarDateSchema, catalogEntriesSchema, createTripInputSchemaFor,
   DESTINATION, idSchema, SCHEMA_VERSION, summarizeBudget, TRIP_LIMITS,
-  tripSchemaWithCatalog, type CatalogEntry, type Trip,
+  tripSchemaWithCatalog, catalogEntrySchema, type CatalogEntry, type Trip,
 } from '@goease/contracts';
 
 export const SAMPLE_LABEL = 'Lịch trình mẫu — hãy kiểm tra giờ mở cửa và giá trước khi đi.';
@@ -14,6 +14,14 @@ export type GenerationResult = {
 } | { ok: false; code: GenerationErrorCode; message: string };
 
 const fail = (code: GenerationErrorCode, message: string): GenerationResult => ({ ok: false, code, message });
+/** Shared sample/AI rule: catalog reference per-person × people; unknown stays null. */
+export function catalogGroupCostVnd(input: unknown, people: number): number | null {
+  const entry = catalogEntrySchema.parse(input);
+  if (!Number.isInteger(people) || people < 1 || people > TRIP_LIMITS.maxPeople) throw new RangeError('Invalid people');
+  const cost = entry.referenceCost.status === 'unknown' ? null : entry.referenceCost.amountVnd * people;
+  if (cost !== null && (!Number.isSafeInteger(cost) || cost > TRIP_LIMITS.maxActivityCostVnd)) throw new RangeError('Cost limit');
+  return cost;
+}
 const categories = ['heritage', 'religious', 'nature', 'garden', 'market', 'public-space'] as const;
 const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 function formatTime(minutes: number): string {
@@ -43,8 +51,9 @@ export function generateSampleTrip(input: unknown, catalogInput: unknown, option
     return { entry, rank };
   }).sort((a, b) => a.rank - b.rank || categories.indexOf(a.entry.category) - categories.indexOf(b.entry.category))
     .slice(0, required).map(({ entry }) => entry);
-  const costs = selected.map((entry) => entry.referenceCost.status === 'unknown' ? null : entry.referenceCost.amountVnd * request.people);
-  if (costs.some((cost) => cost !== null && (!Number.isSafeInteger(cost) || cost > TRIP_LIMITS.maxActivityCostVnd))) {
+  let costs: (number | null)[];
+  try { costs = selected.map((entry) => catalogGroupCostVnd(entry, request.people)); }
+  catch {
     return fail('COST_LIMIT', 'Ước tính chi phí nhóm cho một hoạt động vượt giới hạn. Kiểm tra số người và giá tham khảo.');
   }
 

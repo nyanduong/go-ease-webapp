@@ -65,3 +65,7 @@ Development build và EAS Build dành cho thư viện native tùy chỉnh hoặc
 ## Backend hiện có sau #71
 
 Đã có NestJS 12.1.3 tại apps/api, health chỉ báo tiến trình và catalog dùng contracts runtime; chưa DB/Gemini. [Chạy API và kiểm tra từ Expo Go](../apps/api/README.md). Giữ SDK/native dependencies mobile hiện tại; không thêm key cloud cho bước này.
+
+## Gemini backend sau #72
+
+[Runbook Gemini](../apps/api/GEMINI.md) dùng REST server-side, model allowlist, structured JSON và kiểm tra runtime; không thêm SDK/native dependency mobile. Quota/cost guards lưu lượt trước outbound, mặc định tắt và không tự retry. Key/live evidence còn thiếu; không suy doubles là AI live. Model/giao thức đã đối chiếu docs chính thức nhưng cần thử bằng tài khoản/quota được cấp.

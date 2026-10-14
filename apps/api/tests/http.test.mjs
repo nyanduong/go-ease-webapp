@@ -77,7 +77,7 @@ test('real HTTP CORS allows configured exact origin/native, denies arbitrary bro
   assert.equal(response.headers.get('access-control-allow-credentials'), null);
   await errorResponse(await fetch(`${base}/v1/health`, { headers: { origin: 'https://evil.example' } }), 403, 'ORIGIN_NOT_ALLOWED');
   const preflight = await fetch(`${base}/v1/catalog`, { method: 'OPTIONS', headers: { origin: 'http://localhost:8081', 'access-control-request-method': 'GET' } });
-  assert.equal(preflight.status, 204); assert.equal(preflight.headers.get('access-control-allow-methods'), 'GET');
+  assert.equal(preflight.status, 204); assert.equal(preflight.headers.get('access-control-allow-methods'), 'GET,POST');
 }, { API_CORS_ORIGINS: 'http://localhost:8081' }));
 test('real HTTP validates outbound catalog and masks internal errors (fault providers only)', async () => {
   await withApi(async (base) => errorResponse(await fetch(`${base}/v1/catalog`), 500, 'RESPONSE_INVALID'), {}, () => []);
