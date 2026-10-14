@@ -14,6 +14,7 @@ import { readConfig } from './config.js';
 import { AiService } from './ai/service.js';
 import type { AiOptions } from './ai/service.js';
 import { attachRequestSignal, abortRequest } from './request-signal.js';
+import { demoGuard, type DemoSession } from './demo-session.js';
 
 class Deadline implements NestInterceptor {
   constructor(private readonly ms: number) {}
@@ -21,14 +22,16 @@ class Deadline implements NestInterceptor {
     return next.handle().pipe(timeout({ first: this.ms }), catchError((error: unknown) => throwError(() => error instanceof TimeoutError ? new ApiFailure(504, 'REQUEST_TIMEOUT', 'API quá thời gian xử lý. Hãy thử lại.') : error)), finalize(() => abortRequest(context.switchToHttp().getRequest<Request>())));
   }
 }
-export async function createApi(env: Record<string, string | undefined> = process.env, load: CatalogLoader = getDalatCatalog, aiOptions: AiOptions = {}) {
+export async function createApi(env: Record<string, string | undefined> = process.env, load: CatalogLoader = getDalatCatalog, aiOptions: AiOptions = {}, demo?: DemoSession) {
   const config = readConfig(env); // Fail before opening a socket, without printing env values.
+  const guard = demo ? demoGuard(demo, config.AI_ACCESS_TOKEN, config.API_HOST) : undefined;
   const ai = new AiService(config, aiOptions);
   const app = await NestFactory.create<NestExpressApplication>({ module: ApiModule, providers: [{ provide: CATALOG_LOADER, useValue: load }, { provide: AiService, useValue: ai }] }, { bodyParser: false, logger: ['error', 'warn'], abortOnError: false });
   app.disable('x-powered-by');
   app.use((req: Request, res: Response, next: NextFunction) => {
     attachRequestSignal(req, res);
     res.setHeader('x-request-id', randomUUID()); res.setHeader('x-content-type-options', 'nosniff'); res.setHeader('cache-control', 'no-store');
+    try { guard?.(req); } catch (error) { return next(error); }
     if (req.originalUrl.length > 2048) return next(new ApiFailure(414, 'URI_TOO_LONG', 'URL vượt giới hạn 2048 ký tự.'));
     if (Number(req.headers['content-length'] ?? 0) > 8192) return next(new ApiFailure(413, 'PAYLOAD_TOO_LARGE', 'Body vượt giới hạn 8 KiB.'));
     if ((req.headers['transfer-encoding'] || Number(req.headers['content-length'] ?? 0) > 0) && !/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '')) return next(new ApiFailure(415, 'UNSUPPORTED_MEDIA_TYPE', 'Body phải là application/json.'));

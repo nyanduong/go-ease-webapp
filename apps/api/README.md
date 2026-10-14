@@ -1,6 +1,6 @@
 # GoEase API v1 — NestJS và catalog dùng chung
 
-Nền API local cho [issue #71](https://github.com/nyanduong/go-ease-webapp/issues/71), NestJS 12.1.3 + TypeScript trên Node 24 theo root repo. Dùng `@goease/contracts` và `@goease/catalog`, cùng 15 địa điểm, ID/tọa độ/nguồn với app. Chưa DB, tài khoản hoặc deployment. Adapter Gemini #72 đã có nhưng mặc định tắt, chưa test live vì thiếu key; xem GEMINI.md. Giá chưa xác minh giữ unknown/null.
+Nền API local cho [issue #71](https://github.com/nyanduong/go-ease-webapp/issues/71), NestJS 12.1.3 + TypeScript trên Node 24 theo root repo. Dùng `@goease/contracts` và `@goease/catalog`, cùng 15 địa điểm, ID/tọa độ/nguồn với app. Chưa DB, tài khoản hoặc deployment. Adapter Gemini #72 đã có, mặc định tắt; live Free tier đã đạt, xem [GEMINI.md](GEMINI.md). Giá chưa xác minh giữ unknown/null.
 
 ## Chạy từ root repo
 
@@ -100,4 +100,8 @@ Tài liệu framework: [Nest controllers](https://docs.nestjs.com/controllers), 
 
 ## Gemini backend #72
 
-[Adapter, endpoint, quota và runbook Gemini live](GEMINI.md). Mặc định tắt; chưa có key/live evidence nên #72 còn mở. Endpoint cần bearer credential backend; không nhúng token/key vào app. HTTP/doubles kiểm tra độc lập với live; không tự mua quota/bật billing hoặc fallback sample giả AI.
+[Adapter, endpoint, quota và runbook Gemini live](GEMINI.md). Mặc định tắt; ca live Free tier #72 đã đạt và có bằng chứng redacted trong runbook. Endpoint cần bearer credential backend; không nhúng token/key vào app. HTTP/doubles kiểm tra độc lập với live; không tự mua quota/bật billing hoặc fallback sample giả AI.
+
+## HTTPS demo #73
+
+Xem [HTTPS_DEMO.md](HTTPS_DEMO.md): phiên có mã truy cập 30 phút ở loopback 3100, tunnel tạm riêng với Metro, màn QA native và checklist còn thiếu. Không tunnel API dev thường port 3000; không bật billing. Code/test đã chuẩn bị, chưa ghi nghiệm thu HTTPS Android/iPhone.

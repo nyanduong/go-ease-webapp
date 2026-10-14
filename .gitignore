@@ -17,6 +17,7 @@ build/
 coverage/
 .logic-tests/
 .ai-runtime/
+.demo-runtime/
 __pycache__/
 *.pyc
 .DS_Store
