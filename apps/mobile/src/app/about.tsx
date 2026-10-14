@@ -1,5 +1,6 @@
 import { DESTINATION, TRIP_LIMITS } from '@goease/contracts';
 import { CATALOG_INFO, getDalatPlaces } from '@goease/catalog';
+import { Link } from 'expo-router';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +15,7 @@ export default function AboutScreen() {
         <Text style={styles.text}>Bản này có màn chào và điều hướng để team bắt đầu xây dựng. Chưa có đăng nhập, AI, bản đồ hay dữ liệu chuyến được lưu.</Text>
         <Text style={styles.text}>Demo tiếp theo: {DESTINATION.name}, 1–{TRIP_LIMITS.maxDays} ngày, tối đa {TRIP_LIMITS.maxPeople} người.</Text>
         <Text style={styles.text}>Catalog demo: {catalogSize} địa điểm. {CATALOG_INFO.label}</Text>
+        {__DEV__ && <Link href="/storage-check" style={styles.text}>Kiểm tra lưu chuyến (dev)</Link>}
       </ScrollView>
     </SafeAreaView>
   );

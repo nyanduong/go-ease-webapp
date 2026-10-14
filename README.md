@@ -1,6 +1,6 @@
 # GoEase
 
-App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Baseline có màn chào GoEase và màn Về GoEase bằng Expo Router. Chưa có đăng nhập, API, AI, bản đồ hoặc lưu chuyến.
+App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Baseline có màn chào GoEase và màn Về GoEase bằng Expo Router. Đã có nền lưu chuyến cục bộ và màn QA trong dev; chưa có form/danh sách chuyến sản phẩm, đăng nhập, API, AI hoặc bản đồ.
 
 Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
@@ -122,6 +122,7 @@ pnpm-workspace.yaml
 pnpm-lock.yaml             # Một lockfile tại root
 packages/contracts/        # Schema/type, ngày/giờ/tiền và test nghiệp vụ dùng chung
 packages/catalog/          # 15 địa điểm Đà Lạt có nguồn, metadata và test catalog
+packages/trip-storage/     # Repository/store, revision và test lỗi/concurrency
 ```
 
 Chỉ thêm thư viện native có trong Expo Go cho mốc này. Dùng `pnpm --dir apps/mobile exec expo install <tên-package>` để Expo chọn phiên bản tương thích, rồi kiểm tra lockfile. Backend/admin sẽ được tạo khi team bắt đầu phần việc tương ứng.
@@ -137,11 +138,13 @@ pnpm test
 pnpm build
 ```
 
-Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` kiểm tra contracts và catalog qua Node test runner. Build biên dịch contracts/catalog rồi xuất JS/assets Android/iOS/web; không tạo APK/IPA hoặc chứng minh đã chạy trên điện thoại. Check mẫu credential không thay scanner secret chuyên dụng.
+Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` kiểm tra contracts và catalog qua Node test runner. Build biên dịch contracts/catalog/storage rồi xuất JS/assets Android/iOS/web; không tạo APK/IPA hoặc chứng minh đã chạy trên điện thoại. Check mẫu credential không thay scanner secret chuyên dụng.
 
 Đọc [hướng dẫn contracts](packages/contracts/README.md) trước khi làm catalog/storage/form. Các lệnh root dev/typecheck/build tự build contracts; khi sửa package trong lúc Metro chạy, dùng lệnh watch trong hướng dẫn để cập nhật `dist`.
 
 [Catalog Đà Lạt và nguồn tọa độ](packages/catalog/README.md) dùng chung cho generator, mobile và API. Lệnh root cũng build catalog trước Metro; giá chưa xác minh giữ null.
+
+[Lưu chuyến khách trên máy](packages/trip-storage/README.md) mô tả repository, draft và lỗi dữ liệu. Mobile có `useLocalTrips()` dùng AsyncStorage chung; chưa có form sản phẩm. Trong Expo Go dev, vào Về GoEase → Kiểm tra lưu chuyến để chạy smoke với một chuyến QA riêng. `pnpm build:packages` build các package theo dependency; các lệnh root dev/typecheck/build gọi bước này tự động.
 
 Không commit `.env`, credential Expo/Google hoặc thư mục `.expo`/`node_modules`/`dist`.
 
