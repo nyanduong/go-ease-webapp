@@ -16,6 +16,7 @@ import type { AiOptions } from './ai/service.js';
 import { attachRequestSignal, abortRequest } from './request-signal.js';
 import { demoGuard, type DemoSession } from './demo-session.js';
 import { AuthVerifier, type AuthOptions } from './auth.js';
+import { authDemoGuard, type AuthDemoSession } from './auth-demo-session.js';
 
 class Deadline implements NestInterceptor {
   constructor(private readonly ms: number) {}
@@ -23,9 +24,10 @@ class Deadline implements NestInterceptor {
     return next.handle().pipe(timeout({ first: this.ms }), catchError((error: unknown) => throwError(() => error instanceof TimeoutError ? new ApiFailure(504, 'REQUEST_TIMEOUT', 'API quá thời gian xử lý. Hãy thử lại.') : error)), finalize(() => abortRequest(context.switchToHttp().getRequest<Request>())));
   }
 }
-export async function createApi(env: Record<string, string | undefined> = process.env, load: CatalogLoader = getDalatCatalog, aiOptions: AiOptions = {}, demo?: DemoSession, authOptions: AuthOptions = {}) {
+export async function createApi(env: Record<string, string | undefined> = process.env, load: CatalogLoader = getDalatCatalog, aiOptions: AiOptions = {}, demo?: DemoSession, authOptions: AuthOptions = {}, authSession?: AuthDemoSession) {
   const config = readConfig(env); // Fail before opening a socket, without printing env values.
-  const guard = demo ? demoGuard(demo, config.AI_ACCESS_TOKEN, config.API_HOST) : undefined;
+  if (demo && authSession) throw new Error('Cannot combine AI and auth QA sessions');
+  const guard = authSession ? authDemoGuard(authSession, config) : demo ? demoGuard(demo, config.AI_ACCESS_TOKEN, config.API_HOST) : undefined;
   const ai = new AiService(config, aiOptions);
   const auth = new AuthVerifier(config, authOptions);
   const app = await NestFactory.create<NestExpressApplication>({ module: ApiModule, providers: [{ provide: CATALOG_LOADER, useValue: load }, { provide: AiService, useValue: ai }, { provide: AuthVerifier, useValue: auth }] }, { bodyParser: false, logger: ['error', 'warn'], abortOnError: false });

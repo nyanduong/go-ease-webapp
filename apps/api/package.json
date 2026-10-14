@@ -8,7 +8,8 @@
     "lint": "eslint src tests scripts",
     "test": "pnpm build && node --test tests/*.test.mjs",
     "test:gemini:live": "node --env-file-if-exists=.env scripts/gemini-live.mjs",
-    "demo": "node --env-file-if-exists=.env dist/demo.js"
+    "demo": "node --env-file-if-exists=.env dist/demo.js",
+    "demo:auth": "node --env-file-if-exists=.env dist/auth-demo.js"
   },
   "dependencies": {
     "@goease/catalog": "workspace:*", "@goease/contracts": "workspace:*", "@goease/itinerary": "workspace:*",

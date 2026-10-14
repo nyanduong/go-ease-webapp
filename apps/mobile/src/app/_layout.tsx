@@ -14,6 +14,7 @@ export default function RootLayout() {
         <Stack.Screen name="storage-check" options={{ title: 'Kiểm tra lưu chuyến', headerBackTitle: 'Quay lại' }} />
         <Stack.Screen name="catalog-check" options={{ title: 'Kiểm tra catalog API', headerBackTitle: 'Quay lại' }} />
         <Stack.Screen name="https-check" options={{ title: 'Kiểm tra HTTPS API', headerBackTitle: 'Quay lại' }} />
+        <Stack.Screen name="auth-check" options={{ title: 'Kiểm tra tài khoản GoEase', headerBackTitle: 'Quay lại' }} />
       </Stack>
     </SafeAreaProvider>
   );
