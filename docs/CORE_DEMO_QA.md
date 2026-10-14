@@ -53,13 +53,15 @@ Bản đồ là P1: chỉ nói có nền/pin khi đã quan sát provider native 
 
 ## Biên bản ngày 14/10/2026
 
-Baseline main: `deacec9995e2498ad0bda30bfff7f8c5b249674c`; thay đổi #70 ở branch `nyan/mvp-10-core-demo-qa`. SHA cuối và CI được ghi trong PR liên kết issue. Nghiệm thu native được thực hiện trên working tree của branch, không tự gắn kết quả với một SHA chưa thử.
+Baseline main: `deacec9995e2498ad0bda30bfff7f8c5b249674c`; thay đổi #70 ở branch `nyan/mvp-10-core-demo-qa`. Native Android quan sát trực tiếp ở commit `78cfc24c2ce992782035d5b40d4f9d5ea8169b9e` của [PR #90](https://github.com/nyanduong/go-ease-webapp/pull/90); thay đổi sau đó chỉ cập nhật biên bản. iPhone được chủ repo xác nhận đã tải lại QR #70 port 8091 và mở QA, nhưng Metro chưa nhận client/log iOS nên chưa xác minh SHA/metadata qua runtime. SHA cuối và CI được ghi trong PR.
 
 | Nền tảng | Môi trường | Kết quả và nguồn chứng cứ |
 | --- | --- | --- |
 | iPhone thật | iOS 27.0 do chủ repo cung cấp; Wi-Fi; tunnel. Model/Expo Go/fontScale chưa đọc được từ runtime | Chủ repo trả lời **đạt toàn bộ** cho bốn nhóm: 1/5 ngày + reload/ngân sách; dirty/validation/double tap; lỗi đọc/ghi/xóa một lần + retry; chữ lớn/bàn phím/safe area/hộp xác nhận cuộn. Đây là xác nhận người thử, chưa có ảnh/log runtime của lần #70 |
-| Android | LDPlayer emulator, Expo Go sẵn có; tunnel. OS/Expo Go/fontScale chưa xác định | Đang kiểm tra; chưa ghi nghiệm thu đạt. Việc mở URL/bundle tải không thay kết quả C01–C09 |
+| Android | LDPlayer emulator, runtime báo API level 34, model MI 9 (model giả lập), Expo Go 57.0.9, fontScale 1.00 lúc đọc metadata; tunnel, cần Internet | Chủ repo báo **đạt toàn bộ C01–C09 trên LDPlayer**. Agent trực tiếp quan sát màn danh sách, Về GoEase, QA metadata, lỗi đọc rồi retry về ready; lỗi ghi giữ draft QA riêng rồi retry lưu thành công revision 1, giá null. Các ca sản phẩm còn lại là xác nhận người thử, không ghi là agent tự chạy. Chưa nghiệm thu Android thật hoặc Google Maps P1 |
 
 Kiểm tra tự động: 163 test (contracts 52, catalog 7, storage 18, itinerary 26, mobile 60); test fault wrapper dùng transport trong bộ nhớ, không là native evidence. `pnpm check:expo` giữ đúng dependency hiện tại; build xuất Android/iOS/web, không phải APK/IPA. Kết quả CI cuối xem PR.
 
-**Chưa chốt #70 hoàn thành** khi còn thiếu native Android hoặc metadata/bằng chứng yêu cầu. Khi bổ sung kết quả, ghi từng C01–C09, môi trường thật và SHA thử; chạy lại ca chịu ảnh hưởng nếu sửa code. Mẫu ghi: ngày, SHA, thiết bị thật/emulator, model, OS, Expo Go, fontScale, LAN/tunnel và mạng, mã ca, đạt/lỗi, bước tái hiện/ảnh/log. Không lưu mật khẩu/token hoặc URL tunnel tạm vào source.
+Ảnh quan sát Android được lưu ngoài repo trong bộ tài liệu bàn giao: `ISSUE70-ANDROID-RUNTIME.png` và `ISSUE70-ANDROID-STORAGE-RETRY.png`; xem bản gốc trên máy người giữ bộ tài liệu, không coi tên file là ảnh đính kèm công khai của PR. Log Metro: Android API 34, Expo Go 57.0.9, MI 9, fontScale 1. Chưa có ảnh/log runtime iPhone của #70.
+
+**Chưa chốt #70 hoàn thành** vì còn thiếu xác minh SHA/model/Expo Go/fontScale và bằng chứng runtime iPhone; kết quả chức năng cả hai nền tảng được ghi theo xác nhận người thử như trên. Khi bổ sung kết quả, ghi từng C01–C09, môi trường thật và SHA thử; chạy lại ca chịu ảnh hưởng nếu sửa code. Mẫu ghi: ngày, SHA, thiết bị thật/emulator, model, OS, Expo Go, fontScale, LAN/tunnel và mạng, mã ca, đạt/lỗi, bước tái hiện/ảnh/log. Không lưu mật khẩu/token hoặc URL tunnel tạm vào source.
