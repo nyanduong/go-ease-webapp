@@ -36,7 +36,7 @@ Màn Về GoEase chỉ hiển thị số địa điểm và nhãn demo để ki�
 - Guard tọa độ P0: latitude 11.85–12.01, longitude 108.38–108.53. Đây là hộp bao thô để bắt nhầm vùng/đảo tọa độ, không phải ranh hành chính. Bổ sung địa điểm ngoài vùng phải review phạm vi và cập nhật test.
 - `suggestedDurationMinutes` (45–120 phút trong bộ này) là gợi ý do team biên soạn, `durationBasis: team-estimate`; không lấy từ nhà cung cấp. `visitTimeHint` là gợi ý biên tập, không phải giờ mở cửa đã xác nhận. Chợ đêm gắn evening, không chọn vào khung ban ngày của demo tự động.
 - Cả 15 giá là `referenceCost.status: unknown`, `amountVnd: null`. Không suy miễn phí từ việc nguồn không ghi giá hoặc chỉ có nhãn phí. Nếu bổ sung giá/0 VND phải có sourceUrl và checkedOn, status reference; không có trạng thái confirmed/live trong schema này.
-- Giá tham khảo có basis per-person, khác `Activity.costVnd` là tổng nhóm. Không chép thẳng giá một người vào chi phí nhóm; chỉ tính tổng sau khi rõ chính sách giá và validate giới hạn, nếu không giữ null. Bộ hiện tại chưa có giá để tự tính.
+- Giá tham khảo có basis per-person, khác `Activity.costVnd` là tổng nhóm. Không chép thẳng giá một người vào chi phí nhóm. [Bộ sinh mẫu](../itinerary/README.md) có thể ước tính giá mỗi người × số người với cảnh báo giả định đồng giá, không xác nhận chính sách nhóm/trẻ em/phụ phí. Nếu không chấp nhận giả định này thì giữ unknown/null. Bộ hiện tại chưa có giá để tự tính; mọi số tiền phải qua giới hạn contracts.
 - Không tải API ở runtime: chỉ dùng snapshot dữ liệu đã commit. Test/CI không gọi nguồn ngoài; thay đổi dữ liệu phải xem lại nguồn, ngày tra cứu và chạy `pnpm test`.
 
 ## Nguồn và đối chiếu

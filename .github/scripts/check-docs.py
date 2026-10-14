@@ -46,6 +46,10 @@ REQUIRED = {
     'packages/trip-storage/tests/storage.test.mjs',
     'apps/mobile/src/features/trips/local-trip-store.ts',
     'apps/mobile/src/app/storage-check.tsx',
+    'packages/itinerary/README.md',
+    'packages/itinerary/package.json',
+    'packages/itinerary/src/index.ts',
+    'packages/itinerary/tests/itinerary.test.mjs',
 }
 LINK = re.compile(r'!?\[[^\]\n]*\]\(([^\s)]+)\)')
 SECRETS = re.compile(

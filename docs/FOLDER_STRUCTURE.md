@@ -62,6 +62,10 @@ go-ease-webapp/
 │       │   └── lib/
 │       └── package.json
 ├── packages/
+│   ├── itinerary/                    # Đã có: bộ sinh mẫu thuần, nhãn/budget/error
+│   │   ├── src/index.ts
+│   │   ├── tests/itinerary.test.mjs
+│   │   └── package.json
 │   ├── catalog/                      # Đã có: 15 điểm demo có nguồn, dùng chung
 │   │   ├── src/dalat.ts
 │   │   ├── src/index.ts
