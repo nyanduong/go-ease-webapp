@@ -37,7 +37,7 @@ jobs:
         run: pnpm typecheck
       - name: ESLint
         run: pnpm lint
-      - name: Kiểm thử contracts, catalog và storage
+      - name: Kiểm thử contracts, catalog, storage và itinerary
         run: pnpm test
       - name: Xuất bundle Android, iOS và web
         run: pnpm build

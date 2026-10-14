@@ -18,7 +18,7 @@ P0 phải demo được khi chưa có tài khoản người dùng, backend hoặ
 
 - Chỉ Đà Lạt, mã nghiệp vụ `da-lat`, múi giờ `Asia/Ho_Chi_Minh`, tiền tệ VND. Form hiển thị điểm đến cố định, chưa tìm kiếm nhiều tỉnh/thành.
 - Catalog tối thiểu 8 địa điểm trong khu vực Đà Lạt. ID ổn định, tên, tọa độ hợp lệ và nguồn kiểm chứng theo #63; được lặp địa điểm ở các ngày khác nhau. Chưa tối ưu tuyến đường.
-- Bộ sinh mẫu (#65) tạo 2 hoạt động/ngày theo quy tắc cố định, giờ 09:00–10:00 và 14:00–15:00, người dùng sửa được. Chưa tính thời gian di chuyển hoặc kiểm tra giờ mở cửa thực tế.
+- Bộ sinh mẫu (#65) tạo 2 hoạt động/ngày, bắt đầu 09:00 và 14:00; giờ kết thúc theo thời lượng gợi ý của catalog (tối đa 240 phút/hoạt động). Chỉ chọn địa điểm ban ngày/flexible, không lặp Place trong cùng chuyến. Thiếu số lượng thì báo lỗi, không lấp chỗ bằng dữ liệu giả. Người dùng sửa được. Chưa tính thời gian di chuyển hoặc kiểm tra giờ mở cửa thực tế.
 - Nhãn luôn thấy ở lịch trình: **“Lịch trình mẫu — hãy kiểm tra giờ mở cửa và giá trước khi đi.”** Giá chưa kiểm chứng để trống. Khoản tiền trong kịch bản nghiệm thu là dữ liệu giả lập, không phải báo giá địa điểm.
 - Catalog thiếu/hỏng: giữ form, báo chưa đủ dữ liệu để tạo lịch trình và cho thử lại; không sinh tọa độ/địa điểm giả. P0 không yêu cầu quyền GPS.
 
