@@ -9,6 +9,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerTintColor: '#125C46', contentStyle: { backgroundColor: '#F6F8F5' } }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="about" options={{ title: 'Về GoEase', headerBackTitle: 'Quay lại' }} />
+        <Stack.Screen name="storage-check" options={{ title: 'Kiểm tra lưu chuyến', headerBackTitle: 'Quay lại' }} />
       </Stack>
     </SafeAreaProvider>
   );

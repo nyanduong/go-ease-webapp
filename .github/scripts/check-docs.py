@@ -38,6 +38,14 @@ REQUIRED = {
     'packages/catalog/src/index.ts',
     'packages/catalog/src/dalat.ts',
     'packages/catalog/tests/catalog.test.mjs',
+    'packages/trip-storage/README.md',
+    'packages/trip-storage/package.json',
+    'packages/trip-storage/src/index.ts',
+    'packages/trip-storage/src/repository.ts',
+    'packages/trip-storage/src/store.ts',
+    'packages/trip-storage/tests/storage.test.mjs',
+    'apps/mobile/src/features/trips/local-trip-store.ts',
+    'apps/mobile/src/app/storage-check.tsx',
 }
 LINK = re.compile(r'!?\[[^\]\n]*\]\(([^\s)]+)\)')
 SECRETS = re.compile(

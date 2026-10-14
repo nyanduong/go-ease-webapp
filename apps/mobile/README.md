@@ -15,6 +15,8 @@ Các lệnh root build `@goease/contracts` trước khi chạy Metro. Màn Về 
 
 Root cũng build `@goease/catalog`; màn Về GoEase đọc số địa điểm/nhãn demo từ package. Xem [catalog và nguồn](../../packages/catalog/README.md) trước khi làm generator hoặc map.
 
+`useLocalTrips()` tại src/features/trips/local-trip-store.ts nối AsyncStorage với repository/store dùng chung. [Hướng dẫn storage](../../packages/trip-storage/README.md) có API và ca smoke. Màn Kiểm tra lưu chuyến chỉ dành dev, dùng chuyến QA riêng; chưa phải form/danh sách sản phẩm của #66.
+
 iPhone thật cần đăng nhập cùng tài khoản trên CLI và Expo Go: `pnpm --dir apps/mobile exec expo login`. Dùng Camera iPhone mở QR. Android dùng Expo Go quét QR hoặc mở URL do Metro in ra. LDPlayer có thể thử bằng Expo Go Android tương thích; không mặc định ADB nhận LDPlayer và không suy kết quả iPhone từ LDPlayer.
 
 Nguồn: [Expo Go](https://expo.dev/go), [đăng nhập iPhone](https://docs.expo.dev/troubleshooting/expo-go-sign-in-required/), [kết nối Metro](https://docs.expo.dev/get-started/start-developing/).
