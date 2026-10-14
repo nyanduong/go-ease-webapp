@@ -1,6 +1,6 @@
 # GoEase
 
-App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Baseline có màn chào GoEase và màn Về GoEase bằng Expo Router. Đã có nền lưu chuyến cục bộ và màn QA trong dev; chưa có form/danh sách chuyến sản phẩm, đăng nhập, API, AI hoặc bản đồ.
+App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy, đọc lại/xóa có xác nhận. Chưa có màn chi tiết/sửa hoạt động, đăng nhập, API, AI hoặc bản đồ.
 
 Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
@@ -81,7 +81,7 @@ Không cần Mac/Xcode để mở project trên iPhone thật bằng Expo Go. N�
 
 ### 5. Sửa code và thử trên thiết bị
 
-Sửa một dòng chữ trong `apps/mobile/src/app/index.tsx`, lưu và xác minh Expo Go cập nhật qua Fast Refresh. Thử bấm Về GoEase và quay lại. Source chia sẻ qua Git; mỗi member chạy Metro trên máy của mình.
+Sửa một dòng chữ trong `apps/mobile/src/features/trips/screens/trip-list.tsx`, lưu và xác minh Expo Go cập nhật qua Fast Refresh. Thử bấm Về GoEase và quay lại. Source chia sẻ qua Git; mỗi member chạy Metro trên máy của mình.
 
 `pnpm dev:web` mở browser preview để kiểm tra UI, không thay kết quả Android/iOS. Khi bàn giao, ghi đúng thiết bị thật hay emulator/simulator, nền tảng đã thử và lỗi còn lại. Không lấy kết quả Android để suy iOS đã đạt.
 
@@ -113,7 +113,10 @@ git switch -c feat/nam-trip-detail
 ```text
 apps/mobile/
   src/app/_layout.tsx       # Layout Stack, safe area và status bar
-  src/app/index.tsx         # Màn chào GoEase
+  src/app/index.tsx         # Route Chuyến đi của tôi
+  src/app/trips/new.tsx     # Route tạo chuyến
+  src/features/trips/       # Screens, form controller, UI và local-trip-store
+  tests/                   # Test form/submit và lỗi lưu bằng Node
   src/app/about.tsx         # Điều hướng và quay lại
   app.json                 # Config Expo Go Android/iOS
   package.json
@@ -139,15 +142,15 @@ pnpm test
 pnpm build
 ```
 
-Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` kiểm tra contracts và catalog qua Node test runner. Build biên dịch contracts/catalog/storage rồi xuất JS/assets Android/iOS/web; không tạo APK/IPA hoặc chứng minh đã chạy trên điện thoại. Check mẫu credential không thay scanner secret chuyên dụng.
+Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` kiểm tra contracts, catalog, storage, generator và form/submit qua Node test runner. Build biên dịch package rồi xuất JS/assets Android/iOS/web; không tạo APK/IPA hoặc chứng minh đã chạy trên điện thoại. Check mẫu credential không thay scanner secret chuyên dụng.
 
 Đọc [hướng dẫn contracts](packages/contracts/README.md) trước khi làm catalog/storage/form. Các lệnh root dev/typecheck/build tự build contracts; khi sửa package trong lúc Metro chạy, dùng lệnh watch trong hướng dẫn để cập nhật `dist`.
 
 [Catalog Đà Lạt và nguồn tọa độ](packages/catalog/README.md) dùng chung cho generator, mobile và API. Lệnh root cũng build catalog trước Metro; giá chưa xác minh giữ null.
 
-[Lưu chuyến khách trên máy](packages/trip-storage/README.md) mô tả repository, draft và lỗi dữ liệu. Mobile có `useLocalTrips()` dùng AsyncStorage chung; chưa có form sản phẩm. Trong Expo Go dev, vào Về GoEase → Kiểm tra lưu chuyến để chạy smoke với một chuyến QA riêng. `pnpm build:packages` build các package theo dependency; các lệnh root dev/typecheck/build gọi bước này tự động.
+[Lưu chuyến khách trên máy](packages/trip-storage/README.md) mô tả repository, draft và lỗi dữ liệu. Mobile có `useLocalTrips()` dùng AsyncStorage chung cho form/danh sách. Trong Expo Go dev, vào Về GoEase → Kiểm tra lưu chuyến để chạy smoke với một chuyến QA riêng. `pnpm build:packages` build các package theo dependency; các lệnh root dev/typecheck/build gọi bước này tự động.
 
-[Bộ sinh lịch trình mẫu](packages/itinerary/README.md) trả Trip hợp lệ, nhãn mẫu, tổng chi phí và lỗi có mã. Issue #66 sẽ nối form → generator → repository; không tạo lại model hoặc bộ sinh riêng trong UI.
+[Bộ sinh lịch trình mẫu](packages/itinerary/README.md) trả Trip hợp lệ, nhãn mẫu, tổng chi phí và lỗi có mã. Form đã nối generator → repository; chỉ quay về danh sách sau khi lưu thành công. Xem [hướng dẫn thử luồng tạo chuyến](apps/mobile/README.md#thử-tạo-và-quản-lý-chuyến).
 
 Không commit `.env`, credential Expo/Google hoặc thư mục `.expo`/`node_modules`/`dist`.
 
