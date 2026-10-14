@@ -153,7 +153,9 @@ Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` ki�
 
 [Bộ sinh lịch trình mẫu](packages/itinerary/README.md) trả Trip hợp lệ, nhãn mẫu, tổng chi phí và lỗi có mã. Form đã nối generator → repository; chỉ quay về danh sách sau khi lưu thành công. Xem [hướng dẫn thử luồng tạo chuyến](apps/mobile/README.md#thử-tạo-và-quản-lý-chuyến).
 
-[Lịch trình và chỉnh hoạt động](apps/mobile/README.md#thử-lịch-trình-và-chỉnh-hoạt-động) dùng cùng store và revision. Áp dụng hoạt động chỉ đổi draft; Lưu chuyến mới ghi lên máy. Giờ trùng nhau có cảnh báo; lỗi ghi giữ draft, revision khác chặn ghi đè. Phần ngân sách riêng và bản đồ tiếp tục theo Project.
+[Lịch trình và chỉnh hoạt động](apps/mobile/README.md#thử-lịch-trình-và-chỉnh-hoạt-động) dùng cùng store và revision. Áp dụng hoạt động chỉ đổi draft; Lưu chuyến mới ghi lên máy. Giờ trùng nhau có cảnh báo; lỗi ghi giữ draft, revision khác chặn ghi đè.
+
+[Ngân sách nhóm](apps/mobile/README.md#thử-ngân-sách-nhóm) hiển thị ngay trong lịch trình và danh sách: tổng đã biết, khoản thiếu giá, chênh lệch và tổng theo ngày. Chỉnh ngân sách/số người trong cùng draft; không nhân lại chi phí tổng nhóm. Bản đồ và nghiệm thu P0 tiếp tục theo Project.
 
 Không commit `.env`, credential Expo/Google hoặc thư mục `.expo`/`node_modules`/`dist`.
 

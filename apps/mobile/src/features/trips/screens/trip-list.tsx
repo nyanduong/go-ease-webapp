@@ -1,5 +1,4 @@
 import { SAMPLE_LABEL } from '@goease/itinerary';
-import { summarizeBudget } from '@goease/contracts';
 import type { SavedTrip } from '@goease/trip-storage';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -7,6 +6,7 @@ import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalTrips } from '../local-trip-store';
 import { Action, ConfirmDialog, styles } from '../components/ui';
+import { BudgetSummary } from '../components/budget-summary';
 
 export default function TripListScreen() {
   const { state, actions } = useLocalTrips();
@@ -30,16 +30,12 @@ export default function TripListScreen() {
       </View>}
       ListEmptyComponent={state.loadStatus === 'ready' && !state.issues.length ? <View style={styles.card}><Text style={styles.heading}>Bạn chưa có chuyến nào</Text><Text style={styles.text}>Tạo lịch trình mẫu đầu tiên cho nhóm tại Đà Lạt.</Text></View> : null}
       renderItem={({ item }) => {
-        const { trip } = item; const budget = summarizeBudget(trip);
+        const { trip } = item;
         return <View style={styles.card}>
           <Text accessibilityRole="header" style={{ ...styles.heading, fontSize: 21 }}>{trip.name}</Text>
           <Text style={styles.text}>Đà Lạt · {trip.startDate} → {trip.days.at(-1)?.date}</Text>
           <Text style={styles.text}>{trip.durationDays} ngày · {trip.people} người · {trip.days.reduce((sum, day) => sum + day.activities.length, 0)} hoạt động</Text>
-          <Text style={styles.text}>Ngân sách nhóm: {trip.budgetVnd === null ? 'Chưa đặt' : `${trip.budgetVnd.toLocaleString('vi-VN')} đ`}</Text>
-          <Text style={styles.text}>Chi phí đã biết: {budget.knownCostVnd.toLocaleString('vi-VN')} đ · {budget.unknownCostCount} khoản chưa có giá</Text>
-          {budget.unknownCostCount > 0 && <Text style={styles.text}>Tổng chi phí chưa đầy đủ.</Text>}
-          {trip.days.some((day) => day.activities.some((activity) => activity.costVnd !== null)) && <Text style={styles.text}>Chi phí là ước tính cho nhóm, chưa phải báo giá hoặc booking.</Text>}
-          {budget.overBudgetVnd !== null && budget.overBudgetVnd > 0 && <Text style={styles.error}>Tổng tham khảo đã vượt ngân sách {budget.overBudgetVnd.toLocaleString('vi-VN')} đ.</Text>}
+          <BudgetSummary trip={trip} />
           <Action title={`Xem lịch trình ${trip.name}`} disabled={busy} onPress={() => router.push({ pathname: '/trips/[id]', params: { id: trip.id } })} />
           <Action title={`Xóa chuyến ${trip.name}`} secondary disabled={!writable} onPress={() => { setDeleteError(''); setDeleting(item); }} />
         </View>;

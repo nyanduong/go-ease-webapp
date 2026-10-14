@@ -60,6 +60,10 @@ REQUIRED = {
     'apps/mobile/src/features/trips/screens/trip-detail.tsx',
     'apps/mobile/src/features/trips/components/activity-editor.tsx',
     'apps/mobile/tests/edit-trip.test.cjs',
+    'apps/mobile/src/features/trips/budget-controller.ts',
+    'apps/mobile/src/features/trips/components/budget-summary.tsx',
+    'apps/mobile/src/features/trips/components/group-budget-editor.tsx',
+    'apps/mobile/tests/budget.test.cjs',
 }
 LINK = re.compile(r'!?\[[^\]\n]*\]\(([^\s)]+)\)')
 SECRETS = re.compile(

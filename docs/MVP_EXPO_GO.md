@@ -2,7 +2,7 @@
 
 Chuẩn triển khai cho [issue #61](https://github.com/nyanduong/go-ease-webapp/issues/61), ngày 14/10/2026: demo lập chuyến Đà Lạt trên Expo Go Android và iPhone. Người dùng tạo chuyến, sửa lịch trình mẫu, xem ngân sách nhóm, lưu trên máy và mở lại được. Đọc [wireframe và kịch bản demo](DEMO_FLOW.md) trước khi viết UI.
 
-Phạm vi chốt theo yêu cầu chủ repo để team bắt đầu triển khai; không ghi nhận các member khác đã duyệt hoặc tự đặt deadline. Đã có form tạo chuyến, sinh mẫu, danh sách lưu/xóa cục bộ và xem/chỉnh lịch trình theo ngày; các phần P0 tiếp theo vẫn cần triển khai. Các chức năng dưới đây là phạm vi đích.
+Phạm vi chốt theo yêu cầu chủ repo để team bắt đầu triển khai; không ghi nhận các member khác đã duyệt hoặc tự đặt deadline. Đã có form tạo chuyến, sinh mẫu, danh sách lưu/xóa cục bộ, xem/chỉnh lịch trình theo ngày và ngân sách nhóm; nghiệm thu P0 và các phần tiếp theo vẫn cần triển khai. Các chức năng dưới đây là phạm vi đích.
 
 ## Các mốc theo ưu tiên
 
@@ -40,7 +40,7 @@ Các quyết định sau áp dụng cho #62 và các consumer. Thay đổi phả
 | Trùng giờ | Khoảng giao nhau có cảnh báo, vẫn cho lưu vì có thể là lựa chọn thay thế; hai khoảng chỉ chạm biên không tính trùng |
 | Thứ tự | Thủ công bằng nút Lên/Xuống, không tự sắp theo giờ; chuyển ngày đưa xuống cuối ngày đích, giữ ID/nội dung, kiểm tra sức chứa |
 
-Ngày nghiệp vụ không chuyển UTC rồi cắt chuỗi. Chuyến đã lưu có thể nằm trong quá khứ và vẫn đọc/sửa hoạt động được; điều kiện không trước hôm nay chỉ áp dụng khi tạo mới. P0 chưa có màn sửa ngày/số người/ngân sách chuyến; nhu cầu khác thì tạo chuyến mới.
+Ngày nghiệp vụ không chuyển UTC rồi cắt chuỗi. Chuyến đã lưu có thể nằm trong quá khứ và vẫn đọc/sửa hoạt động được; điều kiện không trước hôm nay chỉ áp dụng khi tạo mới. #68 cho sửa số người/ngân sách trong cùng draft để kiểm tra ngân sách nhóm; giữ giới hạn contracts và không tự nhân/chia giá hoạt động. Chưa sửa ngày/thời lượng chuyến; nhu cầu đó thì tạo chuyến mới.
 
 Ô tiền trống chuyển null, không tự thành 0. UI có thể định dạng VND, contracts nhận số nguyên VND; từ chối âm, lẻ, NaN, Infinity, sai kiểu và ngoài giới hạn. Tổng đã biết không phải tổng cuối nếu còn khoản chưa có giá. Khi đã đặt ngân sách, chỉ báo vượt nếu tổng đã biết lớn hơn ngân sách; luôn cảnh báo tổng chưa đầy đủ nếu còn khoản chưa biết. Chưa chia tiền/thanh toán.
 
