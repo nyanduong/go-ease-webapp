@@ -216,3 +216,7 @@ Hai mức QA: `provider-verified` khác `backend-verified`. Nút backend cần `
 Từ danh sách khách chọn **Tài khoản · Chuyến trên server** để đăng nhập và xem/tạo/sửa/xóa chuyến qua API thật. Nhập chuyến khách cần xác nhận, tạo bản sao có ID mới; bản khách giữ nguyên. Draft/pending request lưu riêng theo project + UUID, giữ payload/key khi retry; conflict cho đọc/đối chiếu và lựa chọn rõ ràng. [Hướng dẫn cấu hình, cách dùng và checklist](docs/MOBILE_ACCOUNT_SYNC.md).
 
 Không nâng SDK/Expo Go, không bật billing. Native Android/iPhone #77 chưa nghiệm thu vì hiện chủ repo chưa tiện thử; issue giữ mở. Test HTTP/PostgreSQL và export bundle không thay cho kết quả thiết bị.
+
+## Web admin quản lý catalog (#78)
+
+`pnpm dev:admin` chạy React + Vite admin ở loopback 5173. Quyền catalog do operator cấp trong DB, kiểm tra mỗi request; admin không có quyền mọi chuyến riêng. Có tạo/sửa/tắt Place, nguồn/validation, version conflict và revision lịch sử. [Setup, cấp/thu hồi quyền và quy tắc dữ liệu](docs/ADMIN_CATALOG.md). Chưa gán quyền user thật; team tự cấp theo UUID. Không bật billing.

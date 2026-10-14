@@ -1,7 +1,14 @@
-import { apiErrorResponseSchema, catalogResponseSchema, type CatalogResponse } from '@goease/contracts';
+import { apiErrorResponseSchema, catalogResponseSchema, managedCatalogSchema, type CatalogResponse } from '@goease/contracts';
 
 export class CatalogApiError extends Error {
   constructor(readonly code: 'CONFIG' | 'NETWORK' | 'TIMEOUT' | 'HTTP' | 'INVALID_RESPONSE', message: string) { super(message); }
+}
+export async function fetchManagedCatalog(base: string, fetcher: typeof fetch = fetch) {
+  const origin=apiOrigin(base);if(!origin.startsWith('https://'))throw new CatalogApiError('CONFIG','Catalog tài khoản cần HTTPS.');
+  const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
+  const deadline=new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new CatalogApiError('TIMEOUT','Catalog quá thời gian.'));},8000);});
+  try{return await Promise.race([deadline,(async()=>{const response=await fetcher(origin+'/v1/catalog/places',{signal:controller.signal,redirect:'error'});const raw=await response.text();if(!response.ok||raw.length>200000)throw new CatalogApiError('HTTP','Không tải được catalog server.');return managedCatalogSchema.parse(JSON.parse(raw));})()]);}
+  finally{clearTimeout(timer);controller.abort();}
 }
 export function apiOrigin(value: string | undefined) {
   try {

@@ -6,6 +6,7 @@ import { AiService } from './ai/service.js';
 import { AiController } from './ai/controller.js';
 import { AuthController } from './auth.js';
 import { TripsController, TripsService } from './trips.js';
+import { AdminCatalogController } from './admin-catalog.js';
 
 export const CATALOG_LOADER = Symbol('CATALOG_LOADER');
 export type CatalogLoader = () => unknown | Promise<unknown>;
@@ -31,6 +32,7 @@ export class ApiController {
     if (!catalogQuerySchema.safeParse(query).success) throw new ApiFailure(400, 'BAD_REQUEST', 'Chỉ hỗ trợ destinationId=da-lat; không nhận query khác hoặc lặp.');
     return this.catalog.list();
   }
+  @Get('catalog/places') places(@Query() query:unknown){if(!catalogQuerySchema.safeParse(query).success)throw new ApiFailure(400,'BAD_REQUEST','Query catalog không hợp lệ.');return this.trips.managedCatalog();}
 }
-@Module({ controllers: [ApiController, AiController, AuthController, TripsController], providers: [CatalogService] })
+@Module({ controllers: [ApiController, AiController, AuthController, TripsController, AdminCatalogController], providers: [CatalogService] })
 export class ApiModule {}

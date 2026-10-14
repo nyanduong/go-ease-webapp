@@ -5,6 +5,8 @@ import { AppState, Platform } from 'react-native';
 import { useEffect, useSyncExternalStore } from 'react';
 import { createAuthPilot, type AuthPilotState } from './auth-pilot-controller';
 import { createAccountTrips } from './account-trip-controller';
+import { fetchManagedCatalog } from './catalog-api-controller';
+import type { ManagedPlace } from '@goease/contracts';
 
 const project = process.env.EXPO_PUBLIC_SUPABASE_URL?.match(/^https:\/\/([a-z0-9]{20})\.supabase\.co$/)?.[1];
 const storageKey = `goease.account.${project ?? 'unconfigured'}.refresh`;
@@ -12,6 +14,7 @@ const secureOptions = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVIC
 const native = () => { if (Platform.OS === 'web') throw Error('Native credential storage required'); };
 let state: AuthPilotState = { busy: false, phase: 'signed-out', userId: null, message: 'Đăng nhập để xem chuyến trên server; chuyến khách giữ trên thiết bị.' };
 const listeners = new Set<() => void>();
+let catalog: ManagedPlace[] = [];
 export const accountTrips = createAccountTrips({
   storage: { get: key => AsyncStorage.getItem(key), set: (key, value) => AsyncStorage.setItem(key, value) },
   request: operation => auth.serverTrips(operation), newId: randomUUID,
@@ -31,6 +34,10 @@ const auth = createAuthPilot({ url: process.env.EXPO_PUBLIC_SUPABASE_URL, key: p
 async function connect() {
   if (auth.snapshot().phase === 'provider-verified') await auth.verifyBackend(process.env.EXPO_PUBLIC_AUTH_API_BASE_URL);
   const next = auth.snapshot();
+  if(next.phase==='backend-verified') {
+    try{const response=await fetchManagedCatalog(process.env.EXPO_PUBLIC_AUTH_API_BASE_URL??'');if(auth.snapshot().userId!==next.userId||auth.snapshot().phase!=='backend-verified')return;catalog=response.places;}
+    catch{state={...state,message:'Chưa tải được catalog server. Chưa mở kho chuyến tài khoản; thử Khôi phục khi kết nối lại.'};listeners.forEach(l=>l());return;}
+  }
   if (project && next.userId && next.phase === 'backend-verified' && await accountTrips.activate(project + '.' + next.userId)) await accountTrips.list();
 }
 let restoring: Promise<void> | null = null;
@@ -45,7 +52,7 @@ export const accountSession = {
 export function useAccount() {
   const session = useSyncExternalStore(accountSession.subscribe, accountSession.snapshot, accountSession.snapshot);
   const trips = useSyncExternalStore(accountTrips.subscribe, accountTrips.getSnapshot, accountTrips.getSnapshot);
-  return { session, trips };
+  return { session, trips, catalog };
 }
 export function AccountSessionLifecycle() {
   useEffect(() => {

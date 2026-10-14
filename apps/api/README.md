@@ -113,3 +113,7 @@ GET /v1/auth/me nhận user access JWT, không query/userId/role, trả UUID/pro
 ## Chuyến riêng và PostgreSQL #76
 
 Xem [runbook chuyến server](../../docs/SERVER_TRIPS.md) để tạo cluster PostgreSQL riêng, migrate/seed, dùng runtime role giới hạn, backup và chạy `pnpm test:db`. Backend không dùng database Supabase cloud ở mốc này. `/v1/trips` CRUD yêu cầu Supabase identity được xác minh; version/conflict và mutationId giữ thao tác retry an toàn. Dev pilot dùng `pnpm demo:trips` riêng với Auth + trips, không dùng tunnel AI/auth-only. Nghiệm thu HTTPS native #76 còn chờ; bằng chứng DB/HTTP và giới hạn được ghi riêng.
+
+## Catalog quản lý #78
+
+Khi có DB chuyến, public catalog đọc Place từ DB, admin CRUD theo CatalogAdmin registry + RLS. Seed không ghi đè sửa đổi; version/revision và immutable tọa độ bảo toàn chuyến cũ. [Setup web, cấp/thu hồi quyền và API](../../docs/ADMIN_CATALOG.md). Admin catalog không được đọc chuyến người khác; không có admin trips endpoint.

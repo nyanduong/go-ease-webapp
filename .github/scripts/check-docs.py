@@ -8,6 +8,12 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 REQUIRED = {
+    'docs/ADMIN_CATALOG.md',
+    'apps/web/package.json',
+    'apps/web/src/main.tsx',
+    'apps/web/src/controller.ts',
+    'packages/contracts/src/admin-catalog.ts',
+    'apps/api/src/admin-catalog.ts',
     'docs/MOBILE_ACCOUNT_SYNC.md',
     'apps/mobile/src/app/account.tsx',
     'apps/mobile/src/features/trips/account-session.ts',

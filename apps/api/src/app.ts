@@ -30,10 +30,12 @@ export async function createApi(env: Record<string, string | undefined> = proces
   const config = readConfig(env); // Fail before opening a socket, without printing env values.
   if ([demo, authSession, tripsSession].filter(Boolean).length > 1) throw new Error('Cannot combine QA sessions');
   const guard = tripsSession ? tripsDemoGuard(tripsSession, config) : authSession ? authDemoGuard(authSession, config) : demo ? demoGuard(demo, config.AI_ACCESS_TOKEN, config.API_HOST) : undefined;
-  const ai = new AiService(config, aiOptions);
+
   const auth = new AuthVerifier(config, authOptions);
   const trips = new TripsService(config, auth);
-  const app = await NestFactory.create<NestExpressApplication>({ module: ApiModule, providers: [{ provide: CATALOG_LOADER, useValue: load }, { provide: AiService, useValue: ai }, { provide: AuthVerifier, useValue: auth }, { provide: TripsService, useValue: trips }] }, { bodyParser: false, logger: ['error', 'warn'], abortOnError: false });
+  const managedEntries = async () => (await trips.managedCatalog()).places.filter(p=>p.enabled).map(p=>p.entry);
+  const ai = new AiService(config, config.TRIPS_ENABLED && config.DATABASE_URL ? {...aiOptions,catalog:managedEntries} : aiOptions);
+  const app = await NestFactory.create<NestExpressApplication>({ module: ApiModule, providers: [{ provide: CATALOG_LOADER, useValue: config.TRIPS_ENABLED && config.DATABASE_URL ? managedEntries : load }, { provide: AiService, useValue: ai }, { provide: AuthVerifier, useValue: auth }, { provide: TripsService, useValue: trips }] }, { bodyParser: false, logger: ['error', 'warn'], abortOnError: false });
   app.disable('x-powered-by');
   let tripsMinute = Math.floor(Date.now() / 60000), tripsAttempts = 0;
   app.use((req: Request, res: Response, next: NextFunction) => {

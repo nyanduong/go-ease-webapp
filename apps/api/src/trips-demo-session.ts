@@ -12,6 +12,6 @@ export function tripsDemoGuard(session: TripsDemoSession, config: ApiConfig) {
     if (now() >= session.expiresAt) throw new ApiFailure(401, 'AUTH_INVALID', 'Phiên QA chuyến đã hết hạn.');
     if (req.headers.origin) throw new ApiFailure(403, 'ORIGIN_NOT_ALLOWED', 'Phiên QA chỉ dành native/CLI.');
     const route = req.originalUrl.split('?')[0];
-    if (!((req.method === 'GET' && req.originalUrl === '/v1/auth/me') || (route === '/v1/trips' && ['GET', 'POST'].includes(req.method)) || (/^\/v1\/trips\/[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(route ?? '') && ['GET', 'PUT', 'DELETE'].includes(req.method)))) throw new ApiFailure(404, 'NOT_FOUND', 'Route không được mở trong phiên chuyến riêng.');
+    if (!((req.method === 'GET' && ['/v1/auth/me','/v1/catalog/places'].includes(req.originalUrl)) || (route === '/v1/trips' && ['GET', 'POST'].includes(req.method)) || (/^\/v1\/trips\/[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(route ?? '') && ['GET', 'PUT', 'DELETE'].includes(req.method)))) throw new ApiFailure(404, 'NOT_FOUND', 'Route không được mở trong phiên chuyến riêng.');
   };
 }

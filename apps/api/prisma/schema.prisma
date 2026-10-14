@@ -17,7 +17,27 @@ model Place {
   id String @id @db.VarChar(80)
   name String @db.VarChar(120)
   snapshot Json
+  version Int @default(1)
+  enabled Boolean @default(true)
   activities TripActivity[]
+  revisions PlaceRevision[]
+}
+model CatalogAdmin {
+  issuer String @db.VarChar(128)
+  subject String @db.Uuid
+  enabled Boolean @default(true)
+  @@id([issuer, subject])
+}
+model PlaceRevision {
+  placeId String @db.VarChar(80)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  version Int
+  snapshot Json
+  enabled Boolean
+  actorIssuer String? @db.VarChar(128)
+  actorSubject String? @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@id([placeId, version])
 }
 model Trip {
   ownerIssuer String @db.VarChar(128)

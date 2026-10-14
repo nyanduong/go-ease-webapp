@@ -18,7 +18,7 @@
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test && node --test tests/*.test.mjs",
-    "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build",
+    "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build && pnpm --filter @goease/web build",
     "build:packages": "pnpm --filter @goease/contracts build && pnpm --filter @goease/catalog --filter @goease/trip-storage --filter @goease/itinerary build",
     "demo:api": "pnpm build:api && pnpm --filter @goease/api demo",
     "demo:auth": "pnpm build:api && pnpm --filter @goease/api demo:auth",
@@ -27,6 +27,9 @@
     "db:seed": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs seed",
     "db:backup": "pnpm --filter @goease/api exec node scripts/db-local.mjs backup",
     "demo:trips": "pnpm build:api && pnpm --filter @goease/api demo:trips",
-    "test:db": "pnpm build:api && pnpm --filter @goease/mobile exec tsc -p tsconfig.logic-tests.json && pnpm --filter @goease/api exec node scripts/test-db.mjs"
+    "test:db": "pnpm build:api && pnpm --filter @goease/mobile exec tsc -p tsconfig.logic-tests.json && pnpm --filter @goease/api exec node scripts/test-db.mjs",
+    "dev:admin": "pnpm build:packages && pnpm --filter @goease/web dev",
+    "catalog:grant": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs grant",
+    "catalog:revoke": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs revoke"
   }
 }
