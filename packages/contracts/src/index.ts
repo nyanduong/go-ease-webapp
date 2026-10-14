@@ -4,3 +4,4 @@ export * from './itinerary.js';
 export * from './catalog.js';
 export * from './api.js';
 export * from './ai.js';
+export * from './server-trips.js';

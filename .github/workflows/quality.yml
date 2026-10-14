@@ -18,6 +18,20 @@ jobs:
     name: Quality Gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: goease_ci_admin
+          POSTGRES_PASSWORD: ${{ github.run_id }}_fixture
+          POSTGRES_DB: goease_test_ci
+        ports:
+          - 55476:5432
+        options: >-
+          --health-cmd "pg_isready -U goease_ci_admin -d goease_test_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -39,5 +53,10 @@ jobs:
         run: pnpm lint
       - name: Kiểm thử packages, mobile và HTTP API thật
         run: pnpm test
+      - name: Migration, ownership, rollback và restart PostgreSQL thật cô lập
+        env:
+          GOEASE_DB_TEST_ADMIN_URL: postgresql://goease_ci_admin:${{ github.run_id }}_fixture@127.0.0.1:55476/goease_test_ci
+          GOEASE_DB_TEST_CONTAINER_ID: ${{ job.services.postgres.id }}
+        run: pnpm test:db
       - name: Build API và xuất bundle Android, iOS, web
         run: pnpm build

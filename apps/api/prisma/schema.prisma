@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+model AppUser {
+  issuer String @db.VarChar(128)
+  subject String @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  trips Trip[]
+  mutations TripMutation[]
+  @@id([issuer, subject])
+}
+model Place {
+  id String @id @db.VarChar(80)
+  name String @db.VarChar(120)
+  snapshot Json
+  activities TripActivity[]
+}
+model Trip {
+  ownerIssuer String @db.VarChar(128)
+  ownerSubject String @db.Uuid
+  id String @db.VarChar(80)
+  owner AppUser @relation(fields: [ownerIssuer, ownerSubject], references: [issuer, subject], onDelete: Restrict)
+  version Int @default(1)
+  schemaVersion Int @default(1)
+  generationSource String? @db.VarChar(10)
+  name String @db.VarChar(80)
+  destinationId String @db.VarChar(20)
+  startDate String @db.VarChar(10)
+  durationDays Int
+  people Int
+  budgetVnd Int?
+  timeZone String @db.VarChar(40)
+  currency String @db.VarChar(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+  days TripDay[]
+  @@id([ownerIssuer, ownerSubject, id])
+}
+model TripDay {
+  ownerIssuer String @db.VarChar(128)
+  ownerSubject String @db.Uuid
+  tripId String @db.VarChar(80)
+  id String @db.VarChar(80)
+  position Int
+  date String @db.VarChar(10)
+  trip Trip @relation(fields: [ownerIssuer, ownerSubject, tripId], references: [ownerIssuer, ownerSubject, id], onDelete: Cascade)
+  activities TripActivity[]
+  @@id([ownerIssuer, ownerSubject, tripId, id])
+  @@unique([ownerIssuer, ownerSubject, tripId, position])
+}
+model TripActivity {
+  ownerIssuer String @db.VarChar(128)
+  ownerSubject String @db.Uuid
+  tripId String @db.VarChar(80)
+  dayId String @db.VarChar(80)
+  id String @db.VarChar(80)
+  position Int
+  name String @db.VarChar(120)
+  locationKind String @db.VarChar(10)
+  placeId String? @db.VarChar(80)
+  startTime String? @db.VarChar(5)
+  endTime String? @db.VarChar(5)
+  costVnd Int?
+  notes String @db.VarChar(500)
+  day TripDay @relation(fields: [ownerIssuer, ownerSubject, tripId, dayId], references: [ownerIssuer, ownerSubject, tripId, id], onDelete: Cascade)
+  place Place? @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  @@id([ownerIssuer, ownerSubject, tripId, id])
+  @@unique([ownerIssuer, ownerSubject, tripId, dayId, position])
+}
+model TripMutation {
+  ownerIssuer String @db.VarChar(128)
+  ownerSubject String @db.Uuid
+  mutationId String @db.Uuid
+  requestHash String @db.VarChar(64)
+  result Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  owner AppUser @relation(fields: [ownerIssuer, ownerSubject], references: [issuer, subject], onDelete: Restrict)
+  @@id([ownerIssuer, ownerSubject, mutationId])
+  @@index([createdAt])
+}

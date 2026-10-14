@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createAuthPilot, type AuthPilotState } from '@/features/trips/auth-pilot-controller';
 import { Action, styles } from '@/features/trips/components/ui';
+import { ServerTripPilot } from '@/features/trips/components/server-trip-pilot';
 
 function AuthCheck() {
   const [email, setEmail] = useState(''), [password, setPassword] = useState('');
@@ -46,6 +47,7 @@ function AuthCheck() {
     <Action title="Xác minh qua backend GoEase" disabled={state.busy || !state.userId || !process.env.EXPO_PUBLIC_AUTH_API_BASE_URL} onPress={() => { void pilot.current!.verifyBackend(process.env.EXPO_PUBLIC_AUTH_API_BASE_URL); }} />
     <Text accessibilityLiveRegion="polite" style={styles.text}>{state.phase} · {state.message}</Text>
     {state.userId && <Text selectable style={styles.text}>UUID đã xác minh: {state.userId}</Text>}
+    {state.userId && state.phase === 'backend-verified' && <ServerTripPilot key={state.userId} identity={state.userId} verified busy={state.busy} onRequest={(operation) => pilot.current!.serverTrips(operation)} />}
     <Text style={styles.text}>Chỉ refresh credential được lưu trong SecureStore; access token ở RAM. Rời màn/xuống nền sẽ bỏ phiên RAM. Đây là pilot, không đăng nhập sản phẩm hoặc gắn chuyến khách vào user. Nút backend cần HTTPS auth riêng được cấp phép; mã phiên AI và QR Metro không dùng thay thế.</Text>
   </ScrollView></SafeAreaView>;
 }

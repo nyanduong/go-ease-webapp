@@ -21,6 +21,12 @@
     "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build",
     "build:packages": "pnpm --filter @goease/contracts build && pnpm --filter @goease/catalog --filter @goease/trip-storage --filter @goease/itinerary build",
     "demo:api": "pnpm build:api && pnpm --filter @goease/api demo",
-    "demo:auth": "pnpm build:api && pnpm --filter @goease/api demo:auth"
+    "demo:auth": "pnpm build:api && pnpm --filter @goease/api demo:auth",
+    "db:local": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs start",
+    "db:stop": "pnpm --filter @goease/api exec node scripts/db-local.mjs stop",
+    "db:seed": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs seed",
+    "db:backup": "pnpm --filter @goease/api exec node scripts/db-local.mjs backup",
+    "demo:trips": "pnpm build:api && pnpm --filter @goease/api demo:trips",
+    "test:db": "pnpm build:api && pnpm --filter @goease/mobile exec tsc -p tsconfig.logic-tests.json && pnpm --filter @goease/api exec node scripts/test-db.mjs"
   }
 }

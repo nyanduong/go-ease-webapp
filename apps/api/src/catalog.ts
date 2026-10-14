@@ -5,6 +5,7 @@ import { ApiFailure } from './errors.js';
 import { AiService } from './ai/service.js';
 import { AiController } from './ai/controller.js';
 import { AuthController } from './auth.js';
+import { TripsController, TripsService } from './trips.js';
 
 export const CATALOG_LOADER = Symbol('CATALOG_LOADER');
 export type CatalogLoader = () => unknown | Promise<unknown>;
@@ -19,11 +20,11 @@ export class CatalogService {
 }
 @Controller('v1')
 export class ApiController {
-  constructor(@Inject(CatalogService) private readonly catalog: CatalogService, @Inject(AiService) private readonly ai: AiService) {}
+  constructor(@Inject(CatalogService) private readonly catalog: CatalogService, @Inject(AiService) private readonly ai: AiService, @Inject(TripsService) private readonly trips: TripsService) {}
   @Get('health')
   health(@Query() query: unknown) {
     if (!query || typeof query !== 'object' || Object.keys(query).length) throw new ApiFailure(400, 'BAD_REQUEST', 'Health không nhận query.');
-    return healthResponseSchema.parse({ apiVersion: API_VERSION, service: 'goease-api', status: 'ok', scope: 'process', dependencies: { database: 'not-configured', gemini: this.ai.healthState() } });
+    return healthResponseSchema.parse({ apiVersion: API_VERSION, service: 'goease-api', status: 'ok', scope: 'process', dependencies: { database: this.trips.healthState(), gemini: this.ai.healthState() } });
   }
   @Get('catalog')
   list(@Query() query: unknown) {
@@ -31,5 +32,5 @@ export class ApiController {
     return this.catalog.list();
   }
 }
-@Module({ controllers: [ApiController, AiController, AuthController], providers: [CatalogService] })
+@Module({ controllers: [ApiController, AiController, AuthController, TripsController], providers: [CatalogService] })
 export class ApiModule {}

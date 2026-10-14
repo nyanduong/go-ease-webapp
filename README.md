@@ -204,3 +204,9 @@ Chọn pilot email/password Supabase cho Expo Go, không dùng Expo login làm t
 Pilot native: `Về GoEase → Kiểm tra tài khoản GoEase (dev)`. Thêm hai biến public Supabase theo `apps/mobile/.env.example`, khởi động lại Metro, nhập user thử trực tiếp trong app. Login/restore phải được provider xác minh lại; chỉ refresh credential lưu SecureStore (~57.0.4 đúng SDK hiện tại), access token ở RAM. Web không lưu credential. Chưa có đăng nhập sản phẩm, đồng bộ chuyến hoặc quyền AI theo user.
 
 Hai mức QA: `provider-verified` khác `backend-verified`. Nút backend cần `EXPO_PUBLIC_AUTH_API_BASE_URL` HTTPS riêng được cấp phép; QR Metro/HTTP LAN/mã phiên AI không thay thế. Không cấu hình URL này cho tunnel #73 vì route auth bị chặn. [Quyết định, cấu hình, checklist và bằng chứng còn thiếu](docs/AUTH_SPIKE.md). #75 đã được chủ repo nghiệm thu phiên thật và backend HTTPS trên iPhone/LDPlayer; kết quả và giới hạn ghi trong runbook. Phiên HTTPS QA đã dừng; team dùng `pnpm demo:auth` và HTTPS auth-only được cấp phép để mở phiên thử mới. Không bật billing hoặc nâng SDK/native dependency cũ.
+
+## Chuyến riêng trên server (#76)
+
+Đã có PostgreSQL 18 + Prisma 7.10, migration/seed catalog và CRUD theo identity backend xác minh. Trip version chống ghi đè; mutationId chống ghi trùng khi retry; mọi ghi dùng transaction và RLS theo issuer/subject. `pnpm db:local` tạo database riêng trên loopback, `pnpm test:db` chạy DB test cô lập, `pnpm db:backup` lưu backup private ngoài repo.
+
+[Runbook, API contracts, backup và checklist native #76](docs/SERVER_TRIPS.md). Pilot thủ công nằm trong màn kiểm tra tài khoản sau backend-verified, giữ riêng chuyến khách. Chưa có đồng bộ nền/outbox. DB/HTTP tests đã đạt; nghiệm thu đồng bộ HTTPS trên thiết bị #76 còn chờ do bước tunnel bị kiểm duyệt tự động chặn. Không coi bundle hoặc kết quả Auth #75 là native pass #76. Không bật billing, không nâng Expo Go.
