@@ -198,6 +198,14 @@ test('corrupt or missing initialized quota state fails closed instead of silentl
     finally { await next.close(); await rm(directory, { recursive: true, force: true }); }
   }
 });
+test('AI config accepts dotted provider keys while rejecting header injection', () => {
+  const dotted = `AQ.${'a'.repeat(50)}`;
+  assert.equal(readConfig({ ...settings, GEMINI_API_KEY: dotted }).GEMINI_API_KEY, dotted);
+  for (const value of [`${dotted}\r\nInjected: value`, `${dotted} value`, 'x'.repeat(257)]) {
+    assert.throws(() => readConfig({ ...settings, GEMINI_API_KEY: value }), /Invalid API config: GEMINI_API_KEY/);
+  }
+});
+
 test('AI config rejects arbitrary models/bad tokens and mismatched deadlines without printing supplied values', () => {
   for (const bad of [{ GEMINI_MODEL: 'proxy-model' }, { AI_ACCESS_TOKEN: 'short' }, { GEMINI_TIMEOUT_MS: '5000' }, { GEMINI_MAX_TOTAL_ATTEMPTS: '101' }, { GEMINI_MAX_OUTPUT_TOKENS: '1000000' }]) assert.throws(() => readConfig({ ...settings, ...bad }));
   assert.throws(() => readConfig({ ...settings, GEMINI_API_KEY: 'DO_NOT_LEAK !' }), (e) => !e.message.includes('DO_NOT_LEAK'));

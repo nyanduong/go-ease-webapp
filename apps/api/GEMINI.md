@@ -38,7 +38,7 @@ Thêm biến từ [.env.example](.env.example) vào `apps/api/.env`, không ghi 
 | --- | --- |
 | GEMINI_ENABLED | false; chỉ nhận true/false |
 | GEMINI_MODEL | Chỉ gemini-3.5-flash-lite; caller không chọn model/URL |
-| GEMINI_API_KEY | Rỗng; chỉ backend, 20–256 ký tự URL-safe khi đặt |
+| GEMINI_API_KEY | Rỗng; chỉ backend, 20–256 ký tự chữ/số, dấu gạch dưới, gạch ngang hoặc dấu chấm khi đặt (hỗ trợ key Google mới); không cho whitespace/header injection |
 | AI_ACCESS_TOKEN | Rỗng; credential nội bộ ngẫu nhiên URL-safe 32–128 ký tự, không đưa vào mobile |
 | GEMINI_TIMEOUT_MS | 4000, 100–20000; khi đủ cấu hình phải nhỏ hơn API_REQUEST_TIMEOUT_MS ít nhất 250 ms |
 | GEMINI_MAX_OUTPUT_TOKENS | 2048, cho phép 512–4096; candidateCount luôn 1 |
