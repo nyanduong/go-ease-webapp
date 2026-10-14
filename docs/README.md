@@ -19,4 +19,4 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 
 - [API NestJS local v1, catalog dùng chung và mobile fetch](../apps/api/README.md)
 
-- [Gemini backend: adapter, giới hạn và live còn thiếu key](../apps/api/GEMINI.md)
+- [Gemini backend: adapter, giới hạn và bằng chứng live](../apps/api/GEMINI.md)

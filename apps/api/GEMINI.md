@@ -1,6 +1,6 @@
 # Gemini backend #72 — giới hạn và nghiệm thu live
 
-Adapter/endpoint đã triển khai, **Gemini live chưa chạy vì chủ repo chưa có key** (14/10/2026). Test doubles không thay chứng cứ live. Giữ [#72](https://github.com/nyanduong/go-ease-webapp/issues/72) mở tới khi có key/quota/quyền và ít nhất một ca live hợp lệ. Không bật billing, mua quota hoặc trả lịch trình mẫu rồi ghi AI thành công.
+Adapter/endpoint đã triển khai và **Gemini live đạt ngày 14/10/2026** bằng key/project GoEase Free tier được chủ repo cấp quyền. Xem bằng chứng bên dưới. Không bật billing, mua quota hoặc trả lịch trình mẫu rồi ghi AI thành công.
 
 ## Endpoint
 
@@ -93,6 +93,29 @@ Không có flag hoặc thiếu cấu hình: LIVE NOT RUN, exit 2, không mở se
 
 ## Trạng thái bàn giao 14/10/2026
 
-Chủ repo trả lời **chưa có key**. Đã chuẩn bị code, HTTP/doubles và harness có opt-in; **0 Gemini live call, chưa có live evidence**, chưa nghiệm thu output/latency/quota thực của tài khoản. Không có billing/quota mua mới/deployment. Phần còn thiếu để đóng #72: key và quyền/quota phù hợp, một ca harness live pass với SHA/evidence redacted, sửa lỗi live nếu có. Mobile AI/HTTPS kiểm soát truy cập thuộc bước tiếp theo, chưa bỏ guard để mở route có phí.
+Chủ repo đã cho phép lưu key vào backend và thử Gemini, không bật billing. Key chỉ ở apps/api/.env được Git ignore; bearer nội bộ sinh ngẫu nhiên, không đưa vào app. Deadline local của ca nghiệm thu là 19.000 ms cho provider và 20.000 ms cho API; mặc định trong env mẫu giữ nguyên.
+
+Có 4 generateContent attempts, mỗi lần chạy harness một HTTP request, không retry tự động, không reset quota: 3 ca lỗi (upstream 400 xác định ở ca 2/3), ca 4 đạt sau khi chuyển responseFormat sang responseMimeType + responseJsonSchema. Định dạng mới của key Google có dấu chấm đã được chấp nhận; whitespace/header injection vẫn bị từ chối. Harness ghi numeric upstream status và danh sách tên field cố định khi 400, không ghi raw error/headers/body. Tests offline API: 30 đạt.
+
+Bằng chứng live redacted từ live-615bdaec-852d-4b6d-9e82-1cffefbc1b4e.json (file gốc ở thư mục private, không commit):
+
+```json
+{
+  "attemptedAt": "2026-10-14T16:02:17.262Z",
+  "commit": "302746c2ee57f94634efeef16d0801db1d53d409",
+  "node": "v24.15.0",
+  "model": "gemini-3.5-flash-lite",
+  "upstreamStatus": 200,
+  "httpStatus": 200,
+  "requestId": "9385986f-8866-497a-a14e-cd2d3e9f05d3",
+  "passed": true,
+  "days": 1,
+  "placeIds": ["dalat-nhagadalat", "dalat-bietthuhangnga"],
+  "knownCostVnd": 0,
+  "unknownCostCount": 2
+}
+```
+
+Hai khoản chưa biết giá giữ null; knownCostVnd 0 không có nghĩa chuyến miễn phí. Đây là ca live một ngày, không phải nghiệm thu mobile AI/HTTPS hoặc cam kết mọi output/quota tương lai đều đạt. Không bật billing, mua quota, nâng Expo/native dependencies hoặc deploy. Quota private vẫn giữ 4 lượt đã reserve. Mobile AI/HTTPS và kiểm soát truy cập thuộc bước #73/#74, chưa bỏ guard để mở route công khai.
 
 Đối chiếu giao thức/model ngày 14/10/2026: [structured outputs REST](https://ai.google.dev/gemini-api/docs/generate-content/structured-output), [model 3.5 Flash-Lite](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite), [GenerateContent reference](https://ai.google.dev/api/generate-content), [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits). Đối chiếu docs không thay test live.
