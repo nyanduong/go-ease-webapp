@@ -192,3 +192,7 @@ pnpm dev:api
 ## HTTPS demo nội bộ (#73)
 
 `pnpm demo:api` chạy phiên API loopback 3100 có mã truy cập 30 phút, allowlist và guards AI. [Runbook HTTPS](apps/api/HTTPS_DEMO.md) hướng dẫn Cloudflare Quick Tunnel tạm, URL public mobile, cấp mã phiên riêng, kiểm tra Expo Go và cách dừng. Về GoEase → Kiểm tra HTTPS API (dev) để kiểm tra health/catalog/QA AI; code chỉ trong RAM, không phải bearer backend. Không bật billing. Code/test đã chuẩn bị nhưng nghiệm thu HTTPS native còn thiếu do thao tác tunnel bị kiểm duyệt tự động chặn; #73 giữ mở, không ghi pass giả.
+
+## Tạo/chỉnh lịch trình AI trên Expo Go (#74)
+
+Form Tạo chuyến có lựa chọn AI nội bộ: nhập mã phiên, xác nhận gọi, xem trước rồi Lưu hoặc Sửa trước khi lưu trong editor hiện có. Chuyến đang sửa có Tạo lại bằng AI, yêu cầu xác nhận trước thay draft; lỗi giữ nội dung, không fallback mẫu hoặc retry ngầm. Chuyến lưu ghi nguồn sample/ai, chuyến cũ thiếu nguồn vẫn đọc được. AI nội bộ chỉ ở dev/Expo Go khi HTTPS được cấu hình; không nhúng key/token backend vào app, không bật billing. [Hướng dẫn và checklist còn chờ](docs/MOBILE_AI.md). #73/#74 chưa nghiệm thu HTTPS native; test doubles không phải Gemini live trên điện thoại.

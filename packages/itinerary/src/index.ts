@@ -75,7 +75,7 @@ export function generateSampleTrip(input: unknown, catalogInput: unknown, option
   // Projection preserves canonical Place identity; coordinates stay in the catalog.
   const places = parsedCatalog.data.map(({ id, name, destinationId, coordinates, sources }: CatalogEntry) => ({ id, name, destinationId, coordinates, sources }));
   const result = tripSchemaWithCatalog(places).safeParse({
-    ...request, id: options.tripId, schemaVersion: SCHEMA_VERSION,
+    ...request, id: options.tripId, schemaVersion: SCHEMA_VERSION, generationSource: 'sample',
     timeZone: DESTINATION.timeZone, currency: DESTINATION.currency, days,
   });
   if (!result.success) return fail('INVALID_OUTPUT', 'Không tạo được chuyến đúng schema. Giữ nhu cầu và kiểm tra catalog.');
