@@ -79,6 +79,7 @@ function TripDetailSession({ id }: { id: string }) {
           </>}
           {state.draft && !editor.owns() && <Text style={styles.error}>Có draft khác chưa xử lý. Quay lại màn đang chỉnh để lưu hoặc hủy.</Text>}
           {message ? <Text accessibilityRole="alert" style={styles.text}>{message}</Text> : null}
+          <Action title="Xem bản đồ ngày đang chọn" secondary disabled={busy || !!form || groupEditing} onPress={() => router.push({ pathname: '/trips/[id]/map', params: { id, dayId: day.id, mode: editing && editor.owns() ? 'draft' : 'saved' } })} />
           {editing && !form && !groupEditing && <Action title="Đổi ngân sách / số người" secondary disabled={busy} onPress={() => { setMoving(null); setGroupEditing(true); }} />}
           {groupEditing && <GroupBudgetEditor trip={trip} disabled={busy} onApply={(updated) => mutate(() => { editor.change(updated); setGroupEditing(false); })} onCancel={() => setConfirm('form')} />}
           <ScrollView horizontal contentContainerStyle={{ gap: 10 }}>
