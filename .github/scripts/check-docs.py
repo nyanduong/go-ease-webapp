@@ -32,6 +32,12 @@ REQUIRED = {
     'packages/contracts/src/schemas.ts',
     'packages/contracts/src/itinerary.ts',
     'packages/contracts/tests/contracts.test.mjs',
+    'packages/contracts/src/catalog.ts',
+    'packages/catalog/package.json',
+    'packages/catalog/README.md',
+    'packages/catalog/src/index.ts',
+    'packages/catalog/src/dalat.ts',
+    'packages/catalog/tests/catalog.test.mjs',
 }
 LINK = re.compile(r'!?\[[^\]\n]*\]\(([^\s)]+)\)')
 SECRETS = re.compile(

@@ -62,9 +62,15 @@ go-ease-webapp/
 │       │   └── lib/
 │       └── package.json
 ├── packages/
+│   ├── catalog/                      # Đã có: 15 điểm demo có nguồn, dùng chung
+│   │   ├── src/dalat.ts
+│   │   ├── src/index.ts
+│   │   ├── tests/catalog.test.mjs
+│   │   └── package.json
 │   └── contracts/                    # Type/schema/logic thuần dùng chung
 │       ├── src/
 │       │   ├── calendar.ts           # Lịch và múi giờ điểm đến
+│       │   ├── catalog.ts            # Schema metadata, vùng demo và giá tham khảo
 │       │   ├── schemas.ts            # Place, Activity, TripDay, Trip
 │       │   ├── itinerary.ts
 │       │   └── index.ts

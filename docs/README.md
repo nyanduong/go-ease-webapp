@@ -7,6 +7,7 @@ Bộ tài liệu cho team phát triển lại GoEase, ngày 14/10/2026. Nền Ex
 - [Phạm vi và cách kiểm tra bản đầu](MVP_EXPO_GO.md)
 - [Wireframe màn hình và kịch bản demo P0](DEMO_FLOW.md)
 - [Contracts ngày, giờ, tiền và model chuyến đi](../packages/contracts/README.md)
+- [Catalog 15 địa điểm Đà Lạt và nguồn dữ liệu](../packages/catalog/README.md)
 
 Giữ React Native + TypeScript + Expo cho app; NestJS cho backend; PostgreSQL + Prisma khi cần lưu dữ liệu tài khoản. Web admin React + Vite bổ sung sau luồng app chính. Team chọn phiên bản theo SDK Expo tương thích với Expo Go đang cài, commit lockfile và kiểm tra cả Android/iOS ngay từ đầu.
 

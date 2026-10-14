@@ -35,6 +35,8 @@ Consumer thêm `@goease/contracts: workspace:*` vào dependencies. Mobile đã n
 | `findTimeOverlaps(day)` | Validate ngày rồi trả cặp ID trùng giờ để UI cảnh báo; không chặn lưu |
 | `moveActivity(trip, activityId, targetDayId, position?)` | Trả bản sao hợp lệ, giữ ID; cùng ngày đổi vị trí zero-based, khác ngày đưa cuối |
 | `DESTINATION`, `TRIP_LIMITS`, `SCHEMA_VERSION` | Metadata/giới hạn dùng chung, không tự copy số vào consumer |
+| `catalogEntrySchema`, `catalogEntriesSchema`, `CatalogEntry` | Metadata catalog demo (loại, thời lượng gợi ý, nguồn marker, giá tham khảo), tách khỏi Place/Trip v1 |
+| `referenceCostSchema`, `DALAT_DEMO_BOUNDS` | Giá null/0 có nguồn, hộp bao tọa độ cho demo Đà Lạt |
 
 ```typescript
 import {
@@ -66,6 +68,7 @@ Schema strict từ chối field lạ, version chưa hỗ trợ và kiểu sai; k
 - Location: `{ kind: 'catalog', placeId }` hoặc `{ kind: 'custom' }`. Activity không giữ tọa độ copy. Dùng Place lookup; tự nhập không được mang tọa độ/Place cũ. Schema thường kiểm tra cấu trúc, schema có catalog kiểm tra tham chiếu và tên. Consumer phải dùng kiểm tra có catalog khi nhận output generator/AI.
 - Place: `id`, `name`, `destinationId`, `coordinates: { latitude, longitude }`, `sources: [{ url, accessedOn }]`. Có nguồn không có nghĩa đã xác minh ngoài thực tế; #63 phụ trách kiểm chứng dữ liệu. Fixture trong test là test double, không dùng làm catalog sản phẩm.
 - Producer cấp ID ổn định trước khi lưu; contracts không tự sinh ID, timestamp hoặc thực hiện I/O. Tên được trim, độ dài theo Unicode code point của Zod. Ghi chú không trim để giữ nội dung người dùng.
+- Catalog metadata kế thừa Place ở schema riêng; [package catalog](../catalog/README.md) giữ dữ liệu, không đặt dữ liệu nguồn vào contracts. Dùng projection `getDalatPlaces()` cho consumer Place strict hiện tại.
 - Ngày/giờ giữ chuỗi nghiệp vụ; giờ trống là hai null. Không áp điều kiện ngày hiện tại lên chuyến đã lưu. Hoạt động trùng giờ vẫn hợp lệ nhưng có warning; đổi thứ tự không tự sửa giờ.
 - Chi phí/null và ngân sách/null theo phạm vi P0. `remainingVnd` âm khi vượt, null nếu chưa đặt; `overBudgetVnd` không âm hoặc null. `isComplete` chỉ nói đủ giá cho các hoạt động đang có, không xác nhận giá thật hay đủ mọi chi phí chuyến.
 - Chuyển hoạt động dùng bản sao, validate cả chuyến trước/sau; lỗi ngày đích đầy không làm mất hoạt động trong đầu vào. Chưa có repository hoặc store thứ hai trong package này.
