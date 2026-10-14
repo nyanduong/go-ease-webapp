@@ -188,3 +188,7 @@ pnpm dev:api
 ## Gemini backend (#72)
 
 Đã có adapter server-side và POST /v1/ai/itineraries, mặc định tắt. Gemini live Free tier đạt ngày 14/10/2026; [runbook và bằng chứng redacted](apps/api/GEMINI.md) ghi SHA, kết quả và giới hạn của ca nghiệm thu. Không bật billing. Runbook mô tả strict output, canonical catalog/chi phí, bearer nội bộ, timeout/cancel, quota lưu bền và harness live có opt-in. Không đưa provider key hoặc backend access token vào mobile/EXPO_PUBLIC_*. Chưa nối nút AI trên app hoặc mở HTTPS có phí; luồng mẫu local tiếp tục như cũ.
+
+## HTTPS demo nội bộ (#73)
+
+`pnpm demo:api` chạy phiên API loopback 3100 có mã truy cập 30 phút, allowlist và guards AI. [Runbook HTTPS](apps/api/HTTPS_DEMO.md) hướng dẫn Cloudflare Quick Tunnel tạm, URL public mobile, cấp mã phiên riêng, kiểm tra Expo Go và cách dừng. Về GoEase → Kiểm tra HTTPS API (dev) để kiểm tra health/catalog/QA AI; code chỉ trong RAM, không phải bearer backend. Không bật billing. Code/test đã chuẩn bị nhưng nghiệm thu HTTPS native còn thiếu do thao tác tunnel bị kiểm duyệt tự động chặn; #73 giữ mở, không ghi pass giả.

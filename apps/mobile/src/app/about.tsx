@@ -19,6 +19,7 @@ export default function AboutScreen() {
         <Text style={styles.text}>{SAMPLE_LABEL}</Text>
         {__DEV__ && <Link href="/storage-check" style={styles.text}>Kiểm tra lưu chuyến (dev)</Link>}
         {__DEV__ && <Link href="/catalog-check" style={styles.text}>Kiểm tra catalog API (dev)</Link>}
+        {__DEV__ && <Link href="/https-check" style={styles.text}>Kiểm tra HTTPS API (dev)</Link>}
       </ScrollView>
     </SafeAreaView>
   );

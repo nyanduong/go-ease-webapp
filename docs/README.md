@@ -20,3 +20,4 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 - [API NestJS local v1, catalog dùng chung và mobile fetch](../apps/api/README.md)
 
 - [Gemini backend: adapter, giới hạn và bằng chứng live](../apps/api/GEMINI.md)
+- [HTTPS demo nội bộ: mã phiên, Expo Go và cách dừng](../apps/api/HTTPS_DEMO.md)
