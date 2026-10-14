@@ -4,5 +4,5 @@
     "strict": true, "skipLibCheck": true, "types": [],
     "rootDir": "src/features/trips", "outDir": ".logic-tests"
   },
-  "include": ["src/features/trips/create-trip-controller.ts"]
+  "include": ["src/features/trips/*-controller.ts"]
 }

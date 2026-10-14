@@ -1,6 +1,6 @@
 # GoEase
 
-App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy, đọc lại/xóa có xác nhận. Chưa có màn chi tiết/sửa hoạt động, đăng nhập, API, AI hoặc bản đồ.
+App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy; xem theo ngày, thêm/sửa/xóa/đổi thứ tự/chuyển ngày hoạt động với draft Hủy/Lưu. Chưa có đăng nhập, API, AI hoặc bản đồ.
 
 Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
@@ -115,6 +115,7 @@ apps/mobile/
   src/app/_layout.tsx       # Layout Stack, safe area và status bar
   src/app/index.tsx         # Route Chuyến đi của tôi
   src/app/trips/new.tsx     # Route tạo chuyến
+  src/app/trips/[id].tsx    # Xem theo ngày và chỉnh hoạt động
   src/features/trips/       # Screens, form controller, UI và local-trip-store
   tests/                   # Test form/submit và lỗi lưu bằng Node
   src/app/about.tsx         # Điều hướng và quay lại
@@ -151,6 +152,8 @@ Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` ki�
 [Lưu chuyến khách trên máy](packages/trip-storage/README.md) mô tả repository, draft và lỗi dữ liệu. Mobile có `useLocalTrips()` dùng AsyncStorage chung cho form/danh sách. Trong Expo Go dev, vào Về GoEase → Kiểm tra lưu chuyến để chạy smoke với một chuyến QA riêng. `pnpm build:packages` build các package theo dependency; các lệnh root dev/typecheck/build gọi bước này tự động.
 
 [Bộ sinh lịch trình mẫu](packages/itinerary/README.md) trả Trip hợp lệ, nhãn mẫu, tổng chi phí và lỗi có mã. Form đã nối generator → repository; chỉ quay về danh sách sau khi lưu thành công. Xem [hướng dẫn thử luồng tạo chuyến](apps/mobile/README.md#thử-tạo-và-quản-lý-chuyến).
+
+[Lịch trình và chỉnh hoạt động](apps/mobile/README.md#thử-lịch-trình-và-chỉnh-hoạt-động) dùng cùng store và revision. Áp dụng hoạt động chỉ đổi draft; Lưu chuyến mới ghi lên máy. Giờ trùng nhau có cảnh báo; lỗi ghi giữ draft, revision khác chặn ghi đè. Phần ngân sách riêng và bản đồ tiếp tục theo Project.
 
 Không commit `.env`, credential Expo/Google hoặc thư mục `.expo`/`node_modules`/`dist`.
 

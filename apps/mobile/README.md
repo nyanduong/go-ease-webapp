@@ -1,6 +1,6 @@
 # GoEase mobile
 
-Expo SDK 57, React Native 0.86.3, React 19.2.3 và TypeScript. Expo Router có danh sách `/`, tạo chuyến `/trips/new` và `/about`; dùng safe area/scroll trên Android/iOS. Chuyến lưu cục bộ, chưa có backend.
+Expo SDK 57, React Native 0.86.3, React 19.2.3 và TypeScript. Expo Router có danh sách `/`, tạo chuyến `/trips/new`, lịch trình `/trips/[id]` và `/about`; dùng safe area/scroll trên Android/iOS. Chuyến lưu cục bộ, chưa có backend.
 
 ## Chạy từ root repository
 
@@ -21,13 +21,25 @@ Root cũng build `@goease/catalog`; màn Về GoEase đọc số địa điểm/
 
 1. Mở QR, danh sách rỗng hiện lời mời tạo chuyến. Bấm + Tạo chuyến.
 2. Nhập tên, ngày có thật dạng YYYY-MM-DD từ hôm nay theo múi giờ Đà Lạt, 1–5 ngày, 1–20 người. Điểm đến cố định Đà Lạt. Ngân sách là tổng nhóm: để trống là chưa đặt, 0 là đã đặt 0 VND; chỉ nhập chữ số, tối đa 1.000.000.000.
-3. Tạo chuyến 1 ngày rồi 5 ngày. Chỉ quay về danh sách khi lưu thành công. Nhãn mẫu và cảnh báo giờ/giá vẫn hiện sau khi đọc lại. Chưa có nút mở chi tiết; phần đó thuộc #67.
+3. Tạo chuyến 1 ngày rồi 5 ngày. Chỉ quay về danh sách khi lưu thành công. Nhãn mẫu và cảnh báo giờ/giá vẫn hiện sau khi đọc lại. Bấm Xem lịch trình để xem từng ngày.
 4. Đóng hẳn Expo Go, mở lại QR khi Metro vẫn chạy; cả hai chuyến phải còn. Dữ liệu thuộc thiết bị, không đồng bộ giữa các member.
 5. Bấm Xóa chuyến → Ở lại / Hủy: chuyến vẫn còn. Xóa → Xóa chuyến: chuyến mất khỏi danh sách và sau khi mở lại.
 6. Thử tên trống, ngày sai/quá khứ, số ngày 0/6, số người 0/21, ngân sách âm/phân cách/phần thập phân. Lỗi phải hiện tại trường tương ứng; thử cuộn khi bàn phím mở.
 7. Nhập rồi Hủy tạo chuyến: xác nhận Bỏ form mới thoát; Ở lại giữ nội dung. Android Back có cùng hành vi. iOS dùng nút Hủy, tắt vuốt quay lại tại form để tránh bỏ mất dữ liệu.
 
 Khi đọc lỗi, dùng Thử đọc lại; không giả danh sách rỗng hoặc ghi đè kho lỗi. Khi lưu lỗi, form và draft vẫn giữ để thử lại; không bấm xóa dữ liệu ứng dụng. Các tình huống lỗi transport/bấm tạo đồng thời được test tự động, không có nút giả lỗi trong UI sản phẩm.
+
+## Thử lịch trình và chỉnh hoạt động
+
+1. Tạo chuyến ít nhất 2 ngày → Xem lịch trình → chọn Ngày 1/2. Thứ tự hiển thị theo danh sách, không tự sắp theo giờ. Ngày trống có thông báo; ID chuyến không tồn tại có đường về danh sách.
+2. Chỉnh sửa lịch trình → Sửa một hoạt động. Nhập tên 1–120 ký tự, giờ HH:mm hoặc để trống cả cặp; kết thúc phải sau bắt đầu trong cùng ngày. Chi phí là tổng nhóm, số nguyên 0–100.000.000 VND, để trống là chưa biết; ghi chú tối đa 500 ký tự. Tổng chuyến tối đa 1 tỷ VND theo contracts.
+3. Áp dụng vào draft mới cập nhật bản đang chỉnh. Đưa lên/Đưa xuống giữ ID; Chuyển ngày đưa hoạt động xuống cuối ngày đích. Ngày tối đa 12 hoạt động; không tự bỏ hoạt động khi ngày đầy. Hai hoạt động trùng giờ có cảnh báo tên, vẫn cho phép giữ/lưu.
+4. Thêm hoạt động → chọn địa điểm trong danh mục hoặc Hoạt động tự nhập. Đổi địa điểm sẽ điền tên và bỏ giá cũ để nhập lại; giữ ghi chú để bạn tự kiểm tra. Hoạt động tự nhập không có tọa độ/pin. Bỏ form hoạt động có xác nhận và không đổi draft đã áp dụng trước đó.
+5. Xóa hoạt động có xác nhận, chỉ đổi draft. Hủy chỉnh sửa → Ở lại giữ draft; Bỏ thay đổi trả về bản đã lưu. Danh sách hoặc Android Back cũng cảnh báo nếu có draft thay đổi/form đang mở. iOS dùng Danh sách; vuốt quay lại bị tắt để tránh mất nội dung.
+6. Lưu chuyến chỉ bật khi đã áp dụng/bỏ form hoạt động. Lưu thành công mới ra khỏi chế độ chỉnh sửa. Đóng hẳn Expo Go rồi mở lại: nội dung, ngày và thứ tự phải giữ. Draft chưa lưu chỉ ở bộ nhớ, không khôi phục khi đóng hẳn app.
+7. Lỗi đọc/ghi giữ draft để thử Lưu lại. Khi revision đã đổi hoặc chuyến bị xóa, không ghi đè: giữ draft để đối chiếu, Hủy chỉnh sửa rồi mở lại bản mới. Không có thao tác ép lưu. Kho lỗi chặn ghi và giữ dữ liệu gốc.
+
+`edit-trip-controller.ts` xử lý validation/mutation và phiên chỉnh sửa trên `localTripStore` hiện có; không tạo kho thứ hai. Test controller gồm Hủy/Lưu, giữ ID/thứ tự/ngày, kho lỗi, save đồng thời, conflict và trường hợp native ghi thành công nhưng báo lỗi. Native smoke vẫn cần thử riêng Android/iPhone.
 
 iPhone thật cần đăng nhập cùng tài khoản trên CLI và Expo Go: `pnpm --dir apps/mobile exec expo login`. Dùng Camera iPhone mở QR. Android dùng Expo Go quét QR hoặc mở URL do Metro in ra. LDPlayer có thể thử bằng Expo Go Android tương thích; không mặc định ADB nhận LDPlayer và không suy kết quả iPhone từ LDPlayer.
 

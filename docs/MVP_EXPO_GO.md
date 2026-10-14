@@ -2,7 +2,7 @@
 
 Chuẩn triển khai cho [issue #61](https://github.com/nyanduong/go-ease-webapp/issues/61), ngày 14/10/2026: demo lập chuyến Đà Lạt trên Expo Go Android và iPhone. Người dùng tạo chuyến, sửa lịch trình mẫu, xem ngân sách nhóm, lưu trên máy và mở lại được. Đọc [wireframe và kịch bản demo](DEMO_FLOW.md) trước khi viết UI.
 
-Phạm vi chốt theo yêu cầu chủ repo để team bắt đầu triển khai; không ghi nhận các member khác đã duyệt hoặc tự đặt deadline. Đã có form tạo chuyến, sinh mẫu và danh sách lưu/xóa cục bộ; chi tiết/chỉnh sửa và các phần P0 tiếp theo vẫn cần triển khai. Các chức năng dưới đây là phạm vi đích.
+Phạm vi chốt theo yêu cầu chủ repo để team bắt đầu triển khai; không ghi nhận các member khác đã duyệt hoặc tự đặt deadline. Đã có form tạo chuyến, sinh mẫu, danh sách lưu/xóa cục bộ và xem/chỉnh lịch trình theo ngày; các phần P0 tiếp theo vẫn cần triển khai. Các chức năng dưới đây là phạm vi đích.
 
 ## Các mốc theo ưu tiên
 

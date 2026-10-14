@@ -40,6 +40,7 @@ export default function TripListScreen() {
           {budget.unknownCostCount > 0 && <Text style={styles.text}>Tổng chi phí chưa đầy đủ.</Text>}
           {trip.days.some((day) => day.activities.some((activity) => activity.costVnd !== null)) && <Text style={styles.text}>Chi phí là ước tính cho nhóm, chưa phải báo giá hoặc booking.</Text>}
           {budget.overBudgetVnd !== null && budget.overBudgetVnd > 0 && <Text style={styles.error}>Tổng tham khảo đã vượt ngân sách {budget.overBudgetVnd.toLocaleString('vi-VN')} đ.</Text>}
+          <Action title={`Xem lịch trình ${trip.name}`} disabled={busy} onPress={() => router.push({ pathname: '/trips/[id]', params: { id: trip.id } })} />
           <Action title={`Xóa chuyến ${trip.name}`} secondary disabled={!writable} onPress={() => { setDeleteError(''); setDeleting(item); }} />
         </View>;
       }} />
