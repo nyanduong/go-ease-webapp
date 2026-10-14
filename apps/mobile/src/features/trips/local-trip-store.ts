@@ -1,8 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createLocalTripRepository, createTripStore } from '@goease/trip-storage';
 import { useEffect, useSyncExternalStore } from 'react';
+import { createQaStorageTransport } from './qa-storage-controller';
 
-export const localTripRepository = createLocalTripRepository(AsyncStorage);
+const qaStorage = createQaStorageTransport(AsyncStorage, __DEV__);
+export const qaStorageControls = qaStorage.controls;
+export const localTripRepository = createLocalTripRepository(qaStorage.transport);
 export const localTripStore = createTripStore(localTripRepository);
 
 export function useLocalTrips() {

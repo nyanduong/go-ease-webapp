@@ -16,7 +16,7 @@ Chuyến đi của tôi → Tạo chuyến → Tạo và lưu thành công → L
                                                             ← Back
 ```
 
-Mọi đường rời lịch trình khi chưa lưu đều hỏi Lưu/Bỏ/Ở lại. Back từ Ngân sách về đúng ngày đang chọn. Back Android và gesture iOS theo cùng quy tắc với nút trên màn hình.
+Triển khai hiện tại (#67–#70): ngân sách là khối ngay trong lịch trình, không có route ngân sách riêng. Rời lịch trình khi dirty hỏi Bỏ thay đổi hoặc Ở lại; muốn lưu thì chọn Ở lại rồi Lưu chuyến. Android Back theo cùng quy tắc; gesture iOS bị tắt ở màn chỉnh sửa để tránh mất draft.
 
 ## Wireframe màn hình
 
@@ -121,14 +121,13 @@ Trong triển khai #68, E là khối ngay trên màn lịch trình C (có nhãn 
 ```text
 ┌────────────────────────────────────────┐
 │ Bạn có thay đổi chưa lưu               │
-│ Lưu trước khi rời lịch trình?          │
-│ [ Lưu và tiếp tục ]                    │
+│ Bỏ nội dung chưa lưu?                  │
 │ [ Bỏ thay đổi ]                        │
 │ [ Ở lại ]                              │
 └────────────────────────────────────────┘
 ```
 
-Lưu lỗi không rời màn. Bỏ dùng bản đã lưu; Ở lại giữ draft. Nếu nhấn Ngân sách thì tiếp tục đến E; nếu Back thì về A.
+Bỏ thay đổi dùng bản đã lưu; Ở lại giữ draft. Để lưu trước khi rời màn, chọn Ở lại → đóng/áp dụng form đang mở → Lưu chuyến → Danh sách. Lưu lỗi giữ draft trên màn để retry. Ngân sách E nằm cùng màn C; mở bản đồ đọc draft đã áp dụng và quay lại không bỏ draft.
 
 ## Kịch bản demo chính
 
@@ -154,9 +153,11 @@ Lưu lỗi không rời màn. Bỏ dùng bản đã lưu; Ở lại giữ draft.
 | Thiếu một giờ, giờ sai, kết thúc trước/bằng bắt đầu | Báo lỗi; hai giờ trống hợp lệ |
 | Trùng giờ hoặc chỉ chạm biên | Trùng cảnh báo nhưng lưu được; chạm biên không cảnh báo |
 | Chuyển ngày/đổi thứ tự, ngày đích đủ 12 | Giữ ID/nội dung; ngày đầy chặn chuyển; xóa hết cho ngày rỗng |
-| Hủy editor; Back/gesture dirty; ba lựa chọn F | Không mất draft ngoài ý muốn, Hủy không đổi bản lưu |
+| Hủy editor; Android Back / nút Danh sách dirty; hai lựa chọn F | Không mất draft ngoài ý muốn, Hủy không đổi bản lưu |
 | Double tap; lỗi đọc/ghi/xóa storage và retry | Không nhân đôi/thành công giả; giữ dữ liệu để retry |
 | Đóng app trước/sau Lưu | Trước: bản lưu gần nhất; sau: bản vừa lưu |
 | Bàn phím, chữ dài, cuộn, safe area | Nút/lỗi đọc và bấm được trên Android/iPhone |
 
 Ghi kết quả thực tế tại PR của #70: commit, Android/iOS, thiết bị thật hay emulator/simulator, OS, Expo Go, LAN/tunnel, ca đạt/lỗi, ảnh/log. Wireframe không thay chứng cứ nghiệm thu phần mềm.
+
+Bản hướng dẫn nghiệm thu triển khai hiện tại: [Checklist và biên bản #70](CORE_DEMO_QA.md). Các wireframe ở trên là ý tưởng ban đầu; tên nút và hành vi thực tế trong checklist được ưu tiên khi demo.
