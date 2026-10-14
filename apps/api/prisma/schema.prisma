@@ -20,6 +20,7 @@ model Place {
   version Int @default(1)
   enabled Boolean @default(true)
   activities TripActivity[]
+  revisions PlaceRevision[]
 }
 model CatalogAdmin {
   issuer String @db.VarChar(128)
@@ -29,6 +30,7 @@ model CatalogAdmin {
 }
 model PlaceRevision {
   placeId String @db.VarChar(80)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Restrict)
   version Int
   snapshot Json
   enabled Boolean
