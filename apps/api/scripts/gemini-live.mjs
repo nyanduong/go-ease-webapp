@@ -13,6 +13,7 @@ if (!process.argv.includes('--ack-one-call') || process.env.GEMINI_ENABLED !== '
 } else {
   let app;
   let upstreamStatus;
+  let rejectedFields;
   try {
     const config = readConfig(process.env);
     const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -20,7 +21,19 @@ if (!process.argv.includes('--ack-one-call') || process.env.GEMINI_ENABLED !== '
     if (execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim()) throw new Error();
     // Pass through to the real network; capture only the numeric status, never headers/body.
     const observedFetch = async (url, options) => {
-      const response = await fetch(url, options); upstreamStatus = response.status; return response;
+      const response = await fetch(url, options); upstreamStatus = response.status;
+      if (response.status === 400) {
+        const reader = response.clone().body.getReader(); let text = ''; let size = 0;
+        try {
+          while (size <= 8192) {
+            const chunk = await reader.read(); if (chunk.done) break;
+            size += chunk.value.byteLength; if (size <= 8192) text += new TextDecoder().decode(chunk.value);
+          }
+          // Only fixed field names may enter evidence; never raw provider messages.
+          rejectedFields = ['responseFormat', 'response_format', 'thinkingLevel', 'thinking_level', 'pattern', 'additionalProperties', 'minItems', 'maxItems'].filter((field) => text.includes(field));
+        } finally { void reader.cancel().catch(() => {}); reader.releaseLock(); }
+      }
+      return response;
     };
     ({ app } = await createApi(process.env, undefined, { fetcher: observedFetch })); await app.listen(0, '127.0.0.1');
     const response = await fetch(`${await app.getUrl()}/v1/ai/itineraries`, {
@@ -34,7 +47,7 @@ if (!process.argv.includes('--ack-one-call') || process.env.GEMINI_ENABLED !== '
       const data = aiItineraryResponseSchema.parse(body); evidence.passed = true;
       evidence.days = data.trip.days.length; evidence.placeIds = data.trip.days.flatMap((day) => day.activities.map((activity) => activity.location.kind === 'catalog' ? activity.location.placeId : 'invalid'));
       evidence.knownCostVnd = data.budget.knownCostVnd; evidence.unknownCostCount = data.budget.unknownCostCount;
-    } else evidence.errorCode = apiErrorResponseSchema.parse(body).error.code;
+    } else { evidence.errorCode = apiErrorResponseSchema.parse(body).error.code; evidence.rejectedFields = rejectedFields; }
     const path = join(resolve(config.GEMINI_STATE_DIR), `live-${randomUUID()}.json`);
     await writeFile(path, `${JSON.stringify(evidence, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
     console.info(`${evidence.passed ? 'LIVE PASS' : 'LIVE FAIL'}: evidence ${path}; đúng 1 HTTP attempt, không retry.`);
