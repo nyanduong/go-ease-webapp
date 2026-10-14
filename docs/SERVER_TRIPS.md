@@ -46,6 +46,8 @@ Tất cả route cần `Authorization: Bearer <access-token>` của chính ngư�
 
 Update/delete bắt buộc expectedVersion; stale version trả 409, đọc lại và cho người dùng quyết định. Header/children/version/receipt ghi trong một transaction, lỗi rollback toàn bộ. Lock theo tài khoản xử lý thao tác đồng thời. Deadline/cancel không thể bảo đảm hoàn tác một commit đã xảy ra nhưng mất phản hồi: giữ mutationId để retry/đối soát, không tạo ID mới.
 
+Receipt hết hạn được thu dọn ở lần ghi tiếp theo của tài khoản; chưa có job xóa theo lịch. Nếu tài khoản không ghi tiếp, snapshot receipt có thể còn trong DB lâu hơn 24 giờ. Mốc 24 giờ là cửa sổ replay, không phải cam kết xóa vật lý đúng hạn. Backup cũng có thể giữ dữ liệu cũ theo chính sách operator.
+
 MVP giới hạn 50 chuyến đang lưu, 200 ID đã sử dụng/tài khoản. Delete là tombstone, bỏ children nhưng giữ ID và metadata; receipt có thể còn snapshot đến khi hết retention. Không tuyên bố xóa vật lý mọi dữ liệu. Body trip tối đa 256 KiB; endpoint khác giữ 8 KiB. Không tự retry hoặc thay server bằng guest store khi lỗi.
 
 ## Pilot trên Expo Go
