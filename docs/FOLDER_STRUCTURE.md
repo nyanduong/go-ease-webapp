@@ -103,3 +103,7 @@ Trong mốc đầu, team chỉ cần mobile và các phần contracts thực s�
 ## API đã triển khai ở #71
 
 apps/api hiện có app factory NestJS, controller/service catalog, config validation, error filter và HTTP tests thật. packages/contracts/src/api.ts là DTO runtime dùng chung; mobile có client thuần và route dev catalog-check. [Hướng dẫn API hiện tại](../apps/api/README.md) là cấu trúc đã chạy; các phần DB/admin trong cây đích vẫn thuộc issue tiếp theo.
+
+## Adapter AI backend #72
+
+apps/api/src/ai gồm controller, service, Gemini transport, projection và quota filesystem private. request-signal.ts nối HTTP disconnect/deadline/shutdown với AbortSignal. packages/contracts/src/ai.ts có response DTO; helper giá catalogGroupCostVnd dùng chung với generator. apps/api/scripts/gemini-live.mjs chỉ chạy live có opt-in/config. [Chi tiết và blocker key/live](../apps/api/GEMINI.md).

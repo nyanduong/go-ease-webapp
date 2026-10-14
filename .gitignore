@@ -16,6 +16,7 @@ build/
 .expo/
 coverage/
 .logic-tests/
+.ai-runtime/
 __pycache__/
 *.pyc
 .DS_Store

@@ -184,3 +184,7 @@ pnpm dev:api
 [Hướng dẫn API, DTO/lỗi/config và kết nối Expo Go](apps/api/README.md) có ca thử success/error/retry. Mobile dev: Về GoEase → Kiểm tra catalog API; cấu hình EXPO_PUBLIC_API_BASE_URL trong apps/mobile/.env theo mẫu rồi restart Metro. Điện thoại dùng IPv4 LAN của máy API, API_HOST=0.0.0.0; tunnel Metro không tunnel API. Luồng chuyến vẫn dùng catalog local, không yêu cầu server.
 
 `pnpm build:api` build server; `pnpm test:api` chạy HTTP tests riêng. Root typecheck/lint/test/build và Quality Gate bao gồm API; root test còn gọi cùng client mobile đã biên dịch với server TCP thật trong Node. Build vẫn export Android/iOS/web. Chưa smoke màn API mới trên thiết bị; không coi Node HTTP/export là native evidence. Không nâng Expo Go hoặc thêm key cloud để chạy #71.
+
+## Gemini backend (#72)
+
+Đã có adapter server-side và POST /v1/ai/itineraries, mặc định tắt; chưa có key nên chưa test live và #72 còn mở. [Runbook Gemini](apps/api/GEMINI.md) mô tả strict output, canonical catalog/chi phí, bearer nội bộ, timeout/cancel, quota lưu bền và harness live có opt-in. Không đưa provider key hoặc backend access token vào mobile/EXPO_PUBLIC_*. Chưa nối nút AI trên app hoặc mở HTTPS có phí; luồng mẫu local tiếp tục như cũ.

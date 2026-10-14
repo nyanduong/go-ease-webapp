@@ -52,3 +52,7 @@ Hàm nhận dữ liệu JSON-compatible; không có cơ chế chạy code/getter
 Từ root: `pnpm install --frozen-lockfile`, `pnpm build:packages`, `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`. Root scripts/CI đã bao gồm package; mobile dùng shared SAMPLE_LABEL tại Về GoEase để kiểm tra nối workspace. Chưa có form #66 để gọi generator trên điện thoại.
 
 Test bao phủ 1–5 ngày, qua cuối năm, canonical refs/tọa độ, deterministic và không mutate, không lặp, giờ/thời lượng/overlap, input sai, catalog rỗng/ít/hỏng/không đủ địa điểm, giá null/0/tham khảo, ngân sách và giới hạn chi phí. Giá có số trong test là test double, không phải báo giá 15 địa điểm thật. Export bundle không thay kiểm thử UI native sau khi #66 triển khai.
+
+## Quy tắc giá dùng chung với AI
+
+catalogGroupCostVnd nhận CatalogEntry đã kiểm tra lại và số người 1–20: unknown → null, reference amount mỗi người × số người; trần 100 triệu/hoạt động. Generator mẫu và AI server dùng cùng helper, sau đó Trip schema kiểm tra tổng ≤1 tỷ và summarizeBudget tính lại. Không lấy giá từ LLM; giá reference chưa là báo giá/booking.
