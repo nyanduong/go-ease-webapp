@@ -1,1 +1,0 @@
-import '../.goease-ui-proof';

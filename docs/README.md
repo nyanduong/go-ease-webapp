@@ -1,0 +1,11 @@
+# GoEase khởi động lại với Expo Go
+
+Bộ tài liệu bàn giao cho team tự triển khai lại từ đầu, ngày 14/10/2026. Mốc đầu tiên là một luồng lập lịch trình chạy được trên Expo Go ở Android và iPhone. Chưa tạo source, cài dependency hoặc dựng dịch vụ mới.
+
+- [Công nghệ và tài liệu học](TECH_STACK.md)
+- [Cây thư mục đề xuất](FOLDER_STRUCTURE.md)
+- [Phạm vi và cách kiểm tra bản đầu](MVP_EXPO_GO.md)
+
+Giữ React Native + TypeScript + Expo cho app; NestJS cho backend; PostgreSQL + Prisma khi cần lưu dữ liệu tài khoản. Web admin React + Vite bổ sung sau luồng app chính. Team chọn phiên bản theo SDK Expo tương thích với Expo Go đang cài, commit lockfile và kiểm tra cả Android/iOS ngay từ đầu.
+
+Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã chạy. Bản thử Expo Go cần môi trường phát triển và kết nối tới Metro; bản cài độc lập sẽ là mốc đóng gói tiếp theo.

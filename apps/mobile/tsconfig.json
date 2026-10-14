@@ -1,9 +1,0 @@
-{
-  "extends": ["expo/tsconfig.base", "../../tsconfig.base.json"],
-  "compilerOptions": {
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "types": ["react", "react-native"]
-  },
-  "include": ["App.tsx", "index.ts", "src/**/*.ts"]
-}
