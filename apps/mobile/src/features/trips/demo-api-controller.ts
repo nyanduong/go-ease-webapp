@@ -1,5 +1,4 @@
 import { aiItineraryResponseSchema, apiErrorResponseSchema, catalogResponseSchema, healthResponseSchema, todayAtDestination } from '@goease/contracts';
-import { apiOrigin } from './catalog-api-controller.js';
 
 export class DemoApiError extends Error {
   constructor(readonly code: 'CONFIG' | 'NETWORK' | 'TIMEOUT' | 'CANCELLED' | 'HTTP' | 'INVALID_RESPONSE', message: string) { super(message); }
@@ -7,7 +6,12 @@ export class DemoApiError extends Error {
 export type DemoOperation = 'health' | 'catalog' | 'ai';
 export async function callDemoApi(base: string | undefined, token: string, operation: DemoOperation, options: { fetcher?: typeof fetch; signal?: AbortSignal; timeoutMs?: number } = {}) {
   let origin: string;
-  try { origin = apiOrigin(base); } catch { throw new DemoApiError('CONFIG', 'Cần cấu hình HTTPS API URL, không phải QR Metro.'); }
+  try {
+    if (!base) throw new Error();
+    const url = new URL(base);
+    if (url.protocol !== 'https:' || url.origin !== base || url.username || url.password) throw new Error();
+    origin = url.origin;
+  } catch { throw new DemoApiError('CONFIG', 'Cần cấu hình HTTPS API URL, không phải QR Metro.'); }
   if (!origin.startsWith('https://') || !/^[A-Za-z0-9_-]{22,64}$/.test(token) || !['health', 'catalog', 'ai'].includes(operation)) throw new DemoApiError('CONFIG', 'Cần HTTPS API URL và mã phiên demo hợp lệ từ người vận hành.');
   const ms = options.timeoutMs ?? 25000;
   if (!Number.isInteger(ms) || ms < 100 || ms > 30000) throw new DemoApiError('CONFIG', 'Timeout demo phải từ 100 đến 30000 ms.');
