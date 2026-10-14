@@ -27,10 +27,10 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
       setApiStatus(''); setReceipt(null);
       try {
         const response = await callDemoApi(process.env.EXPO_PUBLIC_API_BASE_URL, sessionCode, 'ai', { input: request, signal });
-        if (!signal.aborted && focused.current) setReceipt(response.requestId);
+        if (!signal.aborted) setReceipt(response.requestId);
         return response.data;
       } catch (error) {
-        if (!signal.aborted && focused.current && error instanceof DemoApiError) setApiStatus(error.message);
+        if (!signal.aborted && error instanceof DemoApiError) setApiStatus(error.message);
         throw error;
       }
     },
