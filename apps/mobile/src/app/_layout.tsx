@@ -12,6 +12,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="about" options={{ title: 'Về GoEase', headerBackTitle: 'Quay lại' }} />
         <Stack.Screen name="storage-check" options={{ title: 'Kiểm tra lưu chuyến', headerBackTitle: 'Quay lại' }} />
+        <Stack.Screen name="catalog-check" options={{ title: 'Kiểm tra catalog API', headerBackTitle: 'Quay lại' }} />
       </Stack>
     </SafeAreaProvider>
   );

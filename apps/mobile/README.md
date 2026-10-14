@@ -84,3 +84,7 @@ Khởi tạo từ `expo-template-default@sdk-57` chính thức, giữ LICENSE đ
 ## Nghiệm thu demo cốt lõi
 
 Theo [checklist #70](../../docs/CORE_DEMO_QA.md). Dev có nút arm lỗi đọc/ghi một lần tại Về GoEase → Kiểm tra lưu chuyến và banner nhắc lỗi trên các màn. Retry dùng AsyncStorage thật, không thay kho bằng mock. Bản production không cho arm lỗi và route QA chuyển về danh sách. Màn QA hiện OS/model/Expo Go/fontScale và log runtime khi mở; thông tin không có phải ghi chưa xác định.
+
+## Thử catalog API #71
+
+[Hướng dẫn API local](../api/README.md) mô tả env, IPv4 LAN và endpoint v1. Copy .env.example sang .env nếu chưa có, đặt EXPO_PUBLIC_API_BASE_URL theo máy API rồi restart Metro. Về GoEase → Kiểm tra catalog API (dev) → Tải / thử lại: thành công phải hiện 15 địa điểm, nguồn và tọa độ; API tắt phải báo lỗi, bật lại cho retry. QR tunnel Metro không tunnel backend. Route dev không ghi kho hoặc đổi catalog local của luồng chuyến, production redirect về danh sách. Màn mới chưa được native smoke; client đã kiểm tra qua HTTP thật trong Node.

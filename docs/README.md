@@ -16,3 +16,5 @@ Giữ React Native + TypeScript + Expo cho app; NestJS cho backend; PostgreSQL +
 Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã chạy. Bản thử Expo Go cần môi trường phát triển và kết nối tới Metro; bản cài độc lập sẽ là mốc đóng gói tiếp theo.
 
 - [Checklist và biên bản demo cốt lõi #70](CORE_DEMO_QA.md)
+
+- [API NestJS local v1, catalog dùng chung và mobile fetch](../apps/api/README.md)

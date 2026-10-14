@@ -9,12 +9,15 @@
     "dev:mobile": "pnpm build:packages && pnpm --filter @goease/mobile start",
     "dev:mobile:tunnel": "pnpm build:packages && pnpm --filter @goease/mobile start --tunnel",
     "dev:web": "pnpm build:packages && pnpm --filter @goease/mobile web",
+    "dev:api": "pnpm build:packages && pnpm --filter @goease/api dev",
+    "test:api": "pnpm build:packages && pnpm --filter @goease/api test",
+    "build:api": "pnpm build:packages && pnpm --filter @goease/api build",
     "check:docs": "python .github/scripts/check-docs.py",
     "check:expo": "pnpm --filter @goease/mobile exec expo install --check",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
-    "test": "pnpm -r --if-present test",
-    "build": "pnpm build:packages && pnpm --filter @goease/mobile build",
+    "test": "pnpm -r --if-present test && node --test tests/*.test.mjs",
+    "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build",
     "build:packages": "pnpm --filter @goease/contracts build && pnpm --filter @goease/catalog --filter @goease/trip-storage --filter @goease/itinerary build"
   }
 }

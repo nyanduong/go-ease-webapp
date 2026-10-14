@@ -1,6 +1,6 @@
 # GoEase
 
-App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy; xem/chỉnh theo ngày với draft Hủy/Lưu, ngân sách nhóm và bản đồ pin theo catalog. Chưa có đăng nhập, API hoặc AI online.
+App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy; xem/chỉnh theo ngày với draft Hủy/Lưu, ngân sách nhóm và bản đồ pin theo catalog. Có API NestJS local cho health/catalog dùng chung; chưa có đăng nhập, DB hoặc AI online.
 
 Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
@@ -111,6 +111,7 @@ git switch -c feat/nam-trip-detail
 ## Cấu trúc hiện tại
 
 ```text
+apps/api/                   # NestJS v1 health/catalog, config và HTTP tests
 apps/mobile/
   src/app/_layout.tsx       # Layout Stack, safe area và status bar
   src/app/index.tsx         # Route Chuyến đi của tôi
@@ -131,7 +132,7 @@ packages/trip-storage/     # Repository/store, revision và test lỗi/concurren
 packages/itinerary/        # Sinh mẫu 1–5 ngày từ catalog, nhãn và budget summary
 ```
 
-Chỉ thêm thư viện native có trong Expo Go cho mốc này. Dùng `pnpm --dir apps/mobile exec expo install <tên-package>` để Expo chọn phiên bản tương thích, rồi kiểm tra lockfile. Backend/admin sẽ được tạo khi team bắt đầu phần việc tương ứng.
+Chỉ thêm thư viện native có trong Expo Go cho mốc này. Dùng `pnpm --dir apps/mobile exec expo install <tên-package>` để Expo chọn phiên bản tương thích, rồi kiểm tra lockfile. API health/catalog đã có tại apps/api; DB/tài khoản/admin được làm ở các issue tiếp theo.
 
 ## Kiểm tra trước khi bàn giao
 
@@ -170,3 +171,16 @@ Lịch sử source cũ vẫn ở Git; các issue cũ đã xóa theo quyết đ�
 - [Hướng dẫn mobile và kiểm chứng](apps/mobile/README.md)
 
 [Checklist và biên bản bàn giao demo cốt lõi #70](docs/CORE_DEMO_QA.md): ca 1/5 ngày, lỗi storage một lần trong dev, retry, draft và cách ghi kết quả riêng từng nền tảng. Giữ nguyên lockfile và Expo Go đang tương thích; không nâng phiên bản chỉ để chạy checklist.
+
+## API NestJS local (#71)
+
+API v1 có GET /v1/health (chỉ tiến trình, chưa DB/Gemini) và GET /v1/catalog?destinationId=da-lat, dùng cùng contracts/15 địa điểm/nguồn với app. Từ root, chỉ copy env mẫu khi chưa có apps/api/.env:
+
+```powershell
+Copy-Item -LiteralPath apps/api/.env.example -Destination apps/api/.env
+pnpm dev:api
+```
+
+[Hướng dẫn API, DTO/lỗi/config và kết nối Expo Go](apps/api/README.md) có ca thử success/error/retry. Mobile dev: Về GoEase → Kiểm tra catalog API; cấu hình EXPO_PUBLIC_API_BASE_URL trong apps/mobile/.env theo mẫu rồi restart Metro. Điện thoại dùng IPv4 LAN của máy API, API_HOST=0.0.0.0; tunnel Metro không tunnel API. Luồng chuyến vẫn dùng catalog local, không yêu cầu server.
+
+`pnpm build:api` build server; `pnpm test:api` chạy HTTP tests riêng. Root typecheck/lint/test/build và Quality Gate bao gồm API; root test còn gọi cùng client mobile đã biên dịch với server TCP thật trong Node. Build vẫn export Android/iOS/web. Chưa smoke màn API mới trên thiết bị; không coi Node HTTP/export là native evidence. Không nâng Expo Go hoặc thêm key cloud để chạy #71.
