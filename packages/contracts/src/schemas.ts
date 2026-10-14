@@ -92,6 +92,7 @@ export function createTripInputSchemaFor(today: string) {
 
 export const tripSchema = z.strictObject({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  generationSource: z.enum(['sample', 'ai']).optional(),
   id: idSchema,
   ...tripInputShape,
   timeZone: z.literal(DESTINATION.timeZone),

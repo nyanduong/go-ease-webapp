@@ -13,7 +13,7 @@ export default function AboutScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text accessibilityRole="header" style={styles.title}>Đi cùng nhau, khám phá nhiều hơn.</Text>
         <Text style={styles.text}>GoEase hướng tới việc giúp nhóm bạn lên kế hoạch du lịch tại Việt Nam, chỉnh lịch trình và theo dõi ngân sách chung.</Text>
-        <Text style={styles.text}>Demo khách đã có tạo/xem/chỉnh chuyến, ngân sách nhóm và bản đồ địa điểm theo ngày, lưu trên thiết bị. Chưa có đăng nhập, đồng bộ hoặc AI online.</Text>
+        <Text style={styles.text}>Demo khách có tạo/xem/chỉnh chuyến, ngân sách nhóm và bản đồ theo ngày, lưu trên thiết bị. AI nội bộ cần phiên HTTPS được cấp phép; chưa có đăng nhập hoặc đồng bộ.</Text>
         <Text style={styles.text}>Demo tiếp theo: {DESTINATION.name}, 1–{TRIP_LIMITS.maxDays} ngày, tối đa {TRIP_LIMITS.maxPeople} người.</Text>
         <Text style={styles.text}>Catalog demo: {catalogSize} địa điểm. {CATALOG_INFO.label}</Text>
         <Text style={styles.text}>{SAMPLE_LABEL}</Text>

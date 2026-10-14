@@ -1,6 +1,6 @@
 import { getDalatPlaces } from '@goease/catalog';
 import { findTimeOverlaps, type Activity } from '@goease/contracts';
-import { SAMPLE_LABEL } from '@goease/itinerary';
+import { aiTripInput, tripSourceLabel } from '../ai-trip-controller';
 import { randomUUID } from 'expo-crypto';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -13,28 +13,30 @@ import { Action, ConfirmDialog, styles } from '../components/ui';
 import { BudgetSummary } from '../components/budget-summary';
 import { GroupBudgetEditor } from '../components/group-budget-editor';
 import { formatVnd } from '../budget-controller';
+import { AiPlanner } from '../components/ai-planner';
 
 type ActivityDraft = { id: string; dayId: string; editingId?: string; initial: ActivityForm };
 type Confirmation = 'leave' | 'cancel' | 'form' | { deleteId: string } | null;
 export default function TripDetailScreen() {
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const params = useLocalSearchParams<{ id?: string | string[]; newDraft?: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
-  return <TripDetailSession key={id} id={id} />;
+  return <TripDetailSession key={id} id={id} newDraft={params.newDraft === '1'} />;
 }
-function TripDetailSession({ id }: { id: string }) {
+function TripDetailSession({ id, newDraft }: { id: string; newDraft: boolean }) {
   const { state, actions } = useLocalTrips();
   const editor = useMemo(() => createTripEditor(localTripStore), []);
   const places = useMemo(() => getDalatPlaces(), []);
-  const [dayId, setDayId] = useState(''), [editing, setEditing] = useState(false);
+  const [dayId, setDayId] = useState(''), [editing, setEditing] = useState(() => newDraft && editor.adoptNew(id));
   const [form, setForm] = useState<ActivityDraft | null>(null), [moving, setMoving] = useState<string | null>(null);
   const [groupEditing, setGroupEditing] = useState(false);
   const [confirm, setConfirm] = useState<Confirmation>(null), [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false), savingRef = useRef(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const saved = state.trips.find((item) => item.trip.id === id);
   const trip = editing && editor.owns() ? state.draft!.trip : saved?.trip;
   const day = trip?.days.find((item) => item.id === dayId) ?? trip?.days[0];
-  const busy = saving || state.loadStatus === 'loading' || state.writeStatus === 'saving' || state.writeStatus === 'deleting';
+  const busy = saving || aiBusy || state.loadStatus === 'loading' || state.writeStatus === 'saving' || state.writeStatus === 'deleting';
   const leave = useCallback(() => { if (!editor.cancel()) return; if (router.canGoBack()) router.back(); else router.replace('/'); }, [editor]);
   const requestLeave = useCallback(() => {
     if (savingRef.current || busy) return;
@@ -61,7 +63,7 @@ function TripDetailSession({ id }: { id: string }) {
         {trip && day && <>
           <Text accessibilityRole="header" style={styles.heading}>{trip.name}</Text>
           <Text style={styles.text}>Đà Lạt · {trip.durationDays} ngày · {trip.people} người</Text>
-          <Text style={styles.text}>{SAMPLE_LABEL}</Text>
+          <Text style={styles.text}>{tripSourceLabel(trip)}</Text>
           <Text style={styles.text}>Giờ chỉ là gợi ý, chưa tối ưu tuyến hoặc tính thời gian di chuyển. Chi phí là ước tính tổng nhóm.</Text>
           <BudgetSummary trip={trip} draft={editing && editor.owns()} dayId={day.id} />
           {!editing ? <Action title="Chỉnh sửa lịch trình" disabled={busy || state.loadStatus !== 'ready' || !!state.issues.length || !!state.draft} onPress={() => {
@@ -74,10 +76,11 @@ function TripDetailSession({ id }: { id: string }) {
             }} />
             {(form || groupEditing) && <Text style={styles.text}>Áp dụng hoặc bỏ form đang mở trước khi lưu chuyến.</Text>}
             <Action title="Hủy chỉnh sửa" secondary disabled={busy} onPress={() => {
-              if (editor.dirty() || form || groupEditing) setConfirm('cancel'); else { editor.cancel(); setEditing(false); setMoving(null); setMessage('Đã hủy chỉnh sửa.'); }
+              if (editor.dirty() || form || groupEditing) setConfirm('cancel'); else { editor.cancel(); setEditing(false); setMoving(null); setMessage('Đã hủy chỉnh sửa.'); if (!saved) router.replace('/'); }
             }} />
           </>}
           {state.draft && !editor.owns() && <Text style={styles.error}>Có draft khác chưa xử lý. Quay lại màn đang chỉnh để lưu hoặc hủy.</Text>}
+          {__DEV__ && editing && editor.owns() && <AiPlanner input={aiTripInput(trip)} target={trip} disabled={!!form || groupEditing || saving} onBusy={setAiBusy} onApply={(updated) => editor.change(updated)} />}
           {message ? <Text accessibilityRole="alert" style={styles.text}>{message}</Text> : null}
           <Action title="Xem bản đồ ngày đang chọn" secondary disabled={busy || !!form || groupEditing} onPress={() => router.push({ pathname: '/trips/[id]/map', params: { id, dayId: day.id, mode: editing && editor.owns() ? 'draft' : 'saved' } })} />
           {editing && !form && !groupEditing && <Action title="Đổi ngân sách / số người" secondary disabled={busy} onPress={() => { setMoving(null); setGroupEditing(true); }} />}
@@ -116,7 +119,7 @@ function TripDetailSession({ id }: { id: string }) {
       onCancel={() => setConfirm(null)} onConfirm={() => {
         const action = confirm; setConfirm(null);
         if (action === 'leave') leave();
-        else if (action === 'cancel') { editor.cancel(); setEditing(false); setForm(null); setGroupEditing(false); setMoving(null); setMessage('Đã hủy; chuyến đã lưu được giữ nguyên.'); }
+        else if (action === 'cancel') { editor.cancel(); setEditing(false); setForm(null); setGroupEditing(false); setMoving(null); setMessage('Đã hủy; chuyến đã lưu được giữ nguyên.'); if (!saved) router.replace('/'); }
         else if (action === 'form') { setForm(null); setGroupEditing(false); }
         else if (action && trip) mutate(() => editor.change(removeActivity(trip, action.deleteId)));
       }} />

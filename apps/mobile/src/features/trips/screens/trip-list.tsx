@@ -1,4 +1,3 @@
-import { SAMPLE_LABEL } from '@goease/itinerary';
 import type { SavedTrip } from '@goease/trip-storage';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -7,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalTrips } from '../local-trip-store';
 import { Action, ConfirmDialog, styles } from '../components/ui';
 import { BudgetSummary } from '../components/budget-summary';
+import { tripSourceLabel } from '../ai-trip-controller';
 
 export default function TripListScreen() {
   const { state, actions } = useLocalTrips();
@@ -22,7 +22,7 @@ export default function TripListScreen() {
         <Text style={styles.text}>Chế độ khách · Lưu trên thiết bị này</Text>
         <Action title="+ Tạo chuyến" disabled={!writable} onPress={() => router.push('/trips/new')} />
         <Action title="Về GoEase" secondary onPress={() => router.push('/about')} />
-        <Text style={styles.text}>{SAMPLE_LABEL}</Text>
+        <Text style={styles.text}>Nguồn mẫu local hoặc đề xuất AI được ghi trên từng chuyến; hãy kiểm tra thông tin trước khi đi.</Text>
         <Text style={styles.text}>Giờ chỉ là gợi ý; chưa kiểm tra giờ mở cửa, thời gian di chuyển hoặc tối ưu tuyến.</Text>
         {(state.loadStatus === 'idle' || state.loadStatus === 'loading') && <ActivityIndicator accessibilityLabel="Đang đọc chuyến" />}
         {state.loadStatus === 'error' && <><Text accessibilityRole="alert" style={styles.error}>{state.readError?.message} {state.trips.length ? 'Danh sách bên dưới là dữ liệu lần đọc trước.' : ''}</Text><Action title="Thử đọc lại" onPress={() => { void actions.load(); }} /></>}
@@ -33,6 +33,7 @@ export default function TripListScreen() {
         const { trip } = item;
         return <View style={styles.card}>
           <Text accessibilityRole="header" style={{ ...styles.heading, fontSize: 21 }}>{trip.name}</Text>
+          <Text style={styles.text}>{tripSourceLabel(trip)}</Text>
           <Text style={styles.text}>Đà Lạt · {trip.startDate} → {trip.days.at(-1)?.date}</Text>
           <Text style={styles.text}>{trip.durationDays} ngày · {trip.people} người · {trip.days.reduce((sum, day) => sum + day.activities.length, 0)} hoạt động</Text>
           <BudgetSummary trip={trip} />

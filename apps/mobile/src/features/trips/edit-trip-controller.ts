@@ -51,7 +51,7 @@ export { moveActivity };
 
 // Own one editor session; never discard another screen's draft or bypass revisions.
 export function createTripEditor(store: ReturnType<typeof createTripStore>) {
-  let original: SavedTrip | null = null, attempted: Trip | null = null, busy = false;
+  let original: { trip: Trip; revision: number | null } | null = null, attempted: Trip | null = null, busy = false;
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const ownDraft = () => {
     const draft = store.getSnapshot().draft;
@@ -59,8 +59,14 @@ export function createTripEditor(store: ReturnType<typeof createTripStore>) {
   };
   return {
     begin(saved: SavedTrip) { store.beginEdit(saved); original = saved; attempted = null; },
+    adoptNew(id: string) {
+      const draft = store.getSnapshot().draft;
+      if (original) return original.revision === null && ownDraft()?.trip.id === id;
+      if (!draft || draft.baseRevision !== null || draft.trip.id !== id) return false;
+      original = { trip: draft.trip, revision: null }; attempted = null; return true;
+    },
     owns: () => ownDraft() !== null,
-    dirty: () => !!original && !!ownDraft() && !same(original.trip, ownDraft()!.trip),
+    dirty: () => !!original && !!ownDraft() && (original.revision === null || !same(original.trip, ownDraft()!.trip)),
     change(trip: Trip) { if (!ownDraft()) throw Error('Phiên chỉnh sửa không còn.'); store.changeDraft(trip); },
     cancel() {
       if (busy) return false;
@@ -75,8 +81,20 @@ export function createTripEditor(store: ReturnType<typeof createTripStore>) {
         const draft = ownDraft()!;
         if (!await store.load()) return { ok: false, message: 'Không đọc được kho chuyến. Draft vẫn giữ, hãy thử lưu lại.' };
         const snapshot = store.getSnapshot();
+        if (!ownDraft() || !same(ownDraft()!.trip, draft.trip)) return { ok: false, message: 'Draft đã đổi trong lúc kiểm tra lần lưu trước; chưa ghi thêm.' };
         if (snapshot.issues.length) return { ok: false, message: 'Kho có dữ liệu lỗi; giữ draft và tạm chặn ghi.' };
         const latest = snapshot.trips.find((item) => item.trip.id === original!.trip.id);
+        if (original.revision === null) {
+          if (latest) {
+            if (attempted && latest.revision === 1 && same(latest.trip, attempted) && same(draft.trip, attempted)) {
+              store.cancelDraft(); original = null; attempted = null; return { ok: true, message: 'Đã lưu chuyến mới.' };
+            }
+            return { ok: false, message: 'ID chuyến mới đã có trên máy; không ghi đè. Draft vẫn giữ.' };
+          }
+          attempted = draft.trip;
+          if (!await store.saveDraft()) return { ok: false, message: 'Chưa xác nhận lưu chuyến mới. Giữ draft để thử lưu lại.' };
+          original = null; attempted = null; return { ok: true, message: 'Đã lưu chuyến mới.' };
+        }
         if (!latest) return { ok: false, message: 'Chuyến đã bị xóa. Draft vẫn giữ; Hủy chỉnh sửa để quay về danh sách.' };
         if (latest.revision !== original.revision) {
           if (attempted && latest.revision === original.revision + 1 && same(latest.trip, attempted) && same(draft.trip, attempted)) {
