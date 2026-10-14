@@ -13,7 +13,7 @@ const configSchema = z.object({
   API_CORS_ORIGINS: z.string().default('').transform((value) => value ? value.split(',').map((item) => item.trim()) : []).pipe(z.array(origin).max(10)),
   GEMINI_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   GEMINI_MODEL: z.literal(GEMINI_MODEL).default(GEMINI_MODEL),
-  GEMINI_API_KEY: z.string().trim().max(256).default('').refine((value) => !value || /^[A-Za-z0-9_-]{20,256}$/.test(value)),
+  GEMINI_API_KEY: z.string().trim().max(256).default('').refine((value) => !value || /^[A-Za-z0-9_.-]{20,256}$/.test(value)),
   AI_ACCESS_TOKEN: z.string().trim().max(128).default('').refine((value) => !value || /^[A-Za-z0-9_-]{32,128}$/.test(value)),
   GEMINI_TIMEOUT_MS: integer(100, 20000, '4000'), GEMINI_MAX_OUTPUT_TOKENS: integer(512, 4096, '2048'),
   GEMINI_MAX_ATTEMPTS_PER_MINUTE: integer(1, 10, '2'), GEMINI_MAX_ATTEMPTS_PER_DAY: integer(1, 50, '5'),

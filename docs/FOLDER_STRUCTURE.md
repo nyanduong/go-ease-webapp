@@ -106,4 +106,4 @@ apps/api hiện có app factory NestJS, controller/service catalog, config valid
 
 ## Adapter AI backend #72
 
-apps/api/src/ai gồm controller, service, Gemini transport, projection và quota filesystem private. request-signal.ts nối HTTP disconnect/deadline/shutdown với AbortSignal. packages/contracts/src/ai.ts có response DTO; helper giá catalogGroupCostVnd dùng chung với generator. apps/api/scripts/gemini-live.mjs chỉ chạy live có opt-in/config. [Chi tiết và blocker key/live](../apps/api/GEMINI.md).
+apps/api/src/ai gồm controller, service, Gemini transport, projection và quota filesystem private. request-signal.ts nối HTTP disconnect/deadline/shutdown với AbortSignal. packages/contracts/src/ai.ts có response DTO; helper giá catalogGroupCostVnd dùng chung với generator. apps/api/scripts/gemini-live.mjs chỉ chạy live có opt-in/config. [Chi tiết và bằng chứng live](../apps/api/GEMINI.md).

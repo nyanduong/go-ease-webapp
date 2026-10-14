@@ -8,7 +8,7 @@ import { createApi } from '../dist/app.js';
 import { readConfig } from '../dist/config.js';
 import { AiQuota } from '../dist/ai/quota.js';
 import { GeminiProvider, geminiBody } from '../dist/ai/gemini.js';
-import { projectAiPlan } from '../dist/ai/projection.js';
+import { projectAiPlan, planJsonSchema } from '../dist/ai/projection.js';
 import { AiService } from '../dist/ai/service.js';
 import { addCalendarDays, aiItineraryResponseSchema, apiErrorResponseSchema, GEMINI_MODEL } from '@goease/contracts';
 import { getDalatCatalog } from '@goease/catalog';
@@ -116,7 +116,9 @@ test('Gemini adapter sends fixed model/structured schema/header key with no trip
   assert.equal(options.headers['x-goog-api-key'], KEY); assert.equal(options.redirect, 'error');
   assert.equal(url.includes(KEY), false); assert.equal(options.body.includes(KEY), false); assert.equal(options.body.includes(input.name), false);
   const request = JSON.parse(options.body); assert.equal(request.generationConfig.candidateCount, 1);
-  assert.equal(request.generationConfig.responseFormat.text.mimeType, 'application/json');
+  assert.equal(request.generationConfig.responseMimeType, 'application/json');
+  assert.deepEqual(request.generationConfig.responseJsonSchema, planJsonSchema(input, getDalatCatalog()));
+  assert.equal('responseFormat' in request.generationConfig, false);
   const prompt = JSON.parse(request.contents[0].parts[0].text);
   assert.equal('coordinates' in prompt.places[0], false); assert.equal('referenceCost' in prompt.places[0], false); assert.equal('tools' in request, false);
   const result = wire(validPlan(options.body)); result.candidates[0].content.parts[0].thoughtSignature = 'opaque-test-signature';
@@ -198,6 +200,14 @@ test('corrupt or missing initialized quota state fails closed instead of silentl
     finally { await next.close(); await rm(directory, { recursive: true, force: true }); }
   }
 });
+test('AI config accepts dotted provider keys while rejecting header injection', () => {
+  const dotted = `AQ.${'a'.repeat(50)}`;
+  assert.equal(readConfig({ ...settings, GEMINI_API_KEY: dotted }).GEMINI_API_KEY, dotted);
+  for (const value of [`${dotted}\r\nInjected: value`, `${dotted} value`, 'x'.repeat(257)]) {
+    assert.throws(() => readConfig({ ...settings, GEMINI_API_KEY: value }), /Invalid API config: GEMINI_API_KEY/);
+  }
+});
+
 test('AI config rejects arbitrary models/bad tokens and mismatched deadlines without printing supplied values', () => {
   for (const bad of [{ GEMINI_MODEL: 'proxy-model' }, { AI_ACCESS_TOKEN: 'short' }, { GEMINI_TIMEOUT_MS: '5000' }, { GEMINI_MAX_TOTAL_ATTEMPTS: '101' }, { GEMINI_MAX_OUTPUT_TOKENS: '1000000' }]) assert.throws(() => readConfig({ ...settings, ...bad }));
   assert.throws(() => readConfig({ ...settings, GEMINI_API_KEY: 'DO_NOT_LEAK !' }), (e) => !e.message.includes('DO_NOT_LEAK'));
