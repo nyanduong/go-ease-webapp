@@ -23,6 +23,8 @@
 
 ## Bằng chứng kiểm thử
 
+CI giữ dependency/lockfile hiện tại theo yêu cầu không nâng Expo. `pnpm check:expo` so phiên bản đã cài với `expo/bundledNativeModules.json` của SDK đã khóa và range Expo trong manifest; thiếu module/sai range vẫn fail. Không dùng EXPO_OFFLINE để bỏ validation. Bước này không kiểm tra bản vá upstream mới nhất; khi chủ repo chủ động cho nâng, kiểm tra riêng bằng `pnpm --filter @goease/mobile exec expo install --check` (có mạng) và nghiệm thu thiết bị lại. [Expo CLI](https://docs.expo.dev/more/expo-cli/) mô tả việc kiểm tra phiên bản; manifest local lấy từ package Expo đã cài. Đây là kiểm tra tương thích có thể lặp lại, không là chứng nhận mọi native runtime hoạt động.
+
 - Logic mobile dùng provider fixture **offline được ghi rõ**: 1/5 ngày review không ghi; validate sai request/catalog/price/time/budget/kind; lỗi, bấm lặp, hủy/response muộn, stale draft, apply xác nhận, ID/revision, save/reopen/source, lỗi đọc/ghi/ambiguous + retry không gọi AI thêm; cùng editor adopt draft mới, chỉnh và save/cancel.
 - Client tests dùng fetch doubles cho HTTPS-only, body người dùng, DTO/timeout/cancel/redaction và không fallback. Root integration chạy **Nest HTTP/TCP loopback thật**, cùng client/controller/repository, request 5 ngày/4 người/ngân sách 0, request ID, review → lưu/mở lại và auth lỗi. Transport shim chỉ đổi HTTPS test URL sang loopback HTTP; Google provider là double. **Không phải test TLS, native fetch hoặc Gemini live.**
 - Live #72 chỉ xác minh server-loopback Gemini một ngày trên SHA đã ghi ở [GEMINI.md](../apps/api/GEMINI.md). Không có Gemini call/quota mới ở #74; không sao chép chứng cứ đó thành pass mobile.

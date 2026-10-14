@@ -14,7 +14,7 @@
     "test:gemini:live": "pnpm build:api && pnpm --filter @goease/api test:gemini:live",
     "build:api": "pnpm build:packages && pnpm --filter @goease/api build",
     "check:docs": "python .github/scripts/check-docs.py",
-    "check:expo": "pnpm --filter @goease/mobile exec expo install --check",
+    "check:expo": "node .github/scripts/check-expo.cjs",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test && node --test tests/*.test.mjs",
