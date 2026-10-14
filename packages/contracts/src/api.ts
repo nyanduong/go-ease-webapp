@@ -7,7 +7,7 @@ export const catalogQuerySchema = z.strictObject({ destinationId: z.literal('da-
 export const healthResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION), service: z.literal('goease-api'),
   status: z.literal('ok'), scope: z.literal('process'),
-  dependencies: z.strictObject({ database: z.literal('not-configured'), gemini: z.enum(['not-configured', 'configured-unverified']) }),
+  dependencies: z.strictObject({ database: z.enum(['not-configured', 'configured-unverified']), gemini: z.enum(['not-configured', 'configured-unverified']) }),
 });
 export const catalogResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION),
@@ -24,6 +24,7 @@ export const apiErrorCodeSchema = z.enum([
   'AI_GUARD_UNAVAILABLE', 'AI_CANCELLED', 'AI_UPSTREAM_DENIED', 'AI_UPSTREAM_RATE_LIMITED',
   'AI_UPSTREAM_UNAVAILABLE', 'AI_OUTPUT_INVALID', 'AI_OUTPUT_TOO_LARGE',
   'AUTH_DISABLED', 'AUTH_NOT_CONFIGURED', 'AUTH_INVALID', 'AUTH_RATE_LIMITED', 'AUTH_BUSY', 'AUTH_UNAVAILABLE', 'AUTH_CANCELLED',
+  'TRIPS_DISABLED', 'TRIPS_NOT_CONFIGURED', 'DB_UNAVAILABLE', 'TRIP_CONFLICT', 'IDEMPOTENCY_CONFLICT', 'TRIP_LIMIT', 'TRIPS_CANCELLED',
 ]);
 export const apiErrorResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION), statusCode: z.number().int().min(400).max(599),

@@ -18,6 +18,8 @@ coverage/
 .logic-tests/
 .ai-runtime/
 .demo-runtime/
+.db-runtime/
+apps/api/src/generated/
 __pycache__/
 *.pyc
 .DS_Store

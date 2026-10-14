@@ -107,3 +107,7 @@ apps/api hiện có app factory NestJS, controller/service catalog, config valid
 ## Adapter AI backend #72
 
 apps/api/src/ai gồm controller, service, Gemini transport, projection và quota filesystem private. request-signal.ts nối HTTP disconnect/deadline/shutdown với AbortSignal. packages/contracts/src/ai.ts có response DTO; helper giá catalogGroupCostVnd dùng chung với generator. apps/api/scripts/gemini-live.mjs chỉ chạy live có opt-in/config. [Chi tiết và bằng chứng live](../apps/api/GEMINI.md).
+
+## PostgreSQL và chuyến riêng #76
+
+`prisma/schema.prisma`, `prisma/migrations/` và `prisma.config.ts` mô tả schema/migration; `src/trips.ts` chứa CRUD theo identity, transaction, version và idempotency. `scripts/db-local.mjs`, `db-tools.mjs`, `test-db.mjs` vận hành cluster riêng và test DB thật. Generated Prisma client trong `src/generated/prisma` bị Git ignore và được build tạo lại. `packages/contracts/src/server-trips.ts` dùng chung với client/pilot trong `apps/mobile/src/features/trips`. [Runbook](SERVER_TRIPS.md).

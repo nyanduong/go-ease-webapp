@@ -1,4 +1,5 @@
 import { authIdentityResponseSchema } from '@goease/contracts';
+import { callServerTripApi, ServerTripError, type ServerTripRequest } from './server-trip-controller';
 
 export interface RefreshStorage { get(): Promise<string | null>; set(value: string): Promise<void>; remove(): Promise<void> }
 export interface AuthPilotState { busy: boolean; phase: 'signed-out' | 'provider-verified' | 'backend-verified' | 'unverified'; userId: string | null; message: string }
@@ -13,6 +14,7 @@ export function authProject(url: string | undefined, key: string | undefined) {
 export function createAuthPilot(options: { url?: string; key?: string; storage: RefreshStorage; fetcher?: typeof fetch; now?: () => number; timeoutMs?: number; onChange?: (state: AuthPilotState) => void }) {
   let state: AuthPilotState = { busy: false, phase: 'signed-out', userId: null, message: 'Chưa có phiên được xác minh.' };
   let session: Session | null = null, epoch = 0, current: AbortController | null = null, pending: Promise<void> | null = null;
+  let verifiedBackend: string | null = null;
   const now = () => Math.floor((options.now ?? Date.now)() / 1000);
   const publish = (patch: Partial<AuthPilotState>) => { state = { ...state, ...patch }; options.onChange?.({ ...state }); };
   const erase = async () => { try { await options.storage.remove(); } catch { fail('Không xóa được credential trên thiết bị. Chưa thể xác nhận đăng xuất cục bộ.'); } };
@@ -58,7 +60,7 @@ export function createAuthPilot(options: { url?: string; key?: string; storage: 
   }
   function run(work: (signal: AbortSignal, generation: number) => Promise<void>, dropSession = true) {
     if (pending) return Promise.resolve(); // Serialize login/refresh/storage; double tap never sends twice.
-    if (dropSession) { session = null; publish({ phase: 'unverified', userId: null }); }
+    if (dropSession) { session = null; verifiedBackend = null; publish({ phase: 'unverified', userId: null }); }
     const generation = ++epoch, controller = new AbortController(); current = controller; publish({ busy: true, message: 'Đang xác minh…' });
     pending = (async () => {
       try { await work(controller.signal, generation); }
@@ -75,7 +77,7 @@ export function createAuthPilot(options: { url?: string; key?: string; storage: 
     session = next;
     publish({ phase: 'provider-verified', userId: id, message: 'Supabase đã xác minh user; chưa xác minh qua backend GoEase. Refresh credential đã lưu an toàn.' });
   }
-  function cancel() { epoch++; current?.abort(); session = null; publish({ phase: 'unverified', userId: null, message: 'Đã bỏ phiên RAM. Khôi phục cần được provider xác minh lại.' }); }
+  function cancel() { epoch++; current?.abort(); session = null; verifiedBackend = null; publish({ phase: 'unverified', userId: null, message: 'Đã bỏ phiên RAM. Khôi phục cần được provider xác minh lại.' }); }
   return {
     snapshot() { if (session && session.expires <= now()) { session = null; publish({ phase: 'unverified', userId: null, message: 'Access token hết hạn. Bấm Khôi phục để refresh/xác minh lại.' }); } return { ...state }; },
     cancel,
@@ -110,7 +112,18 @@ export function createAuthPilot(options: { url?: string; key?: string; storage: 
       const body = await request(origin.origin + '/v1/auth/me', { headers: { authorization: `Bearer ${active.access}`, accept: 'application/json' } }, signal);
       const identity = authIdentityResponseSchema.safeParse(body);
       if (!identity.success || identity.data.identity.id !== id || active.expires <= now() || generation !== epoch || signal.aborted) fail('Backend chưa xác minh đúng user/phiên hiện tại.');
-      publish({ phase: 'backend-verified', message: 'Backend GoEase đã xác minh đúng UUID qua Supabase. Chưa có đồng bộ chuyến.' });
+      verifiedBackend = origin.origin;
+      publish({ phase: 'backend-verified', message: 'Backend GoEase đã xác minh đúng UUID qua Supabase. Chuyến server cần thao tác đồng bộ riêng.' });
     }, false) },
+    async serverTrips(operation: ServerTripRequest) {
+      const active = session, backend = verifiedBackend, generation = epoch;
+      if (pending || !active || active.expires <= now() || !backend || state.phase !== 'backend-verified') throw new ServerTripError('AUTH_REQUIRED', 'Cần đăng nhập/khôi phục và xác minh backend trước thao tác chuyến server.');
+      const controller = new AbortController(); current = controller; publish({ busy: true });
+      const task = callServerTripApi(backend, active.access, operation, { ...(options.fetcher ? { fetcher: options.fetcher } : {}), signal: controller.signal });
+      pending = task.then(() => {}, () => {});
+      try { const result = await task; if (generation !== epoch || controller.signal.aborted || active.expires <= now()) throw new ServerTripError('CANCELLED', 'Phiên đã đổi; không áp dụng phản hồi. Đọc lại server để đối soát.'); return result; }
+      catch (error) { if (error instanceof ServerTripError && error.status === 401) { cancel(); await erase(); } throw error; }
+      finally { if (current === controller) { current = null; pending = null; publish({ busy: false }); } }
+    },
   };
 }
