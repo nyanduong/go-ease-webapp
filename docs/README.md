@@ -1,6 +1,6 @@
 # GoEase khởi động lại với Expo Go
 
-Bộ tài liệu bàn giao cho team tự triển khai lại từ đầu, ngày 14/10/2026. Mốc đầu tiên là một luồng lập lịch trình chạy được trên Expo Go ở Android và iPhone. Chưa tạo source, cài dependency hoặc dựng dịch vụ mới.
+Bộ tài liệu cho team phát triển lại GoEase, ngày 14/10/2026. Nền Expo + TypeScript đã có tại `apps/mobile`; xem [README root](../README.md) để cài dependency và chạy Expo Go. Mốc sản phẩm tiếp theo là luồng lập lịch trình trên Android và iPhone.
 
 - [Công nghệ và tài liệu học](TECH_STACK.md)
 - [Cây thư mục đề xuất](FOLDER_STRUCTURE.md)
