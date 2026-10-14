@@ -2,6 +2,8 @@
 
 App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Baseline có màn chào GoEase và màn Về GoEase bằng Expo Router. Chưa có đăng nhập, API, AI, bản đồ hoặc lưu chuyến.
 
+Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
+
 ## Member bắt đầu tại đây
 
 Mỗi member clone repo một lần, dùng tài khoản Expo riêng và làm trên branch riêng. App đã được khởi tạo: không chạy lại `create-expo-app`, không tạo Git repository con trong `apps/mobile`.
