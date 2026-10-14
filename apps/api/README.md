@@ -105,3 +105,7 @@ Tài liệu framework: [Nest controllers](https://docs.nestjs.com/controllers), 
 ## HTTPS demo #73
 
 Xem [HTTPS_DEMO.md](HTTPS_DEMO.md): phiên có mã truy cập 30 phút ở loopback 3100, tunnel tạm riêng với Metro, màn QA native và checklist còn thiếu. Không tunnel API dev thường port 3000; không bật billing. Code/test đã chuẩn bị, chưa ghi nghiệm thu HTTPS Android/iPhone.
+
+## Auth verifier spike #75
+
+GET /v1/auth/me nhận user access JWT, không query/userId/role, trả UUID/provider sau HTTPS xác minh trực tiếp với Supabase project cấu hình. Default tắt/thiếu cấu hình trả 503, không mock user; không thay bearer AI/mã demo hoặc public route của tunnel #73. [Cấu hình, giới hạn và nghiệm thu còn thiếu](../../docs/AUTH_SPIKE.md). Chưa có Supabase nên chưa live auth, native login/logout/restore hoặc dữ liệu chuyến server. Health process-only không chứng minh auth sẵn sàng.

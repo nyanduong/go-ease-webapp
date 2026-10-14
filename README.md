@@ -196,3 +196,7 @@ pnpm dev:api
 ## Tạo/chỉnh lịch trình AI trên Expo Go (#74)
 
 Form Tạo chuyến có lựa chọn AI nội bộ: nhập mã phiên, xác nhận gọi, xem trước rồi Lưu hoặc Sửa trước khi lưu trong editor hiện có. Chuyến đang sửa có Tạo lại bằng AI, yêu cầu xác nhận trước thay draft; lỗi giữ nội dung, không fallback mẫu hoặc retry ngầm. Chuyến lưu ghi nguồn sample/ai, chuyến cũ thiếu nguồn vẫn đọc được. AI nội bộ chỉ ở dev/Expo Go khi HTTPS được cấu hình; không nhúng key/token backend vào app, không bật billing. [Hướng dẫn và checklist còn chờ](docs/MOBILE_AI.md). #73/#74 chưa nghiệm thu HTTPS native; test doubles không phải Gemini live trên điện thoại.
+
+## Auth spike (#75)
+
+Chọn pilot email/password Supabase cho Expo Go, không dùng Expo login làm tài khoản GoEase hoặc hứa Google native OAuth chạy trong Expo Go. Backend có `/v1/auth/me` mặc định tắt, chỉ trả danh tính sau khi provider tin cậy xác minh token; không tin client userId/role. Chủ repo chưa có Supabase nên chưa triển khai auth mobile toàn bộ, login/logout/restore hoặc nhận sync chuyến riêng. [Quyết định, cấu hình và gate nghiệm thu](docs/AUTH_SPIKE.md). Không bật billing/tạo project hoặc thêm dependency; #75 giữ mở cho phiên thật hai nền tảng.

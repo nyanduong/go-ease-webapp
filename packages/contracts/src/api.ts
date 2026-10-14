@@ -23,6 +23,7 @@ export const apiErrorCodeSchema = z.enum([
   'AI_DISABLED', 'AI_NOT_CONFIGURED', 'AI_ACCESS_DENIED', 'AI_BUSY', 'AI_RATE_LIMITED', 'AI_BUDGET_EXCEEDED',
   'AI_GUARD_UNAVAILABLE', 'AI_CANCELLED', 'AI_UPSTREAM_DENIED', 'AI_UPSTREAM_RATE_LIMITED',
   'AI_UPSTREAM_UNAVAILABLE', 'AI_OUTPUT_INVALID', 'AI_OUTPUT_TOO_LARGE',
+  'AUTH_DISABLED', 'AUTH_NOT_CONFIGURED', 'AUTH_INVALID', 'AUTH_RATE_LIMITED', 'AUTH_BUSY', 'AUTH_UNAVAILABLE', 'AUTH_CANCELLED',
 ]);
 export const apiErrorResponseSchema = z.strictObject({
   apiVersion: z.literal(API_VERSION), statusCode: z.number().int().min(400).max(599),
@@ -30,3 +31,7 @@ export const apiErrorResponseSchema = z.strictObject({
 });
 export type CatalogResponse = z.infer<typeof catalogResponseSchema>;
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
+export const authIdentityResponseSchema = z.strictObject({
+  apiVersion: z.literal(API_VERSION), identity: z.strictObject({ id: z.uuid(), provider: z.literal('supabase') }),
+});
+export type AuthIdentityResponse = z.infer<typeof authIdentityResponseSchema>;
