@@ -50,6 +50,11 @@ REQUIRED = {
     'packages/itinerary/package.json',
     'packages/itinerary/src/index.ts',
     'packages/itinerary/tests/itinerary.test.mjs',
+    'apps/mobile/src/app/trips/new.tsx',
+    'apps/mobile/src/features/trips/create-trip-controller.ts',
+    'apps/mobile/src/features/trips/screens/new-trip.tsx',
+    'apps/mobile/src/features/trips/screens/trip-list.tsx',
+    'apps/mobile/tests/create-trip.test.cjs',
 }
 LINK = re.compile(r'!?\[[^\]\n]*\]\(([^\s)]+)\)')
 SECRETS = re.compile(
@@ -73,7 +78,7 @@ def check(root, tracked):
             continue
         if not path.is_file() or path.is_symlink():
             continue
-        if path.suffix.lower() not in {'.md', '.ts', '.tsx', '.js', '.mjs', '.json', '.yaml', '.yml', '.py', '.example'} and path.name not in {'.gitignore', '.node-version'}:
+        if path.suffix.lower() not in {'.md', '.ts', '.tsx', '.js', '.mjs', '.cjs', '.json', '.yaml', '.yml', '.py', '.example'} and path.name not in {'.gitignore', '.node-version'}:
             continue
         try:
             text = path.read_text(encoding='utf-8-sig')
