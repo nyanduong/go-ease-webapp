@@ -5,7 +5,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Text, TextInput, View } from 'react-native';
 import { createAiTripFlow } from '../ai-trip-controller';
-import { callDemoApi } from '../demo-api-controller';
+import { callDemoApi, DemoApiError } from '../demo-api-controller';
 import { localTripStore } from '../local-trip-store';
 import { BudgetSummary } from './budget-summary';
 import { Action, ConfirmDialog, styles } from './ui';
@@ -19,13 +19,20 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
 }) {
   const [code, setCode] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [operation, setOperation] = useState<'generate' | 'save' | null>(null), [receipt, setReceipt] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState('');
   const [confirm, setConfirm] = useState<'generate' | 'apply' | 'discard' | null>(null), [, refresh] = useState(0);
   const epoch = useRef(0), focused = useRef(false);
   const flow = useMemo(() => createAiTripFlow({ store: localTripStore, getCatalog: getDalatCatalog, newId: randomUUID, now: () => new Date(),
     request: async (request, signal, sessionCode) => {
-      const response = await callDemoApi(process.env.EXPO_PUBLIC_API_BASE_URL, sessionCode, 'ai', { input: request, signal });
-      if (!signal.aborted) setReceipt(response.requestId);
-      return response.data;
+      setApiStatus(''); setReceipt(null);
+      try {
+        const response = await callDemoApi(process.env.EXPO_PUBLIC_API_BASE_URL, sessionCode, 'ai', { input: request, signal });
+        if (!signal.aborted && focused.current) setReceipt(response.requestId);
+        return response.data;
+      } catch (error) {
+        if (!signal.aborted && focused.current && error instanceof DemoApiError) setApiStatus(error.message);
+        throw error;
+      }
     },
   }), []);
   const preview = flow.preview();
@@ -57,6 +64,7 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
     {busy && operation === 'save' && <Text style={styles.text}>Đang lưu trên thiết bị; không gọi Gemini thêm.</Text>}
     {message ? <Text accessibilityLiveRegion="polite" style={styles.text}>{message}</Text> : null}
     {receipt && <Text style={styles.text}>Mã phản hồi API gần nhất: {receipt}</Text>}
+    {apiStatus ? <Text accessibilityRole="alert" style={styles.error}>{apiStatus}</Text> : null}
     {preview && <>
       <Text style={styles.text}>{preview.label} · {preview.model} · Chưa lưu/thay draft</Text>
       <BudgetSummary trip={preview.trip} draft />
