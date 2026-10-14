@@ -41,6 +41,19 @@ Khi đọc lỗi, dùng Thử đọc lại; không giả danh sách rỗng hoặ
 
 `edit-trip-controller.ts` xử lý validation/mutation và phiên chỉnh sửa trên `localTripStore` hiện có; không tạo kho thứ hai. Test controller gồm Hủy/Lưu, giữ ID/thứ tự/ngày, kho lỗi, save đồng thời, conflict và trường hợp native ghi thành công nhưng báo lỗi. Native smoke vẫn cần thử riêng Android/iPhone.
 
+## Thử ngân sách nhóm
+
+Khối Ngân sách nhóm được tích hợp vào lịch trình, không mở route mới làm gián đoạn draft. Danh sách và lịch trình dùng cùng `BudgetSummary` → `budgetView` → `summarizeBudget` của contracts. Chi phí ngày là ngày đang chọn; toàn chuyến cộng mọi ngày. Nhãn Bản nháp/Đã lưu cho biết bản dữ liệu đang đọc. Form chưa Áp dụng không được tính vào draft.
+
+1. Chỉnh sửa lịch trình → Đổi ngân sách / số người. Thử ngân sách trống (chưa đặt), 0, 100000 và số người 5; Áp dụng ngân sách vào draft. Đổi số người không nhân/chia giá hoạt động. Hủy/Bỏ form có xác nhận; Lưu chuyến chỉ bật sau khi đóng form.
+2. Nhập một hoạt động 150000 VND và một hoạt động miễn phí 0 VND. Với ngân sách 100000, tổng đã biết 150.000 đ, vượt 50.000 đ; không nhân lên 5 lần. Khoản chưa có giá vẫn được đếm riêng, không hiển thị như miễn phí.
+3. Chuyển khoản 150000 sang ngày khác: tổng ngày nguồn/đích đổi, tổng chuyến không đổi. Sửa/xóa/thêm cập nhật ngay sau Áp dụng vào draft. Xóa khoản có giá cuối: tổng về 0, số khoản thiếu giá giữ đúng; xóa hết hoạt động: thông báo ngày/chuyến trống, không giữ tổng cũ.
+4. Ngân sách chưa đặt không có số còn/vượt. Tổng bằng ngân sách không cảnh báo vượt. Phần còn lại chỉ dựa vào chi phí đã biết và luôn nhắc chưa tính khoản thiếu giá; không hứa ngân sách chắc chắn đủ. Có đủ giá nhập vẫn là ước tính.
+5. Thử số người 0/21, tiền âm/lẻ/dấu phân cách/vượt 1 tỷ; phải có lỗi field. Chi phí hoạt động tối đa 100 triệu, tổng chuyến tối đa 1 tỷ theo contracts; vượt giới hạn chặn áp dụng và giữ dữ liệu trước đó. Tiền là số nguyên VND, không làm tròn để chấp nhận dữ liệu sai.
+6. Lưu → về danh sách → mở lại hoặc đóng/mở Expo Go: số người, ngân sách, tổng và số khoản thiếu giá phải thống nhất. Hủy chỉnh sửa phục hồi bản đã lưu. Lỗi ghi giữ draft để thử lại bằng cơ chế #67.
+
+`budget-controller.ts` chứa định dạng VND/view model và validation form nhóm; không cộng tiền hoặc lưu một kho riêng trong component. Test ngân sách gồm null/0/giới hạn, ngày trống, tổng sau chuyển/sửa/xóa, không nhân số người và Hủy/Lưu/lỗi ghi/reopen.
+
 iPhone thật cần đăng nhập cùng tài khoản trên CLI và Expo Go: `pnpm --dir apps/mobile exec expo login`. Dùng Camera iPhone mở QR. Android dùng Expo Go quét QR hoặc mở URL do Metro in ra. LDPlayer có thể thử bằng Expo Go Android tương thích; không mặc định ADB nhận LDPlayer và không suy kết quả iPhone từ LDPlayer.
 
 Nguồn: [Expo Go](https://expo.dev/go), [đăng nhập iPhone](https://docs.expo.dev/troubleshooting/expo-go-sign-in-required/), [kết nối Metro](https://docs.expo.dev/get-started/start-developing/).

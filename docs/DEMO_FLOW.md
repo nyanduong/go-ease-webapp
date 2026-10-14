@@ -97,6 +97,8 @@ Chọn Place dùng ID/tọa độ catalog, tên theo catalog; tự nhập không
 
 ### E Ngân sách nhóm
 
+Trong triển khai #68, E là khối ngay trên màn lịch trình C (có nhãn Đã lưu/Bản nháp) và bản tóm tắt tại danh sách A. Chọn ngày để đọc tổng ngày tương ứng; không mở route ngân sách riêng hoặc bỏ draft khi xem. Chỉnh sửa lịch trình → Đổi ngân sách / số người → Áp dụng ngân sách vào draft → Lưu chuyến để ghi. Wireframe dưới mô tả nội dung ngân sách, không phải một màn bắt buộc tách riêng.
+
 ```text
 ┌────────────────────────────────────────┐
 │ [Lịch trình]            Ngân sách nhóm │
@@ -112,7 +114,7 @@ Chọn Place dùng ID/tọa độ catalog, tên theo catalog; tự nhập không
 └────────────────────────────────────────┘
 ```
 
-Đọc bản chuyến đã lưu. Chưa đặt ngân sách thì không hiện còn/vượt. Ngân sách 0 và tổng > 0 báo vượt đúng chênh lệch; tổng bằng ngân sách không báo vượt. Nếu chưa có giá nào, hiện tổng đã biết 0 đ kèm số khoản chưa biết, không gọi chuyến miễn phí. Mỗi khoản là tổng nhóm, không nhân số người. Wireframe E là trạng thái trước thao tác chuyển ngày trong kịch bản dưới.
+Đọc bản chuyến đang hiển thị: draft đã áp dụng khi chỉnh sửa, bản đã lưu khi xem/danh sách. Chưa đặt ngân sách thì không hiện số còn/vượt. Ngân sách 0 và tổng > 0 báo vượt đúng chênh lệch; tổng bằng ngân sách không báo vượt. Nếu chưa có giá nào, hiện tổng đã biết 0 đ kèm số khoản chưa biết, không gọi chuyến miễn phí. Mỗi khoản là tổng nhóm, không nhân số người. Phần còn lại chưa tính khoản thiếu giá. Wireframe E là trạng thái trước thao tác chuyển ngày trong kịch bản dưới.
 
 ### F Rời lịch trình chưa lưu
 
@@ -135,8 +137,8 @@ Lưu lỗi không rời màn. Bỏ dùng bản đã lưu; Ở lại giữ draft.
 1. Mở project bằng Expo Go, A rỗng, chọn Tạo chuyến.
 2. Nhập “Đà Lạt cùng bạn”, 3 ngày, 4 người, ngân sách 3.000.000 VND. Tạo; sau lưu thành công có 3 ngày, 2 hoạt động mẫu/ngày, giá ban đầu chưa biết.
 3. Sửa giá hai hoạt động Ngày 1 thành 400.000 và 200.000 VND, sửa ghi chú. Đổi thứ tự, chuyển một hoạt động sang Ngày 2, thêm hoạt động tự nhập miễn phí 0 VND. Lưu.
-4. Mở Ngân sách: tổng đã biết 600.000 VND, còn trong mức đã đặt 2.400.000 VND, 4 hoạt động chưa có giá. Tổng không nhân lên 4 lần; tổng từng ngày phản ánh hoạt động đã chuyển.
-5. Back về ngày đang chọn. Đóng hẳn app rồi mở lại project: chuyến, thứ tự/ngày, giờ, ghi chú và tiền vẫn đúng, không có bản sao.
+4. Xem khối Ngân sách nhóm trên lịch trình: tổng đã biết 600.000 VND, còn theo chi phí đã biết 2.400.000 VND, 4 hoạt động chưa có giá. Tổng không nhân lên 4 lần; chọn qua các ngày để kiểm tra tổng sau chuyển hoạt động.
+5. Đóng hẳn app rồi mở lại project: chuyến, thứ tự/ngày, giờ, ghi chú và tiền vẫn đúng, không có bản sao.
 6. Về A, xóa rồi Hủy chứng minh chuyến còn. Xác nhận xóa: biến mất sau ghi thành công, mở lại vẫn rỗng.
 
 ## Ca biên và lỗi bắt buộc
