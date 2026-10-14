@@ -4,6 +4,7 @@ import { CATALOG_INFO } from '@goease/catalog';
 import { ApiFailure } from './errors.js';
 import { AiService } from './ai/service.js';
 import { AiController } from './ai/controller.js';
+import { AuthController } from './auth.js';
 
 export const CATALOG_LOADER = Symbol('CATALOG_LOADER');
 export type CatalogLoader = () => unknown | Promise<unknown>;
@@ -30,5 +31,5 @@ export class ApiController {
     return this.catalog.list();
   }
 }
-@Module({ controllers: [ApiController, AiController], providers: [CatalogService] })
+@Module({ controllers: [ApiController, AiController, AuthController], providers: [CatalogService] })
 export class ApiModule {}

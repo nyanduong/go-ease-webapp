@@ -22,3 +22,4 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 - [Gemini backend: adapter, giới hạn và bằng chứng live](../apps/api/GEMINI.md)
 - [HTTPS demo nội bộ: mã phiên, Expo Go và cách dừng](../apps/api/HTTPS_DEMO.md)
 - [Mobile AI: tạo, review, chỉnh/lưu và nghiệm thu còn chờ](MOBILE_AI.md)
+- [Auth spike: email/password Expo Go và backend xác minh](AUTH_SPIKE.md)

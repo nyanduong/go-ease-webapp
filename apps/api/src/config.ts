@@ -11,6 +11,10 @@ const configSchema = z.object({
   API_PORT: integer(1, 65535, '3000'), API_REQUEST_TIMEOUT_MS: integer(100, 30000, '5000'),
   API_RECEIVE_TIMEOUT_MS: integer(1000, 60000, '15000'),
   API_CORS_ORIGINS: z.string().default('').transform((value) => value ? value.split(',').map((item) => item.trim()) : []).pipe(z.array(origin).max(10)),
+  AUTH_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
+  SUPABASE_AUTH_URL: z.string().max(128).default('').refine((value) => !value || /^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(value)),
+  SUPABASE_PUBLISHABLE_KEY: z.string().max(256).default('').refine((value) => !value || /^sb_publishable_[A-Za-z0-9_-]{16,200}$/.test(value)),
+  AUTH_TIMEOUT_MS: integer(100, 10000, '3000'),
   GEMINI_ENABLED: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   GEMINI_MODEL: z.literal(GEMINI_MODEL).default(GEMINI_MODEL),
   GEMINI_API_KEY: z.string().trim().max(256).default('').refine((value) => !value || /^[A-Za-z0-9_.-]{20,256}$/.test(value)),
@@ -19,6 +23,7 @@ const configSchema = z.object({
   GEMINI_MAX_ATTEMPTS_PER_MINUTE: integer(1, 10, '2'), GEMINI_MAX_ATTEMPTS_PER_DAY: integer(1, 50, '5'),
   GEMINI_MAX_TOTAL_ATTEMPTS: integer(1, 100, '10'), GEMINI_STATE_DIR: z.string().trim().min(1).max(1024).default('.ai-runtime'),
 }).superRefine((value, ctx) => {
+  if (value.AUTH_ENABLED && value.SUPABASE_AUTH_URL && value.SUPABASE_PUBLISHABLE_KEY && value.AUTH_TIMEOUT_MS + 250 > value.API_REQUEST_TIMEOUT_MS) ctx.addIssue({ code: 'custom', path: ['AUTH_TIMEOUT_MS'], message: 'Auth deadline phải nhỏ hơn API deadline ít nhất 250 ms' });
   if (value.GEMINI_ENABLED && value.GEMINI_API_KEY && value.AI_ACCESS_TOKEN && value.GEMINI_TIMEOUT_MS + 250 > value.API_REQUEST_TIMEOUT_MS) ctx.addIssue({ code: 'custom', path: ['GEMINI_TIMEOUT_MS'], message: 'Provider deadline phải nhỏ hơn API deadline ít nhất 250 ms' });
 });
 export function readConfig(env: Record<string, string | undefined>) {
