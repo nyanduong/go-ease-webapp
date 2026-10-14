@@ -1,6 +1,6 @@
 # GoEase
 
-App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy; xem theo ngày, thêm/sửa/xóa/đổi thứ tự/chuyển ngày hoạt động với draft Hủy/Lưu. Chưa có đăng nhập, API, AI hoặc bản đồ.
+App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy; xem/chỉnh theo ngày với draft Hủy/Lưu, ngân sách nhóm và bản đồ pin theo catalog. Chưa có đăng nhập, API hoặc AI online.
 
 Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
@@ -115,7 +115,8 @@ apps/mobile/
   src/app/_layout.tsx       # Layout Stack, safe area và status bar
   src/app/index.tsx         # Route Chuyến đi của tôi
   src/app/trips/new.tsx     # Route tạo chuyến
-  src/app/trips/[id].tsx    # Xem theo ngày và chỉnh hoạt động
+  src/app/trips/[id]/index.tsx # Xem theo ngày và chỉnh hoạt động
+  src/app/trips/[id]/map.tsx   # Bản đồ native theo ngày, đọc saved/draft
   src/features/trips/       # Screens, form controller, UI và local-trip-store
   tests/                   # Test form/submit và lỗi lưu bằng Node
   src/app/about.tsx         # Điều hướng và quay lại
@@ -155,7 +156,9 @@ Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` ki�
 
 [Lịch trình và chỉnh hoạt động](apps/mobile/README.md#thử-lịch-trình-và-chỉnh-hoạt-động) dùng cùng store và revision. Áp dụng hoạt động chỉ đổi draft; Lưu chuyến mới ghi lên máy. Giờ trùng nhau có cảnh báo; lỗi ghi giữ draft, revision khác chặn ghi đè.
 
-[Ngân sách nhóm](apps/mobile/README.md#thử-ngân-sách-nhóm) hiển thị ngay trong lịch trình và danh sách: tổng đã biết, khoản thiếu giá, chênh lệch và tổng theo ngày. Chỉnh ngân sách/số người trong cùng draft; không nhân lại chi phí tổng nhóm. Bản đồ và nghiệm thu P0 tiếp tục theo Project.
+[Ngân sách nhóm](apps/mobile/README.md#thử-ngân-sách-nhóm) hiển thị ngay trong lịch trình và danh sách: tổng đã biết, khoản thiếu giá, chênh lệch và tổng theo ngày. Chỉnh ngân sách/số người trong cùng draft; không nhân lại chi phí tổng nhóm.
+
+[Bản đồ theo ngày](apps/mobile/README.md#thử-bản-đồ-theo-ngày) dùng react-native-maps 1.27.2 theo SDK 57. Mở từ lịch trình đã lưu hoặc draft đã áp dụng; pin chỉ lấy tọa độ canonical, hoạt động tự nhập không có pin. Browser chỉ có danh sách thay thế, không là bằng chứng bản đồ native. Nghiệm thu P0 và tích hợp API/AI tiếp tục theo Project.
 
 Không commit `.env`, credential Expo/Google hoặc thư mục `.expo`/`node_modules`/`dist`.
 

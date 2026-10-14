@@ -1,6 +1,6 @@
 # GoEase mobile
 
-Expo SDK 57, React Native 0.86.3, React 19.2.3 và TypeScript. Expo Router có danh sách `/`, tạo chuyến `/trips/new`, lịch trình `/trips/[id]` và `/about`; dùng safe area/scroll trên Android/iOS. Chuyến lưu cục bộ, chưa có backend.
+Expo SDK 57, React Native 0.86.3, React 19.2.3 và TypeScript. Expo Router có danh sách `/`, tạo chuyến `/trips/new`, lịch trình `/trips/[id]`, bản đồ `/trips/[id]/map` và `/about`; dùng safe area/scroll trên Android/iOS. Chuyến lưu cục bộ, chưa có backend.
 
 ## Chạy từ root repository
 
@@ -53,6 +53,19 @@ Khối Ngân sách nhóm được tích hợp vào lịch trình, không mở ro
 6. Lưu → về danh sách → mở lại hoặc đóng/mở Expo Go: số người, ngân sách, tổng và số khoản thiếu giá phải thống nhất. Hủy chỉnh sửa phục hồi bản đã lưu. Lỗi ghi giữ draft để thử lại bằng cơ chế #67.
 
 `budget-controller.ts` chứa định dạng VND/view model và validation form nhóm; không cộng tiền hoặc lưu một kho riêng trong component. Test ngân sách gồm null/0/giới hạn, ngày trống, tổng sau chuyển/sửa/xóa, không nhân số người và Hủy/Lưu/lỗi ghi/reopen.
+
+## Thử bản đồ theo ngày
+
+Thư viện `react-native-maps@1.27.2` đã đối chiếu với `expo/bundledNativeModules.json` của SDK 57 và [tài liệu Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/map-view/). Dùng provider mặc định Apple Maps trên iOS và Google Maps trên Android; Expo Go không cần cấu hình key riêng cho bước thử này. Bản binary riêng có quy trình key/provider khác trong tài liệu Expo, chưa cấu hình ở mốc này. Không thêm key, plugin Google Maps, billing hoặc quyền vị trí.
+
+1. Tạo/mở chuyến 2 ngày → Xem bản đồ ngày đang chọn. Nền bản đồ và pin phải tải thật trên Expo Go; kiểm tra riêng iPhone/Android, ghi OS, Expo Go và thiết bị. Browser chỉ hiện danh sách thay thế qua component `.tsx`, native dùng `.native.tsx`.
+2. Chọn Ngày 1/2. Pin/khung nhìn đổi theo tọa độ canonical từ catalog, không theo tên tự sửa. Bấm pin đọc tên địa điểm và các hoạt động. Cùng Place chỉ có một pin, danh sách giữ ID/thứ tự hoạt động. Khung 1 pin có độ zoom tối thiểu; nhiều pin có biên. Tải lại bản đồ / vừa khung pin để đưa camera về pin sau khi kéo/zoom.
+3. Trong draft, chuyển ngày hoặc thêm hoạt động rồi Áp dụng → mở bản đồ. Nhãn Bản nháp đã áp dụng, quay lại không hủy/ghi draft. Nút bản đồ bị tắt khi form hoạt động/ngân sách còn mở để tránh mất input chưa áp dụng. Map có chọn ngày riêng; quay lại giữ ngày của màn lịch trình.
+4. Hoạt động tự nhập hoặc Place không còn trong catalog: ghi rõ không có tọa độ/không tìm thấy, không đoán pin. Ngày rỗng/không có tọa độ không mount bản đồ hoặc dùng tâm giả. Chuyến/đường dẫn không tồn tại có đường quay lại, đọc lỗi có retry.
+5. Không yêu cầu quyền vị trí chỉ để xem pin; không hiện vị trí người dùng, không vẽ tuyến hay gọi Directions/Routes. Giữ logo/attribution provider, không che vùng bản đồ bằng lớp nút của app.
+6. Kiểm tra mạng yếu/tắt mạng: danh sách địa điểm vẫn đọc từ local; Tải lại remount native view. Sau 20 giây chưa có onMapReady sẽ báo chưa xác nhận sẵn sàng. onMapReady chỉ xác nhận view, không bảo đảm mọi tile đã tải; nếu nền trống vẫn dùng danh sách và kiểm tra provider/mạng. Boundary chỉ bắt lỗi render JavaScript, không thể bảo đảm bắt lỗi/crash SDK native. Không ghi runtime đạt từ bundle/export.
+
+`map-controller.ts` chiếu Trip + Place sang pin/danh sách không mutate dữ liệu. Có test ngày 0/1/nhiều pin, đổi ngày, Place lặp/mất, custom, camera bounds và catalog lỗi. Smoke provider Android và iPhone phải ghi riêng trong PR; thiếu nền tảng nào phải ghi đúng điều kiện còn thiếu.
 
 iPhone thật cần đăng nhập cùng tài khoản trên CLI và Expo Go: `pnpm --dir apps/mobile exec expo login`. Dùng Camera iPhone mở QR. Android dùng Expo Go quét QR hoặc mở URL do Metro in ra. LDPlayer có thể thử bằng Expo Go Android tương thích; không mặc định ADB nhận LDPlayer và không suy kết quả iPhone từ LDPlayer.
 
