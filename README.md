@@ -120,6 +120,7 @@ apps/mobile/
 docs/                      # Công nghệ, cây thư mục đích, phạm vi MVP
 pnpm-workspace.yaml
 pnpm-lock.yaml             # Một lockfile tại root
+packages/contracts/        # Schema/type, ngày/giờ/tiền và test nghiệp vụ dùng chung
 ```
 
 Chỉ thêm thư viện native có trong Expo Go cho mốc này. Dùng `pnpm --dir apps/mobile exec expo install <tên-package>` để Expo chọn phiên bản tương thích, rồi kiểm tra lockfile. Backend/admin sẽ được tạo khi team bắt đầu phần việc tương ứng.
@@ -131,10 +132,13 @@ pnpm check:docs
 pnpm check:expo
 pnpm typecheck
 pnpm lint
+pnpm test
 pnpm build
 ```
 
-Quality Gate chạy các lệnh trên và cài frozen lockfile. Build xuất JS/assets cho Android, iOS và web; không tạo APK/IPA hoặc chứng minh đã chạy trên điện thoại. Check mẫu credential không thay scanner secret chuyên dụng. Chưa có logic nghiệp vụ nên chưa có suite test nghiệp vụ; thêm test cùng tính năng thực.
+Quality Gate chạy các lệnh trên và cài frozen lockfile. `pnpm test` kiểm tra contracts nghiệp vụ qua Node test runner. Build biên dịch contracts rồi xuất JS/assets Android/iOS/web; không tạo APK/IPA hoặc chứng minh đã chạy trên điện thoại. Check mẫu credential không thay scanner secret chuyên dụng.
+
+Đọc [hướng dẫn contracts](packages/contracts/README.md) trước khi làm catalog/storage/form. Các lệnh root dev/typecheck/build tự build contracts; khi sửa package trong lúc Metro chạy, dùng lệnh watch trong hướng dẫn để cập nhật `dist`.
 
 Không commit `.env`, credential Expo/Google hoặc thư mục `.expo`/`node_modules`/`dist`.
 

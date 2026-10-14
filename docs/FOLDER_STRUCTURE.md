@@ -2,7 +2,7 @@
 
 Cấu trúc đích cho team khi tự tạo dự án mới. Chỉ tạo module khi có chức năng thực; đây là sơ đồ, chưa tạo scaffold rỗng.
 
-Nền mobile hiện có route tại `apps/mobile/src/app`, theo template Expo SDK 57. Phần `app/` trong sơ đồ dưới là nhóm route tương ứng; tiếp tục đặt route trong `src/app` của app hiện tại. API/web/contracts là cấu trúc đích, chưa được dựng lại. Xem [cây hiện tại](../README.md#cấu-trúc-hiện-tại).
+Nền mobile hiện có route tại `apps/mobile/src/app`, theo template Expo SDK 57. Phần `app/` trong sơ đồ dưới là nhóm route tương ứng; tiếp tục đặt route trong `src/app` của app hiện tại. [Contracts](../packages/contracts/README.md) đã có schema/type/logic và test; API/web vẫn là cấu trúc đích. Xem [cây hiện tại](../README.md#cấu-trúc-hiện-tại).
 
 ```text
 go-ease-webapp/
@@ -64,10 +64,12 @@ go-ease-webapp/
 ├── packages/
 │   └── contracts/                    # Type/schema/logic thuần dùng chung
 │       ├── src/
-│       │   ├── trip.ts
-│       │   ├── place.ts
+│       │   ├── calendar.ts           # Lịch và múi giờ điểm đến
+│       │   ├── schemas.ts            # Place, Activity, TripDay, Trip
 │       │   ├── itinerary.ts
 │       │   └── index.ts
+│       ├── tests/contracts.test.mjs
+│       ├── tsconfig.json
 │       └── package.json
 ├── docs/
 ├── .github/workflows/                # CI khi có source và scripts thật
