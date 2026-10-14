@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,11 +15,12 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Chào mừng đến với GoEase</Text>
             <Text style={styles.description}>Đây là bản khởi tạo. Các tính năng lập lịch trình và lưu chuyến sẽ được team phát triển tiếp.</Text>
           </View>
-          <Link href="/about" asChild>
-            <Pressable accessibilityRole="button" style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <Text style={styles.buttonText}>Về GoEase</Text>
-            </Pressable>
-          </Link>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/about')}
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <Text style={styles.buttonText}>Về GoEase</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
