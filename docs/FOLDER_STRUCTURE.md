@@ -114,7 +114,7 @@ apps/api/src/ai gồm controller, service, Gemini transport, projection và quot
 
 ## Mobile account #77
 
-Route `apps/mobile/src/app/account.tsx` mở màn tài khoản; `account-session.ts` nối Auth/SecureStore với lifecycle. `account-trip-controller.ts` quản lý state và draft/pending owner-bound, màn account và các component editor/new-trip dùng lại activity/budget/map logic. Namespace dữ liệu riêng tách khỏi kho guest. [Hướng dẫn và checklist native còn chờ](MOBILE_ACCOUNT_SYNC.md).
+Route `apps/mobile/src/app/account.tsx` mở màn tài khoản; `account-session.ts` nối Auth/SecureStore với lifecycle. `account-trip-controller.ts` quản lý state và draft/pending owner-bound, màn account và các component editor/new-trip dùng lại activity/budget/map logic. Namespace dữ liệu riêng tách khỏi kho guest. [Hướng dẫn và biên bản nghiệm thu native](MOBILE_ACCOUNT_SYNC.md).
 
 ## Web admin #78
 
