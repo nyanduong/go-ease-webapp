@@ -121,4 +121,4 @@ Không ghi nghiệm thu chỉ từ việc mở màn QA hoặc có hai user trên
 
 Không hứa JWT bị revoke tức thì: access JWT có thể còn tới exp, verifier giới hạn TTL tối đa 2 giờ. #76 phải thiết kế ownership/authorization và chốt revocation cho dữ liệu riêng; #75 chưa có dữ liệu server, RLS trip, admin, signup email/reset, Google/Apple OAuth hoặc web credential persistence.
 
-Mobile đã có màn tài khoản sản phẩm ở #77, tách riêng credential/persistence khỏi pilot dev mô tả ở trên. Xem [runbook mobile account](MOBILE_ACCOUNT_SYNC.md); native sync #77 chưa được nghiệm thu.
+Mobile đã có màn tài khoản sản phẩm ở #77, tách riêng credential/persistence khỏi pilot dev mô tả ở trên. Xem [runbook và biên bản nghiệm thu mobile account](MOBILE_ACCOUNT_SYNC.md): chủ repo xác nhận iPhone và LDPlayer đạt ngày 15/10/2026, với giới hạn bằng chứng ghi riêng.

@@ -50,7 +50,7 @@ Admin catalog vẫn là user bình thường đối với `/v1/trips`: chỉ đ�
 - Chuyến đã lưu giữ nguyên activity name/cost/notes. Update chuyến cho phép giữ tên cũ chỉ khi cùng activity ID và Place ID đã lưu trước; hoạt động mới cần tên canonical hiện tại. Place đã tắt vẫn đọc/map được cho lịch sử, nhưng không thêm tham chiếu mới vào chuyến. Disable không tự xóa hoặc đổi giá chuyến riêng.
 - Khi API đã cấu hình DB chuyến, GET `/v1/catalog` trả active DB entries; GET `/v1/catalog/places` trả cả active/disabled/version nhưng không actor/registry/history riêng. AI backend dùng active DB catalog; không có cuộc gọi Gemini trong nghiệm thu #78.
 - Kho tài khoản mobile tải `/v1/catalog/places` từ HTTPS backend đã verify, dùng active cho tạo/chọn Place và toàn bộ entries cho map lịch sử. Khi lỗi không lấy catalog bundled để giả làm live; bấm **Cập nhật catalog và xác minh lại phiên** để nhận sửa đổi. Backend luôn validate lại nếu catalog đổi giữa lúc xem và lưu.
-- Chế độ khách vẫn dùng bundled catalog offline, không tuyên bố tự đồng bộ catalog. AI guest/dev #74 validator vẫn theo bundled dataset: đề xuất dùng Place mới/đổi tên ngoài dataset có thể bị từ chối; không tự thay bằng mẫu. Nghiệm thu AI/mobile tích hợp còn chờ #73/#74/#77/#80, không dùng test web để chốt native.
+- Chế độ khách vẫn dùng bundled catalog offline, không tuyên bố tự đồng bộ catalog. AI guest/dev #74 validator vẫn theo bundled dataset: đề xuất dùng Place mới/đổi tên ngoài dataset có thể bị từ chối; không tự thay bằng mẫu. Nghiệm thu AI/mobile tích hợp còn chờ #73/#74/#80, không dùng test web để chốt native. Phần đăng nhập/đồng bộ chuyến #77 có [biên bản iPhone và LDPlayer riêng](MOBILE_ACCOUNT_SYNC.md), không thay thế nghiệm thu AI/catalog tích hợp.
 
 ## Phiên web và lỗi
 
