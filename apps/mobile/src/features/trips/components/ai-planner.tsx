@@ -2,13 +2,13 @@ import { getDalatCatalog } from '@goease/catalog';
 import type { CreateTripInput, Trip } from '@goease/contracts';
 import { randomUUID } from 'expo-crypto';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Text, TextInput, View } from 'react-native';
 import { createAiTripFlow } from '../ai-trip-controller';
 import { callDemoApi, DemoApiError } from '../demo-api-controller';
 import { localTripStore } from '../local-trip-store';
 import { BudgetSummary } from './budget-summary';
-import { Action, ConfirmDialog, styles } from './ui';
+import { Action, Badge, ConfirmDialog, Disclosure, styles } from './ui';
 
 export interface AiPlannerSession { discard: () => boolean; pending: () => boolean }
 export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onLock, register, disabled = false }: {
@@ -22,7 +22,7 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
   const [apiStatus, setApiStatus] = useState('');
   const [confirm, setConfirm] = useState<'generate' | 'apply' | 'discard' | null>(null), [, refresh] = useState(0);
   const epoch = useRef(0), focused = useRef(false);
-  const flow = useMemo(() => createAiTripFlow({ store: localTripStore, getCatalog: getDalatCatalog, newId: randomUUID, now: () => new Date(),
+  const [flow] = useState(() => createAiTripFlow({ store: localTripStore, getCatalog: getDalatCatalog, newId: randomUUID, now: () => new Date(),
     request: async (request, signal, sessionCode) => {
       setApiStatus(''); setReceipt(null);
       try {
@@ -34,7 +34,7 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
         throw error;
       }
     },
-  }), []);
+  }));
   const preview = flow.preview();
   useEffect(() => { onLock?.(preview !== null); }, [preview, onLock]);
   useEffect(() => { register?.({ discard: () => flow.discard(), pending: () => flow.preview() !== null }); return () => register?.(null); }, [flow, register]);
@@ -52,12 +52,12 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
     finally { if (!flow.busy()) { if (focused.current) { setBusy(false); setOperation(null); } onBusy?.(false); } }
   };
   const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.startsWith('https://') === true;
-  return <View style={styles.card}>
-    <Text accessibilityRole="header" style={styles.heading}>{target ? 'Tạo lại bằng AI' : 'Tạo bằng AI'}</Text>
-    <Text style={styles.text}>Phiên demo nội bộ. Mỗi lần gọi dùng quota Free tier; không tự retry hoặc đổi lỗi thành mẫu. Gemini key/bearer backend không nhập vào app. Kết quả phải được xem trước khi lưu/thay draft.</Text>
+  return <Disclosure title={target ? 'Gợi ý lại bằng Gemini' : 'Gợi ý bằng Gemini'} subtitle={preview ? 'Đã có đề xuất · Mở để xem và lưu' : busy ? 'Đang xử lý yêu cầu…' : 'Tùy chọn · Cần phiên AI nội bộ'}>
+    <Badge warm>Gemini · Free tier</Badge>
+    <Text style={styles.text}>Mỗi lần gọi dùng một lượt quota miễn phí. Xem trước kết quả rồi mới lưu hoặc thay lịch trình đang sửa.</Text>
     {!configured && <Text style={styles.text}>AI chưa được cấu hình HTTPS. Luồng mẫu local vẫn dùng được; xem runbook của team.</Text>}
-    <TextInput accessibilityLabel="Mã phiên AI nội bộ" placeholder="Mã phiên từ người vận hành" secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={64} value={code} editable={!busy} onChangeText={setCode} style={[styles.card, styles.text]} />
-    <Action title={busy ? 'Đang xử lý…' : preview ? 'Gọi AI lại (dùng thêm quota)' : 'Đề xuất lịch trình bằng AI'} disabled={busy || disabled || !configured || !input} onPress={() => setConfirm('generate')} />
+    <TextInput accessibilityLabel="Mã phiên AI nội bộ" placeholder="Mã phiên từ người vận hành" secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={64} value={code} editable={!busy} onChangeText={setCode} style={styles.input} />
+    <Action title={busy ? 'Đang xử lý…' : preview ? 'Gợi ý lại' : 'Đề xuất lịch trình'} icon="sparkles-outline" disabled={busy || disabled || !configured || !input} onPress={() => setConfirm('generate')} />
     {disabled && <Text style={styles.text}>Áp dụng/bỏ form hoạt động hoặc ngân sách đang mở và chờ thao tác lưu hoàn tất trước khi dùng AI.</Text>}
     {!input && <Text style={styles.text}>Nhập nhu cầu hợp lệ và ngày bắt đầu từ hôm nay trước khi gọi AI.</Text>}
     {busy && operation === 'generate' && <Action title="Hủy gọi AI" secondary onPress={() => { epoch.current++; flow.cancelRequest(); setBusy(flow.busy()); onBusy?.(flow.busy()); setMessage('Đã hủy yêu cầu; nội dung hiện tại vẫn giữ.'); }} />}
@@ -88,5 +88,5 @@ export function AiPlanner({ input, target, onApply, onSaved, onEdit, onBusy, onL
           setConfirm(null); refresh((old) => old + 1);
         } else { if (flow.discard()) setMessage('Đã bỏ đề xuất AI.'); setConfirm(null); refresh((old) => old + 1); }
       }} />
-  </View>;
+  </Disclosure>;
 }
