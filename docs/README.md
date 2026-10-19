@@ -26,3 +26,6 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 - [PostgreSQL, CRUD chuyến riêng, backup và pilot đồng bộ #76](SERVER_TRIPS.md)
 - [Đăng nhập sản phẩm và đồng bộ chuyến tài khoản #77](MOBILE_ACCOUNT_SYNC.md)
 - [Web admin catalog, quyền server và lịch sử Place #78](ADMIN_CATALOG.md)
+
+- [Dịch vụ ngoài: website tham khảo và giới hạn #79](PARTNER_SERVICES.md)
+- [Bàn giao, cấu hình và nghiệm thu còn lại #73–#80](MVP_HANDOFF.md)

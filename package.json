@@ -30,6 +30,7 @@
     "test:db": "pnpm build:api && pnpm --filter @goease/mobile exec tsc -p tsconfig.logic-tests.json && pnpm --filter @goease/api exec node scripts/test-db.mjs",
     "dev:admin": "pnpm build:packages && pnpm --filter @goease/web dev",
     "catalog:grant": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs grant",
-    "catalog:revoke": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs revoke"
+    "catalog:revoke": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs revoke",
+    "demo:readiness": "node .github/scripts/mvp-readiness.mjs"
   }
 }

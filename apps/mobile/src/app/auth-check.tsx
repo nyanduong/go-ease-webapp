@@ -38,8 +38,8 @@ function AuthCheck() {
     <Text accessibilityRole="header" style={styles.heading}>Kiểm tra tài khoản GoEase (dev)</Text>
     <Text style={styles.text}>Dùng hai user thử Supabase, khác tài khoản Expo và tài khoản quản trị. Email/mật khẩu chỉ gửi trực tiếp tới project Supabase qua HTTPS; không gửi mật khẩu tới backend GoEase.</Text>
     <Text style={styles.text}>Project: {process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'Chưa cấu hình'}</Text>
-    <TextInput accessibilityLabel="Email user thử GoEase" placeholder="Email user thử GoEase" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} maxLength={254} value={email} onChangeText={setEmail} editable={!state.busy} style={[styles.card, styles.text]} />
-    <TextInput accessibilityLabel="Mật khẩu user thử GoEase" placeholder="Mật khẩu user thử GoEase" secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={256} value={password} onChangeText={setPassword} editable={!state.busy} style={[styles.card, styles.text]} />
+    <TextInput accessibilityLabel="Email user thử GoEase" placeholder="Email user thử GoEase" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} maxLength={254} value={email} onChangeText={setEmail} editable={!state.busy} style={styles.input} />
+    <TextInput accessibilityLabel="Mật khẩu user thử GoEase" placeholder="Mật khẩu user thử GoEase" secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={256} value={password} onChangeText={setPassword} editable={!state.busy} style={styles.input} />
     <Action title="Đăng nhập user thử" disabled={state.busy} onPress={() => { const submitted = password; setPassword(''); void pilot.current!.login(email.trim(), submitted); }} />
     <Action title="Khôi phục / refresh và xác minh" secondary disabled={state.busy} onPress={() => { setPassword(''); void pilot.current!.restore(); }} />
     <Action title="Đăng xuất phiên này" secondary disabled={state.busy} onPress={() => { setEmail(''); setPassword(''); void pilot.current!.logout(); }} />

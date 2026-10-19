@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalTrips } from '../local-trip-store';
 import { projectDayMap, type DayMap } from '../map-controller';
 import DayMapCanvas from '../components/day-map';
-import { Action, styles } from '../components/ui';
+import { Action, Badge, colors, dateLabel, DayChip, Disclosure, Icon, SectionTitle, styles } from '../components/ui';
 
 export default function TripMapScreen() {
   const params = useLocalSearchParams<{ id?: string; dayId?: string; mode?: string }>();
@@ -23,32 +23,30 @@ function MapSession({ id, initialDayId, draftRequested }: { id: string; initialD
   return <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.page}>
     <Stack.Screen options={{ title: 'Bản đồ theo ngày', headerBackTitle: 'Lịch trình' }} />
     <ScrollView contentContainerStyle={styles.content}>
-      <Action title="Về lịch trình" secondary onPress={back} />
       {(state.loadStatus === 'idle' || state.loadStatus === 'loading') && <ActivityIndicator accessibilityLabel="Đang đọc chuyến" />}
       {state.loadStatus === 'error' && <><Text accessibilityRole="alert" style={styles.error}>{state.readError?.message}</Text><Action title="Thử đọc lại chuyến" onPress={() => { void actions.load(); }} /></>}
       {!trip && state.loadStatus === 'ready' && <Text style={styles.text}>Không tìm thấy chuyến. Chuyến có thể đã bị xóa hoặc đường dẫn không hợp lệ.</Text>}
       {trip && day && <>
-        <Text accessibilityRole="header" style={styles.heading}>{trip.name}</Text>
-        <Text style={styles.text}>Đang xem {draft ? 'bản nháp đã áp dụng' : 'bản đã lưu'} · Không sửa hoặc lưu chuyến tại bản đồ.</Text>
+        <Badge>{draft ? 'Bản nháp đã áp dụng' : 'Chuyến đã lưu'}</Badge><Text accessibilityRole="header" style={styles.heading}>{trip.name}</Text>
+        <Text style={styles.text}>Nhìn lại các điểm dừng chân trong ngày của bạn.</Text>
         {draftRequested && !draft && <Text style={styles.error}>Draft không còn; đang hiển thị bản đã lưu nếu có.</Text>}
-        <ScrollView horizontal contentContainerStyle={{ gap: 10 }}>{trip.days.map((item, index) => <Action key={item.id} title={`${item.id === day.id ? '✓ ' : ''}Ngày ${index + 1}`} secondary={item.id !== day.id} onPress={() => setDayId(item.id)} />)}</ScrollView>
-        <Text accessibilityRole="header" style={styles.heading}>{day.date}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>{trip.days.map((item, index) => <DayChip key={item.id} title={`Ngày ${index + 1}`} date={dateLabel(item.date).slice(0, 5)} selected={item.id === day.id} onPress={() => setDayId(item.id)} />)}</ScrollView>
         {projectionError && <Text accessibilityRole="alert" style={styles.error}>Không đọc được tọa độ/ngày từ dữ liệu hiện tại. Không vẽ pin thay thế; quay về lịch trình để kiểm tra.</Text>}
         {model && <>
           {model.region ? <DayMapCanvas key={`${model.dayId}:${JSON.stringify(model.pins)}`} model={model} /> : <Text style={styles.text}>{model.activityCount === 0 ? 'Ngày này chưa có hoạt động.' : 'Ngày này không có địa điểm có tọa độ để vẽ pin.'}</Text>}
-          <Text accessibilityRole="header" style={styles.heading}>Địa điểm trong ngày · {model.pins.length} pin</Text>
-          {model.pins.map((pin) => <View key={pin.placeId} style={styles.card}>
-            <Text style={{ ...styles.text, fontWeight: '700' }}>{pin.name}</Text>
-            {pin.activities.map((activity) => <Text key={activity.id} style={styles.text}>{activity.order}. {activity.name}</Text>)}
+          <SectionTitle title="Địa điểm trong ngày" subtitle={`${dateLabel(day.date)} · ${model.pins.length} điểm có tọa độ`} icon="location-outline" />
+          {model.pins.map((pin, index) => <View key={pin.placeId} style={[styles.card, { flexDirection: 'row', alignItems: 'flex-start', gap: 13 }]}>
+            <View style={{ backgroundColor: colors.mint, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}><Text style={[styles.label, { color: colors.tealDark }]}>{index + 1}</Text></View><View style={{ flex: 1, gap: 6 }}><Text style={styles.sectionTitle}>{pin.name}</Text>
+            {pin.activities.map((activity) => <Text key={activity.id} style={styles.caption}>{activity.order}. {activity.name}</Text>)}</View>
           </View>)}
           {model.unlocated.map((activity) => <View key={activity.id} style={styles.card}>
-            <Text style={styles.text}>{activity.order}. {activity.name}</Text>
-            <Text style={styles.text}>{activity.reason === 'custom' ? 'Hoạt động tự nhập: không có tọa độ, không vẽ pin.' : 'Không tìm thấy Place trong catalog hiện tại: không vẽ pin thay thế.'}</Text>
+            <View style={styles.row}><Icon name="location-outline" color={colors.muted} /><Text style={[styles.sectionTitle, { flex: 1 }]}>{activity.order}. {activity.name}</Text></View>
+            <Text style={styles.caption}>{activity.reason === 'custom' ? 'Hoạt động tự nhập · Chưa có tọa độ' : 'Địa điểm không còn trong danh mục · Chưa có tọa độ'}</Text>
           </View>)}
-          <Text style={styles.text}>Các hoạt động cùng Place dùng chung một pin; thứ tự ở danh sách theo lịch trình. Không vẽ tuyến, ước tính khoảng cách hoặc thời gian di chuyển.</Text>
-          <Text style={styles.text}>Tọa độ từ catalog có nguồn. Giữ nguyên logo/attribution của provider trên bản đồ.</Text>
+          <Disclosure title="Thông tin bản đồ"><Text style={styles.text}>Các hoạt động cùng địa điểm dùng chung một pin; thứ tự ở danh sách theo lịch trình. Bản đồ chưa vẽ tuyến hoặc tính thời gian di chuyển.</Text><Text style={styles.caption}>Tọa độ từ danh mục có nguồn. Xem tên nhà cung cấp và thông tin ghi công ngay trên bản đồ.</Text></Disclosure>
         </>}
       </>}
+      <Action title="Về lịch trình" secondary icon="arrow-back" onPress={back} />
     </ScrollView>
   </SafeAreaView>;
 }

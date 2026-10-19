@@ -32,7 +32,7 @@ function HttpsCheck() {
     <Text accessibilityRole="header" style={styles.heading}>Kiểm tra HTTPS API (dev)</Text>
     <Text style={styles.text}>API: {process.env.EXPO_PUBLIC_API_BASE_URL ?? 'Chưa cấu hình'}</Text>
     <Text style={styles.text}>Mã phiên 30 phút do người vận hành cấp, không phải Gemini key hoặc bearer backend. Chỉ giữ trong RAM; rời màn/đưa app xuống nền sẽ xóa mã. QR Metro chỉ tải app.</Text>
-    <TextInput accessibilityLabel="Mã phiên demo" placeholder="Mã phiên demo" secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={64} value={code} onChangeText={setCode} editable={!busy} style={[styles.card, styles.text]} />
+    <TextInput accessibilityLabel="Mã phiên demo" placeholder="Mã phiên demo" secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={64} value={code} onChangeText={setCode} editable={!busy} style={styles.input} />
     <Action title="Kiểm tra HTTPS health" disabled={busy} onPress={() => { void run('health'); }} />
     <Action title="Tải catalog HTTPS" disabled={busy} onPress={() => { void run('catalog'); }} />
     <Action title="Thử Gemini thật (dùng 1 lượt quota)" disabled={busy} onPress={() => setConfirm(true)} />
