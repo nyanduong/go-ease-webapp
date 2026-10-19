@@ -8,7 +8,7 @@ export function Brand() {
       className="flex shrink-0 items-center gap-2 text-2xl font-extrabold tracking-tight text-teal-dark"
       aria-label="GoEase — Trang chủ"
     >
-      <img src="/logo.png" alt="" width="38" height="38" />
+      <img src="/icons/favicon-round.svg" alt="" width="38" height="38" />
       <span>
         GoEase
         <small className="block text-xs font-normal tracking-normal text-amber-800 italic">

@@ -80,6 +80,7 @@ async function setup(options = {}) {
     shortSession: false,
     refreshes: [],
     rejectRefresh: false,
+    backendUnavailable: false,
     refreshBusy: 0,
     maxRefreshBusy: 0,
   };
@@ -178,6 +179,8 @@ async function setup(options = {}) {
       method = request.method();
     if (method === 'OPTIONS') return reply(route, {});
     const owner = request.headers().authorization === 'Bearer ' + tokens.B ? 'B' : 'A';
+    if (url.pathname === '/v1/auth/me' && state.backendUnavailable)
+      return fail(route, 503, 'AUTH_UNAVAILABLE');
     if (url.pathname === '/v1/auth/me')
       return reply(route, {
         apiVersion: '1',
@@ -886,4 +889,32 @@ test('a revoked refresh token requires Google login and clears persistent creden
     0,
   );
   await finish(f, 'revoked-session');
+});
+
+test('online backend outage preserves login, reports server failure and recovers on retry or reconnect', async () => {
+  const f = await setup(),
+    { page, context, state } = f;
+  await login(page, '/account');
+  state.backendUnavailable = true;
+  await page.reload();
+  assert.equal(await page.evaluate(() => navigator.onLine), true);
+  await page.getByRole('heading', { name: 'Chưa kết nối được máy chủ', exact: true }).waitFor();
+  assert.equal(await page.getByRole('navigation').count(), 0);
+  assert.equal(
+    await page.evaluate(
+      () => Object.keys(localStorage).filter((key) => key.endsWith('.session')).length,
+    ),
+    1,
+  );
+  state.backendUnavailable = false;
+  await page.getByRole('button', { name: 'Thử kết nối lại', exact: true }).click();
+  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole('heading', { name: 'Đang chờ kết nối', exact: true }).waitFor();
+  await context.setOffline(false);
+  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+  assert.equal(state.authorize.length, 1, 'Recovery must reuse the saved session');
+  assert.equal(state.writes.length, 0);
+  await finish(f, 'server-reconnect');
 });

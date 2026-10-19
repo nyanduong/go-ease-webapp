@@ -5,18 +5,34 @@ import { accountSession, useAccount } from './session';
 
 export function LoginPage() {
   const { session, hasSavedSession } = useAccount();
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
   if (hasSavedSession)
     return (
       <main className="flex min-h-dvh items-center justify-center bg-cream px-6">
         <section className="flex w-full max-w-md flex-col gap-6 rounded-3xl border border-line bg-paper p-8">
           <Brand />
           <PageTitle eyebrow="GoEase">
-            {session.busy ? 'Đang mở lại tài khoản…' : 'Đang chờ kết nối'}
+            {session.busy
+              ? 'Đang mở lại tài khoản…'
+              : online
+                ? 'Chưa kết nối được máy chủ'
+                : 'Đang chờ kết nối'}
           </PageTitle>
           <p className="text-muted">
             {session.busy
               ? 'Bạn không cần đăng nhập lại. GoEase đang kiểm tra phiên đã lưu.'
-              : 'Sẽ tự kết nối lại khi có mạng. Bạn không cần đăng nhập Google lại vì lỗi kết nối tạm thời.'}
+              : online
+                ? 'Máy chủ GoEase chưa phản hồi. Hệ thống sẽ tự thử lại và giữ phiên đăng nhập của bạn.'
+                : 'Sẽ tự kết nối lại khi có mạng. Bạn không cần đăng nhập Google lại vì lỗi kết nối tạm thời.'}
           </p>
           {!session.busy && (
             <Button

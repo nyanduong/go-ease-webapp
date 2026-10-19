@@ -16,7 +16,7 @@ function customerPwa(): Plugin {
     },
     async closeBundle() {
       const files = (await readdir(output, { recursive: true }))
-        .filter((file) => /\.(html|js|css|png|webmanifest)$/.test(file) && file !== 'sw.js')
+        .filter((file) => /\.(html|js|css|png|svg|webmanifest)$/.test(file) && file !== 'sw.js')
         .sort();
       const hash = createHash('sha256');
       for (const file of files) {
