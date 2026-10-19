@@ -2,7 +2,6 @@ import { ProfileCard } from './profile-card';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Brand, Notice, PageTitle } from '../../components/ui';
 import { accountSession, useAccount } from './session';
-import { PwaStatus } from '../../platform/pwa';
 
 export function LoginPage() {
   const { session, hasSavedSession } = useAccount();
@@ -42,58 +41,106 @@ export function LoginPage() {
       </main>
     );
   return (
-    <main className="grid min-h-dvh bg-cream lg:grid-cols-2">
-      <section className="relative hidden bg-[url('/dalat-illustration.png')] bg-cover bg-center p-12 lg:flex lg:items-end">
-        <div className="rounded-3xl bg-cream/95 p-8">
-          <h1 className="text-4xl">
-            Một kế hoạch,
-            <br />
-            cả nhóm cùng đi.
-          </h1>
-          <p className="mt-4 max-w-md text-muted">
-            Lên lịch trình Đà Lạt, dự toán chi phí và giữ mọi chuyến đi trong tài khoản của bạn.
-          </p>
-        </div>
-      </section>
-      <section className="flex min-w-0 flex-col justify-center gap-7 px-6 py-10 sm:px-12 lg:mx-auto lg:w-full lg:max-w-xl">
+    <main className="postcard-login">
+      <header className="postcard-login-header">
         <Brand />
-        <PageTitle eyebrow="Bắt đầu với GoEase">
-          Chuyến đi tiếp theo
-          <br />
-          đang chờ bạn
-        </PageTitle>
-        <p className="text-muted">
-          Đăng nhập bằng Google để tạo, chỉnh sửa và mở lại lịch trình trên các thiết bị.
-        </p>
-        <Button
-          secondary
-          disabled={session.busy}
-          onClick={() => {
-            void accountSession.loginGoogle();
-          }}
-        >
-          <span aria-hidden="true" className="font-bold">
-            G
-          </span>{' '}
-          Tiếp tục với Google
-        </Button>
-        {session.busy && <p role="status">{session.message}</p>}
-        {!session.busy && session.message && <Notice>{session.message}</Notice>}
-        {session.phase === 'unverified' && !session.busy && (
-          <Button
-            secondary
+        <p>Mỗi chuyến đi, một câu chuyện.</p>
+      </header>
+      <div className="postcard-login-content">
+        <section className="postcard-story" aria-label="Bưu thiếp Đà Lạt">
+          <p className="postcard-kicker">Một chút cảm hứng, trước khi đi</p>
+          <p className="postcard-journal">
+            Dành một khoảng trời cho
+            <br />
+            <em>một chuyến đi thật riêng.</em>
+          </p>
+          <div className="postcard-arrival">
+            <figure className="dalat-postcard">
+              <img
+                src="/dalat-illustration.png"
+                alt="Nắng chiều trên hồ, rừng thông và những ngọn đồi Đà Lạt"
+                width="1536"
+                height="1024"
+                fetchPriority="high"
+              />
+              <figcaption>
+                <svg
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                >
+                  <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
+                  <circle cx="12" cy="10" r="2.5" />
+                </svg>
+                Đà Lạt, Việt Nam
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+        <section className="postcard-signin" aria-labelledby="login-title">
+          <p className="postcard-signin-eyebrow">Chào bạn, người sắp lên đường</p>
+          <h1 id="login-title">
+            Chuyến đi mới,
+            <br />
+            bắt đầu <span>từ đây.</span>
+          </h1>
+          <p className="postcard-signin-description">
+            Đăng nhập để tạo, chỉnh sửa và mở lại lịch trình của bạn.
+          </p>
+          <button
+            type="button"
+            className="postcard-google-button"
+            disabled={session.busy}
             onClick={() => {
-              void accountSession.resume();
+              void accountSession.loginGoogle();
             }}
           >
-            Thử lại kết nối
-          </Button>
-        )}
-        <small>
-          GoEase không lưu mật khẩu Google. Chuyến đi chỉ hiển thị sau khi tài khoản được xác minh.
-        </small>
-        <PwaStatus />
-      </section>
+            <img src="/google-g.png" alt="" width="20" height="20" className="shrink-0" />
+            <span>Tiếp tục với Google</span>
+          </button>
+          <p className="postcard-signin-note">
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M7 3h10v18l-5-3-5 3V3Z" />
+            </svg>
+            Lịch trình của bạn, luôn có thể mở lại.
+          </p>
+          {session.busy && <p role="status">{session.message}</p>}
+          {!session.busy &&
+            session.message &&
+            session.message !== 'Thiết bị không có refresh credential.' &&
+            session.message !== 'Đăng nhập Google để bắt đầu chuyến đi của bạn.' && (
+              <Notice>{session.message}</Notice>
+            )}
+          {session.phase === 'unverified' && !session.busy && (
+            <Button
+              secondary
+              onClick={() => {
+                void accountSession.resume();
+              }}
+            >
+              Thử lại kết nối
+            </Button>
+          )}
+        </section>
+      </div>
+      <footer className="postcard-login-footer">
+        <p>
+          <span>GoEase.</span> Just go. We’ll plan.
+        </p>
+        <p>Từ một ý tưởng, đến một chuyến đi.</p>
+      </footer>
     </main>
   );
 }
