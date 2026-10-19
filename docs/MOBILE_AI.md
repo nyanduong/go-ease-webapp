@@ -1,5 +1,7 @@
 # Mobile AI #74 — tạo, xem trước, chỉnh và lưu
 
+Phạm vi tài liệu này là Expo/native ở mốc triển khai ban đầu. PWA khách hàng hiện có adapter phiên/bộ nhớ và giao diện riêng; xem [runbook PWA](PWA.md). Các hạn chế web trong spike cũ không mô tả PWA mới.
+
 Đã triển khai luồng mobile, kiểm tra offline và HTTP loopback. **Chưa nghiệm thu Android/iPhone gọi Gemini thật qua HTTPS rồi lưu/mở lại.** #73 đang Chờ kiểm tra do kiểm duyệt tự động chặn cấu hình/gọi thử tunnel; #74 không thử lại bằng công cụ khác để vượt chặn. Không ghi doubles hoặc live loopback #72 thành bằng chứng mobile live. Không bật billing, nâng Expo/native dependency hoặc gọi Gemini mới trong #74.
 
 ## Dùng trong Expo Go (phiên demo được cấp phép)

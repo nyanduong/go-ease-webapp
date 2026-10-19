@@ -1,5 +1,7 @@
 # Auth #75 — quyết định và spike xác minh backend
 
+Phạm vi tài liệu này là Expo/native ở mốc triển khai ban đầu. PWA khách hàng hiện có adapter phiên/bộ nhớ và giao diện riêng; xem [runbook PWA](PWA.md). Các hạn chế web trong spike cũ không mô tả PWA mới.
+
 **Trạng thái: pilot #75 đã nghiệm thu theo xác nhận chủ repo trên iPhone và LDPlayer, gồm hai user, login/logout/restore và backend HTTPS đúng UUID.** Backend có kiểm tra negative thật, CI phải đạt trên HEAD cuối trước merge. Đây là nền auth/pilot dev trước dữ liệu chuyến riêng #76, chưa thêm đăng nhập sản phẩm, sync/ownership hoặc OAuth. Không bật billing/thêm thẻ, không gọi Gemini hoặc nâng dependency cũ; chỉ thêm expo-secure-store ~57.0.4 đúng SDK đang khóa.
 
 ## Quyết định

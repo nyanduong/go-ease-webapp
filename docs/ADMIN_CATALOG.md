@@ -1,6 +1,6 @@
 # Web admin catalog — issue #78
 
-`apps/web` dùng React 19.2.3 + Vite 8.3.4 + TypeScript. Vite tương thích Node hiện tại của repo; không nâng Expo/native packages. [Vite guide](https://vite.dev/guide/). Backend NestJS dùng PostgreSQL riêng hiện có, không tạo cloud service hoặc bật billing.
+`apps/admin` dùng React 19.2.3 + Vite 8.3.4 + TypeScript. Vite tương thích Node hiện tại của repo; không nâng Expo/native packages. [Vite guide](https://vite.dev/guide/). Backend NestJS dùng PostgreSQL riêng hiện có, không tạo cloud service hoặc bật billing.
 
 ## Khởi chạy local
 
@@ -16,7 +16,7 @@ pnpm db:local
 
 Trong `apps/api/.env`, giữ cấu hình Auth/Trips và thêm `CATALOG_ADMIN_ENABLED=true`; đặt `API_CORS_ORIGINS=http://127.0.0.1:5173` (hoặc danh sách exact origins được phép). Không wildcard, không đưa DB/Gemini/service-role key lên web. Chỉ copy env mẫu khi chưa có file cấu hình.
 
-Tạo `apps/web/.env.local` từ `.env.example`: VITE_SUPABASE_URL/publishable key công khai, VITE_API_BASE_URL là HTTPS API; local cho phép HTTP loopback 127.0.0.1/localhost. Không chấp nhận bearer qua HTTP LAN/public. Vite bind loopback, port 5173.
+Tạo `apps/admin/.env.local` từ `.env.example`: VITE_SUPABASE_URL/publishable key công khai, VITE_API_BASE_URL là HTTPS API; local cho phép HTTP loopback 127.0.0.1/localhost. Không chấp nhận bearer qua HTTP LAN/public. Vite bind loopback, port 5173.
 
 ```powershell
 pnpm dev:api
@@ -24,7 +24,7 @@ pnpm dev:api
 pnpm dev:admin
 ```
 
-Mở `http://127.0.0.1:5173`. Web không phải trang lịch trình khách; `pnpm dev:web` vẫn là bản Expo web cũ. `pnpm build` giờ build API, Expo Android/iOS/web và Vite admin; root typecheck/lint/test bao gồm apps/web. Hosted SPA cần rewrite đường dẫn UI về index.html, API vẫn ở origin riêng và route API không rewrite sang HTML.
+Mở `http://127.0.0.1:5173`. Web không phải trang lịch trình khách; `pnpm dev:web` mở PWA khách ở port 5174. `pnpm build` giờ build API, Expo Android/iOS/web, PWA khách và Vite admin; root typecheck/lint/test bao gồm apps/admin. Hosted SPA cần rewrite đường dẫn UI về index.html, API vẫn ở origin riêng và route API không rewrite sang HTML.
 
 ## Cấp và thu hồi quyền
 
@@ -60,6 +60,6 @@ Form chưa gửi không lưu bền vững. Lỗi validation/network/409 giữ fo
 
 ## Kiểm thử và bằng chứng
 
-`pnpm test:db` chạy cluster cô lập, provider fixtures, Nest TCP/PostgreSQL thật và Chromium. Ca admin kiểm tra anonymous/customer/role injection, grant/revoke, create/edit/conflict/invalid coordinates, disable referenced Place, dữ liệu lịch sử, active/public feed và không đọc chuyến B. Ca browser mở deep link, login với provider fixture, sửa/tắt qua API/DB thật, refresh về login, không lưu credential trong local/sessionStorage, không page error. Screenshot fixture được ignore trong `apps/web/test-results`, không dùng dữ liệu user thật.
+`pnpm test:db` chạy cluster cô lập, provider fixtures, Nest TCP/PostgreSQL thật và Chromium. Ca admin kiểm tra anonymous/customer/role injection, grant/revoke, create/edit/conflict/invalid coordinates, disable referenced Place, dữ liệu lịch sử, active/public feed và không đọc chuyến B. Ca browser mở deep link, login với provider fixture, sửa/tắt qua API/DB thật, refresh về login, không lưu credential trong local/sessionStorage, không page error. Screenshot fixture được ignore trong `apps/admin/test-results`, không dùng dữ liệu user thật.
 
 CI cài Chromium và chạy cùng tests trước build; cần Quality Gate HEAD cuối đạt trước merge. Auth provider là double trong automated tests, không phải nghiệm thu user thật trên Supabase/Expo Go. Team tự cấp user thật và smoke login/cập nhật mobile khi sẵn sàng; không gửi password/JWT vào PR/chat. Không bật billing.

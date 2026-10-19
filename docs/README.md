@@ -1,5 +1,7 @@
 # GoEase khởi động lại với Expo Go
 
+Ứng dụng khách hàng hiện phát triển chính ở **PWA `apps/web`**; admin đã chuyển sang `apps/admin`. Expo vẫn được giữ. [Chạy PWA, bản đồ và offline](PWA.md) · [Cây dự án hiện tại](FOLDER_STRUCTURE.md). Các tài liệu theo issue/mốc Expo bên dưới giữ bối cảnh lịch sử.
+
 Bộ tài liệu cho team phát triển lại GoEase, ngày 14/10/2026. Nền Expo + TypeScript đã có tại `apps/mobile`; xem [README root](../README.md) để cài dependency và chạy Expo Go. Mốc sản phẩm tiếp theo là luồng lập lịch trình trên Android và iPhone.
 
 - [Công nghệ và tài liệu học](TECH_STACK.md)

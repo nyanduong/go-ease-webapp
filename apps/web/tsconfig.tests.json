@@ -1,1 +1,0 @@
-{"extends":"./tsconfig.json","compilerOptions":{"noEmit":false,"outDir":".logic-tests","rootDir":"src","types":[]},"include":["src/controller.ts"]}

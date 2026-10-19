@@ -1,0 +1,77 @@
+# PWA khách hàng GoEase
+
+`apps/web` dùng React 19, Vite 8, Tailwind CSS 4 qua plugin Vite. Màu GoEase ở `src/tailwind.css` bằng `@theme`; component dùng utility classes. Admin cũ chuyển sang `apps/admin`. Expo giữ ở `apps/mobile`; controller dùng chung qua `packages/trip-client`.
+
+## Chạy và cấu hình
+
+```powershell
+pnpm install --frozen-lockfile
+if (-not (Test-Path apps/web/.env.local)) { Copy-Item apps/web/.env.example apps/web/.env.local }
+pnpm dev:web
+```
+
+PWA ở http://127.0.0.1:5174; admin ở 5173; API ở 3000. Guest không cần server. Account cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, **HTTPS origin chính xác** ở `VITE_API_BASE_URL`; API phải bật Auth/Trips, có DB và dùng cùng Supabase project.
+
+`API_CORS_ORIGINS` phải có origin mở PWA, ví dụ `http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:4174`. Giữ origins admin/Expo hiện có. Metro tunnel không chuyển tiếp API; dùng HTTPS proxy/tunnel được vận hành. Không hạ HTTPS guard để gửi JWT qua HTTP LAN.
+
+## Giao diện desktop/mobile và chuyển động
+
+Từ 1024 px, desktop dùng sidebar trái; trang chủ có dashboard và từ 1280 px có cột tổng quan. Màn tạo chuyến có hướng dẫn bên cạnh form; chi tiết có cột tóm tắt hành trình/ngân sách. Dưới 1024 px, mobile/tablet dùng menu dưới, nội dung một cột và nút chạm lớn. Hai bố cục cùng state và nghiệp vụ.
+
+Hiệu ứng vào trang, chuyển ngày/tab và xuất hiện thẻ dùng Web Animations API, khoảng 240 ms; hover/nhấn dùng Tailwind transitions. Không trì hoãn điều hướng hoặc tự chạy vòng lặp. `prefers-reduced-motion` tắt chuyển động và có test riêng.
+
+`pnpm format` format PWA/admin, controllers và cấu hình liên quan. `pnpm format:check` kiểm tra trong CI; cấu hình PWA dùng plugin chính thức của Tailwind để sắp xếp utility theo theme.
+
+## Dữ liệu và phiên
+
+- Guest ở IndexedDB `goease.customer.v1`, cùng schema/revision mobile. Một read-write transaction bao trọn đọc/kiểm tra/ghi để chống ghi đè giữa tab.
+- Nếu cùng origin có key Expo Web cũ `goease.guest-trips.v1` ở localStorage, adapter đọc bytes đó khi chưa có IndexedDB. Không xóa bytes gốc hoặc tạo kho rỗng thay kho corrupt.
+- Expo Go, web dev và web preview có kho riêng. Để chuyển từ điện thoại, nhập chuyến khách vào tài khoản trên Expo rồi mở tài khoản trên PWA.
+- Draft/yêu cầu chờ của account ở IndexedDB có namespace owner. Chỉ mở sau xác minh lại đúng identity. Lỗi server không fallback sang kho guest, không tự retry hay đồng bộ nền.
+- Access token chỉ ở RAM; refresh ở sessionStorage của tab, xóa khi logout. Đây không phải SecureStore native hoặc HttpOnly cookie. Không lưu mật khẩu. CSP/XSS và cookie/BFF có thể nâng cấp riêng khi triển khai production.
+- Xuống nền/hết phiên sẽ khóa private RAM; khôi phục cần provider/backend xác minh lại. Chỉ nội dung bấm Áp dụng mới nằm trong draft account; form chưa áp dụng không tự khôi phục.
+
+Xóa site data/profile có thể xóa guest. Cache giao diện không thay backup tài khoản.
+
+## Bản đồ
+
+Đặt `VITE_GOOGLE_MAPS_API_KEY` trong env local; key giới hạn theo referrer/domain và **Maps JavaScript API**. Browser key là public config, không dùng Gemini/service key. [Hướng dẫn Google](https://developers.google.com/maps/documentation/javascript/load-maps-js-api).
+
+Chưa có key/tải lỗi vẫn giữ danh sách và nút chỉ đường tới tọa độ. Không vẽ map giả. Pin theo ngày từ catalog; chưa tối ưu tuyến, tính thời gian di chuyển hoặc GPS trong GoEase. Điều hướng giọng nói/background mở trong Google Maps qua URL. Không cache map tiles hoặc bật billing/tạo key trong lần migrate này.
+
+## AI nội bộ
+
+Mặc định `VITE_AI_DEMO_ENABLED=false`. Muốn thử: bật `true`, cấu hình `VITE_AI_API_BASE_URL` là HTTPS demo origin được vận hành và nhập mã phiên tạm trong giao diện. Không đặt mã phiên/bearer/Gemini key vào env public. Preview chưa thay chuyến; Lưu/Áp dụng mới thay draft. Lưu lại không gọi provider thêm. Chính sách demo/quota backend giữ nguyên; đây chưa là AI endpoint public production.
+
+## Cài PWA và offline
+
+```powershell
+pnpm build:web
+pnpm preview:web
+```
+
+Mở http://127.0.0.1:4174, chờ “Sẵn sàng dùng ngoại tuyến”. Android/Chrome: menu Cài ứng dụng. iPhone/Safari: Chia sẻ → Thêm vào Màn hình chính. HTTP loopback dành phát triển; điện thoại qua LAN cần HTTPS để service worker hoạt động.
+
+Build sinh manifest/icons, `sw.js` có version hash. Chỉ cache giao diện, assets và catalog bundled; API, authorization, Supabase, Maps và mutation không cache. Guest dùng ngoại tuyến sau lần tải đầu; account/AI/bản đồ online cần mạng. Worker mới chờ bấm cập nhật, không tự reload mất form. [Service worker](https://web.dev/learn/pwa/service-workers).
+
+## Deploy
+
+Deploy toàn bộ `apps/web/dist` ở root của **origin riêng**, HTTPS. Admin/API có origin riêng, không đặt admin dưới scope `/` của PWA cùng origin. Muốn chạy subpath cần đổi đồng bộ Vite base, manifest, SW và router.
+
+Static server rewrite route giao diện `/trips/:id`, `/account`, `/about` về `index.html`; file không có và `/v1/*` không rewrite sang app. Đặt `Cache-Control: no-cache` cho `index.html`, `manifest.webmanifest`, `sw.js`; assets hash dùng immutable. Vite preview không là server production.
+
+Sau khi có domain/key đúng cần smoke Maps live và cài/mở trên Chrome Android, Safari iPhone. Chromium tự động không thay nghiệm thu thiết bị.
+
+## Kiểm thử
+
+```powershell
+pnpm --filter @goease/web exec playwright install chromium
+pnpm test:web
+pnpm test
+pnpm test:db
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+Browser test build `dist-test` với URL/provider fixture, không chứa env cá nhân hay gọi cloud; production vẫn ở `dist`. API/PostgreSQL/admin có harness thật cô lập riêng. Các test mobile tiếp tục chạy qua controller dùng chung.

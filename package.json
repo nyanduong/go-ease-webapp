@@ -8,7 +8,7 @@
   "scripts": {
     "dev:mobile": "pnpm build:packages && pnpm --filter @goease/mobile start",
     "dev:mobile:tunnel": "pnpm build:packages && pnpm --filter @goease/mobile start --tunnel",
-    "dev:web": "pnpm build:packages && pnpm --filter @goease/mobile web",
+    "dev:web": "pnpm build:packages && pnpm --filter @goease/web dev",
     "dev:api": "pnpm build:packages && pnpm --filter @goease/api dev",
     "test:api": "pnpm build:packages && pnpm --filter @goease/api test",
     "test:gemini:live": "pnpm build:api && pnpm --filter @goease/api test:gemini:live",
@@ -17,9 +17,9 @@
     "check:expo": "node .github/scripts/check-expo.cjs",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
-    "test": "pnpm -r --if-present test && node --test tests/*.test.mjs",
-    "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build && pnpm --filter @goease/web build",
-    "build:packages": "pnpm --filter @goease/contracts build && pnpm --filter @goease/catalog --filter @goease/trip-storage --filter @goease/itinerary build",
+    "test": "pnpm build:packages && pnpm -r --if-present test && node --test tests/*.test.mjs",
+    "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build && pnpm --filter @goease/web build && pnpm --filter @goease/admin build",
+    "build:packages": "pnpm --filter @goease/contracts build && pnpm --filter @goease/catalog --filter @goease/trip-storage --filter @goease/itinerary build && pnpm --filter @goease/trip-client build",
     "demo:api": "pnpm build:api && pnpm --filter @goease/api demo",
     "demo:auth": "pnpm build:api && pnpm --filter @goease/api demo:auth",
     "db:local": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs start",
@@ -28,9 +28,19 @@
     "db:backup": "pnpm --filter @goease/api exec node scripts/db-local.mjs backup",
     "demo:trips": "pnpm build:api && pnpm --filter @goease/api demo:trips",
     "test:db": "pnpm build:api && pnpm --filter @goease/mobile exec tsc -p tsconfig.logic-tests.json && pnpm --filter @goease/api exec node scripts/test-db.mjs",
-    "dev:admin": "pnpm build:packages && pnpm --filter @goease/web dev",
+    "dev:admin": "pnpm build:packages && pnpm --filter @goease/admin dev",
     "catalog:grant": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs grant",
     "catalog:revoke": "pnpm --filter @goease/api exec node scripts/catalog-role.mjs revoke",
-    "demo:readiness": "node .github/scripts/mvp-readiness.mjs"
+    "demo:readiness": "node .github/scripts/mvp-readiness.mjs",
+    "dev:mobile:web": "pnpm build:packages && pnpm --filter @goease/mobile web",
+    "build:web": "pnpm build:packages && pnpm --filter @goease/web build",
+    "preview:web": "pnpm --filter @goease/web preview",
+    "test:web": "pnpm build:packages && pnpm --filter @goease/web test:e2e",
+    "format": "prettier --write \"apps/web\" \"apps/admin\" \"packages/trip-client\" \"apps/mobile/src/features/trips/*-controller.ts\" \"package.json\" \"pnpm-workspace.yaml\" \".github/workflows/quality.yml\" \".prettierrc.json\"",
+    "format:check": "prettier --check \"apps/web\" \"apps/admin\" \"packages/trip-client\" \"apps/mobile/src/features/trips/*-controller.ts\" \"package.json\" \"pnpm-workspace.yaml\" \".github/workflows/quality.yml\" \".prettierrc.json\""
+  },
+  "devDependencies": {
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1"
   }
 }

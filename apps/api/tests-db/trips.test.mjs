@@ -14,10 +14,13 @@ import {
   serverTripListResponseSchema,
 } from '@goease/contracts';
 import { isolatedUrl, pgControl } from '../scripts/db-tools.mjs';
-import { callServerTripApi } from '../../mobile/.logic-tests/server-trip-controller.js';
-import { createAccountTrips } from '../../mobile/.logic-tests/account-trip-controller.js';
-import { createAuthPilot } from '../../mobile/.logic-tests/auth-pilot-controller.js';
-import { ServerTripError } from '../../mobile/.logic-tests/server-trip-controller.js';
+import serverTripClient from '../../mobile/.logic-tests/server-trip-controller.js';
+import accountTripClient from '../../mobile/.logic-tests/account-trip-controller.js';
+import authClient from '../../mobile/.logic-tests/auth-pilot-controller.js';
+// TypeScript emits CommonJS facades for the Expo controller test harness.
+const { callServerTripApi, ServerTripError } = serverTripClient;
+const { createAccountTrips } = accountTripClient;
+const { createAuthPilot } = authClient;
 if (process.env.GOEASE_DB_TEST_ACK !== 'isolated')
   throw Error('Real isolated database test harness required');
 const adminUrl = process.env.GOEASE_DB_TEST_ADMIN_URL,
@@ -934,7 +937,7 @@ test('web browser login/edit/disable/refresh/deep-link uses real Nest/PostgreSQL
         }),
         201,
       );
-      const { checkAdminBrowser } = await import('../../web/tests/browser-runner.mjs');
+      const { checkAdminBrowser } = await import('../../admin/tests/browser-runner.mjs');
       // Browser runner only receives a generated fixture JWT, never a real user's credential.
       const url = await http('/v1/health');
       const base = new URL(url.url).origin;

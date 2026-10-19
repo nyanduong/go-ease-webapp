@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-cream: #fffaf1;
+  --color-paper: #fffdf7;
+  --color-ink: #153f49;
+  --color-teal: #007f87;
+  --color-teal-dark: #00636c;
+  --color-mint: #e7f3ee;
+  --color-orange: #fb8500;
+  --color-sand: #fff0d7;
+  --color-line: #e6e3d8;
+  --color-muted: #687d80;
+  --color-error: #a73325;
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply m-0 bg-cream font-sans text-ink antialiased;
+  }
+  h1 {
+    @apply text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl;
+  }
+  h2 {
+    @apply text-xl leading-snug font-bold sm:text-2xl;
+  }
+  h3 {
+    @apply text-lg leading-snug font-bold;
+  }
+  p {
+    @apply leading-relaxed;
+  }
+  small {
+    @apply text-sm leading-relaxed text-muted;
+  }
+  label {
+    @apply flex min-w-0 flex-col gap-2 text-sm font-semibold;
+  }
+  input,
+  select,
+  textarea {
+    @apply w-full rounded-xl border border-line bg-paper px-3 py-3 font-normal text-ink outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 disabled:opacity-60;
+  }
+  textarea {
+    @apply min-h-24 resize-y;
+  }
+  fieldset {
+    @apply min-w-0 border-0 p-0;
+  }
+  button,
+  a,
+  summary {
+    @apply touch-manipulation;
+  }
+  button,
+  summary {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  a,
+  button,
+  summary {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal;
+  }
+  summary {
+    @apply py-2 font-bold;
+  }
+  details > p {
+    @apply my-3;
+  }
+}

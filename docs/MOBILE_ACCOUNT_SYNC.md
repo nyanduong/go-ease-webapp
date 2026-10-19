@@ -1,5 +1,7 @@
 # Đăng nhập và chuyến tài khoản — issue #77
 
+Phạm vi tài liệu này là Expo/native ở mốc triển khai ban đầu. PWA khách hàng hiện có adapter phiên/bộ nhớ và giao diện riêng; xem [runbook PWA](PWA.md). Các hạn chế web trong spike cũ không mô tả PWA mới.
+
 Từ danh sách **Chuyến đi của tôi**, chọn **Tài khoản · Chuyến trên server**. Màn này chạy trên Expo Go Android/iPhone; web không lưu credential. Tài khoản GoEase là user Supabase được cấp, khác tài khoản Expo hoặc tài khoản quản trị.
 
 ## Team khởi chạy

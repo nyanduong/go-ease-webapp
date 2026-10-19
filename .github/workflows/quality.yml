@@ -51,12 +51,16 @@ jobs:
         run: pnpm typecheck
       - name: Kiểm tra định dạng backend
         run: pnpm --filter @goease/api format:check
+      - name: Kiểm tra định dạng PWA, admin và client dùng chung
+        run: pnpm format:check
       - name: ESLint
         run: pnpm lint
       - name: Kiểm thử packages, mobile và HTTP API thật
         run: pnpm test
-      - name: Cài Chromium cho kiểm tra web admin với DB thật
-        run: pnpm --filter @goease/web exec playwright install --with-deps chromium
+      - name: Cài Chromium cho PWA và admin
+        run: pnpm --filter @goease/admin exec playwright install --with-deps chromium
+      - name: PWA trên Chromium — CRUD, offline, nhiều tab và tài khoản
+        run: pnpm test:web
       - name: Migration, ownership, rollback và restart PostgreSQL thật cô lập
         env:
           GOEASE_DB_TEST_ADMIN_URL: postgresql://goease_ci_admin:${{ github.run_id }}_fixture@127.0.0.1:55476/goease_test_ci

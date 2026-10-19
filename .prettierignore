@@ -1,0 +1,15 @@
+**/node_modules/**
+**/dist/**
+**/dist-test/**
+**/dist-demos/**
+**/.logic-tests/**
+**/test-results/**
+**/.expo/**
+**/coverage/**
+**/src/generated/**
+**/.env
+**/.env.*
+**/.ai-runtime/**
+**/.demo-runtime/**
+**/.db-runtime/**
+pnpm-lock.yaml
