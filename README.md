@@ -215,7 +215,7 @@ Hai mức QA: `provider-verified` khác `backend-verified`. Nút backend cần `
 
 Từ danh sách khách chọn **Tài khoản · Chuyến trên server** để đăng nhập và xem/tạo/sửa/xóa chuyến qua API thật. Nhập chuyến khách cần xác nhận, tạo bản sao có ID mới; bản khách giữ nguyên. Draft/pending request lưu riêng theo project + UUID, giữ payload/key khi retry; conflict cho đọc/đối chiếu và lựa chọn rõ ràng. [Hướng dẫn cấu hình, cách dùng và checklist](docs/MOBILE_ACCOUNT_SYNC.md).
 
-Không nâng SDK/Expo Go, không bật billing. Native Android/iPhone #77 chưa nghiệm thu vì hiện chủ repo chưa tiện thử; issue giữ mở. Test HTTP/PostgreSQL và export bundle không thay cho kết quả thiết bị.
+Không nâng SDK/Expo Go, không bật billing. Ngày 15/10/2026, chủ repo xác nhận nghiệm thu #77 đạt trên iPhone và Expo Go Android trong LDPlayer (emulator): CRUD, hai user, khôi phục draft/phiên, retry và conflict liên thiết bị. [Biên bản và giới hạn bằng chứng](docs/MOBILE_ACCOUNT_SYNC.md) phân biệt các ca native đã thử với expiry/mất response sau commit chỉ được kiểm thử tự động; chưa thử Android điện thoại thật.
 
 ## Web admin quản lý catalog (#78)
 

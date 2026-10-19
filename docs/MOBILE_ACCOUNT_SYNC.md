@@ -19,7 +19,7 @@ Backend `.env` cần AUTH_ENABLED, TRIPS_ENABLED và cấu hình URL/publishable
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: publishable key công khai, không phải service-role/secret.
 - `EXPO_PUBLIC_AUTH_API_BASE_URL`: origin HTTPS backend có `/v1/auth/me` và CRUD `/v1/trips`. QR Metro, HTTP LAN và tunnel auth-only không thay thế endpoint này.
 
-Khởi động API và HTTPS gateway được phép cho phiên thử, rồi `pnpm dev:mobile` và quét QR. `pnpm demo:trips` giới hạn route Auth + trips trong 30 phút, bỏ Gemini/key/bearer khỏi process. Không mở PostgreSQL qua gateway. Dừng gateway sau phiên; không bật billing. Phiên #77 hiện chưa mở vì chủ repo chưa tiện native QA; không có URL demo sống được commit vào repo. Nếu bước gateway bị chặn, ghi điều kiện còn thiếu, không chuyển user JWT sang HTTP để vượt chặn.
+Khởi động API và HTTPS gateway được phép cho phiên thử, rồi `pnpm dev:mobile` và quét QR. `pnpm demo:trips` giới hạn route Auth + trips trong 30 phút, bỏ Gemini/key/bearer khỏi process. Không mở PostgreSQL qua gateway. Dừng gateway sau phiên; không bật billing. Phiên nghiệm thu #77 đã hoàn thành theo biên bản bên dưới; không có URL demo sống được commit vào repo. Nếu bước gateway bị chặn, ghi điều kiện còn thiếu, không chuyển user JWT sang HTTP để vượt chặn.
 
 ## Cách dùng
 
@@ -43,25 +43,35 @@ Các form chưa bấm Áp dụng (kể cả tên/ngân sách/hoạt động) ch�
 - 409: draft giữ nguyên, chưa ghi đè. **Đọc bản server để đối chiếu** rồi chọn **Bỏ bản nháp, dùng bản server mới**, hoặc xác nhận **Giữ toàn bộ bản nháp trên version mới**. Lựa chọn thứ hai cập nhật baseVersion, chưa gửi; Lưu lần tiếp theo có mutationId mới. Thao tác này có thể thay toàn bộ thay đổi của máy khác, không phải merge tự động. Server đổi lần nữa vẫn 409.
 - Yêu cầu đang chờ không được tùy tiện bỏ để tạo thao tác mới khi chưa biết kết quả. Không tự ghi server lỗi vào kho khách hoặc báo đã đồng bộ. Khi storage lỗi, dùng nút ghi lại trạng thái local; bytes cũ được giữ nếu đọc/validate lỗi.
 
-## Checklist native còn chờ
+## Biên bản nghiệm thu ngày 15/10/2026
 
-Chủ repo báo chưa tiện thử thiết bị ngày 15/10/2026. #77 **giữ mở**, chưa đánh dấu tiêu chí native đạt. Không lấy kết quả Auth #75 hoặc DB tests #76 thay thế.
+Chủ repo xác nhận đạt trên **iPhone thật chạy Expo Go** và **Android chạy Expo Go trong LDPlayer (emulator)**, với hai user Supabase A/B, backend Nest qua HTTPS và PostgreSQL thật. Source thử: `2761ee2e19803effe53bc5337309550ff58be570` (main sau PR #101, chứa triển khai #77 từ PR #100). Không nâng SDK/Expo Go, không bật billing.
 
-Thử riêng iPhone và Android (LDPlayer ghi rõ là emulator):
+Đây là kết quả **người dùng báo lại**, không phải quan sát màn hình trực tiếp của agent. Chưa thu thập model, phiên bản hệ điều hành hoặc Expo Go của phiên #77; không suy ra từ các lần thử trước.
 
-| Ca | Thao tác và kết quả cần xác nhận | Trạng thái |
-| --- | --- | --- |
-| N01 | A login → server list; sai password/Hủy không mở kho; logout/restore không còn phiên | Chưa thử |
-| N02 | Tạo draft 1/5 ngày → chỉnh hoạt động/ngân sách → Lưu; đóng/mở và restore A đọc lại từ API | Chưa thử |
-| N03 | Nhập guest có xác nhận; chưa Lưu thì chưa upload, Lưu có một bản server, guest giữ nguyên | Chưa thử |
-| N04 | A/B switch không hiện list/draft/pending A dưới B; quay A khôi phục draft đã áp dụng | Chưa thử |
-| N05 | Hai máy A cùng version, một sửa trước; máy còn lại 409 giữ draft, đọc/đối chiếu và chọn cách xử lý | Chưa thử |
-| N06 | Offline/timeout/mất response → pending giữ key/payload; reload/login A retry không tăng version/tạo chuyến lần hai | Chưa thử |
-| N07 | Background/expiry trong lúc ghi không áp dụng response cũ sang phiên mới; bản nháp đã áp dụng khôi phục được | Chưa thử |
-| N08 | Delete Hủy/Xác nhận; stale delete không xóa bản mới; B không đọc/sửa/xóa A; guest còn nguyên | Chưa thử |
-| N09 | Bàn phím/chữ lớn/safe area/confirm cuộn; bản đồ pin theo ngày, null/0 và cảnh báo chi phí | Chưa thử |
+| Ca | Kết quả đã xác nhận | iPhone | LDPlayer |
+| --- | --- | --- | --- |
+| N01 | A đăng nhập, mở danh sách server; đăng xuất/đổi B không thấy chuyến A | Đạt | Đạt |
+| N02 | Tạo và lưu chuyến 1/5 ngày; đóng/mở app, khôi phục A đọc lại chuyến từ server | Đạt | Đạt |
+| N03 | Nhập chuyến khách có xác nhận, kiểm tra draft rồi lưu server; bản khách vẫn còn | Đạt | Đạt |
+| N04 | Draft A đã Áp dụng nhưng chưa lưu server không hiện dưới B; quay lại A khôi phục draft | Đạt | Đạt |
+| N05 | Hai máy cùng A sửa cùng version: iPhone lưu trước, LDPlayer nhận 409 và giữ draft; đối chiếu đúng, giữ draft trên version mới rồi lưu; iPhone đọc đúng bản cuối | Đạt, máy lưu trước/đọc lại | Đạt, máy xử lý 409 |
+| N06 | Ngắt mạng trước Lưu: báo lỗi, giữ draft/yêu cầu; nối mạng, thử lại đúng yêu cầu thành công, không tạo bản trùng | Đạt | Đạt |
+| N07 | Xuống nền/đóng app với draft đã Áp dụng; mở lại và khôi phục A vẫn có draft, lưu được | Đạt | Đạt |
+| N08 | Xóa Hủy giữ chuyến; Xác nhận xóa bản server | Đạt | Đạt |
+| N09 | Double tap Lưu không tạo trùng; thêm/sửa/chuyển ngày, ngân sách null/0, bản đồ, bàn phím và hộp xác nhận | Đạt | Đạt |
 
-Ghi kết quả từng nền tảng và commit; không gửi mật khẩu/JWT/refresh token hoặc ảnh chứa credential. Sau khi có HTTPS/native bằng chứng mới chốt checklist #77.
+Các xác nhận trong phiên: iPhone đạt 6 bước cơ bản; conflict liên thiết bị đạt với 409, giữ draft, đối chiếu, lưu lại và iPhone đọc đúng; sau đó iPhone đạt bước bổ sung 2–5, LDPlayer đạt bước 1–5 (luồng cơ bản và các ca N04/N06/N07/N09). Biên bản này thay checklist chờ thử trước đó; những ca rộng hơn trong checklist cũ được tách rõ dưới đây.
+
+### Giới hạn bằng chứng
+
+- Chưa thử Android điện thoại thật; kết quả Android ở đây thuộc LDPlayer.
+- Sai mật khẩu/Hủy đăng nhập, expiry thực tế, phản hồi cũ trong lúc đổi phiên và mất response **sau khi server đã ghi** chỉ có bằng chứng automated phù hợp, chưa xác nhận bằng thử native có kiểm soát. N06 không thay thế ca mất response sau commit; N07 không chứng minh expiry hoặc race khi đang ghi.
+- Stale DELETE sau sửa từ máy khác và cố gọi trực tiếp GET/PUT/DELETE chuyến A bằng B thuộc kiểm thử API tự động. Native chỉ xác nhận không thấy list/draft sai owner và luồng xóa Hủy/Xác nhận.
+- Chưa có xác nhận riêng cho cài đặt chữ lớn hoặc đo safe area. N09 chỉ ghi các thao tác người dùng đã xác nhận.
+- Không suy rộng thành nghiệm thu AI, admin hay toàn bộ MVP. Không lưu email, mật khẩu, JWT hoặc URL tunnel tạm trong biên bản.
+
+Chủ repo yêu cầu đóng #77 sau các xác nhận trên. Phạm vi đăng nhập và đồng bộ chuyến chủ động được chốt với các giới hạn này; không tuyên bố realtime hoặc đồng bộ nền.
 
 ## Bằng chứng tự động
 
