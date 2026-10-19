@@ -7,7 +7,6 @@ interface InstallPrompt extends Event {
 }
 export function PwaStatus() {
   const [offline, setOffline] = useState(!navigator.onLine),
-    [ready, setReady] = useState(false),
     [waiting, setWaiting] = useState<ServiceWorker | null>(null),
     [install, setInstall] = useState<InstallPrompt | null>(null),
     [message, setMessage] = useState('');
@@ -39,13 +38,8 @@ export function PwaStatus() {
                 setWaiting(worker);
             });
           });
-          return navigator.serviceWorker.ready.then(() => {
-            if (mounted) setReady(true);
-          });
         })
-        .catch(() => {
-          if (mounted) setMessage('Chưa lưu được giao diện để dùng khi mất mạng.');
-        });
+        .catch(() => {});
     }
     return () => {
       mounted = false;
@@ -60,13 +54,7 @@ export function PwaStatus() {
       className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-9 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
       aria-live="polite"
     >
-      <span>
-        {offline
-          ? 'Ngoại tuyến · Cần mạng để xác minh và lưu chuyến tài khoản'
-          : ready
-            ? 'Đã lưu giao diện · Dữ liệu tài khoản cần mạng'
-            : 'Lên kế hoạch cho hành trình của bạn'}
-      </span>
+      {offline && <span>Bạn đang mất kết nối. Kết nối mạng để lưu chuyến đi.</span>}
       {install && (
         <Button
           secondary
@@ -84,14 +72,17 @@ export function PwaStatus() {
         <Button
           secondary
           onClick={() => {
-            if (!window.confirm('Tải phiên bản mới? Hãy lưu bản nháp trước khi tiếp tục.')) return;
+            if (
+              !window.confirm('Cập nhật GoEase? Hãy lưu thay đổi trước vì trang sẽ được tải lại.')
+            )
+              return;
             navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
               once: true,
             });
             waiting.postMessage('ACTIVATE_UPDATE');
           }}
         >
-          Có bản mới · Cập nhật
+          Cập nhật GoEase
         </Button>
       )}
       {message && <span>{message}</span>}

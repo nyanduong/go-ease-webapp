@@ -21,7 +21,7 @@ export function budgetPresentation(trip: Trip) {
       phase === 'empty'
         ? 'Chưa có hoạt động'
         : phase === 'unknown'
-          ? 'Chưa đủ dữ liệu để dự toán'
+          ? 'Chưa có chi phí để ước tính'
           : model.knownText,
     label:
       phase === 'complete' ? 'Tổng chi phí ước tính · cả nhóm' : 'Tổng các khoản đã nhập · cả nhóm',

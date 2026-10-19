@@ -18,6 +18,44 @@ export function Brand() {
     </Link>
   );
 }
+export function AccountGate({
+  error,
+  onRetry,
+  onLogout,
+}: {
+  error?: string;
+  onRetry: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-cream px-6">
+      <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
+        <Brand />
+        {error ? (
+          <>
+            <p role="alert" className="text-sm text-muted">
+              {error}
+            </p>
+            <Button secondary onClick={onRetry}>
+              Thử lại
+            </Button>
+            <button type="button" className="text-sm text-muted" onClick={onLogout}>
+              Đăng xuất
+            </button>
+          </>
+        ) : (
+          <div role="status">
+            <span
+              aria-hidden="true"
+              className="block size-6 animate-spin rounded-full border-2 border-line border-t-teal motion-reduce:animate-none"
+            />
+            <span className="sr-only">Đang tải…</span>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
 export function Button({
   secondary = false,
   danger = false,

@@ -57,6 +57,7 @@ const setProfile = (patch: Partial<typeof profileState>) => {
 };
 let catalog: ManagedPlace[] = [],
   lifecycle = 0;
+let workspace = { busy: false, error: '' };
 const publish = () => listeners.forEach((listener) => listener());
 export const accountTrips = createAccountTrips({
   storage: browserStorage,
@@ -101,6 +102,8 @@ async function connect() {
   const current = auth.snapshot(),
     epoch = lifecycle;
   if (!project || !current.userId || current.phase !== 'backend-verified') return;
+  workspace = { busy: true, error: '' };
+  publish();
   try {
     const response = await fetchManagedCatalog(import.meta.env.VITE_API_BASE_URL ?? '');
     if (
@@ -124,6 +127,14 @@ async function connect() {
       message: 'Chưa tải được dữ liệu chuyến. Kiểm tra kết nối rồi thử khôi phục phiên.',
     };
     publish();
+  } finally {
+    if (epoch === lifecycle && auth.snapshot().userId === current.userId) {
+      workspace = {
+        busy: false,
+        error: accountTrips.getSnapshot().ready ? '' : 'Chưa tải được dữ liệu. Vui lòng thử lại.',
+      };
+      publish();
+    }
   }
 }
 let importing = false;
@@ -186,7 +197,7 @@ async function profileRequest(input?: ProfileInput) {
     if (epoch === lifecycle && owner === session.userId && session.phase === 'backend-verified')
       setProfile({
         error: input
-          ? 'Chưa xác nhận lưu hồ sơ. Nội dung đang sửa vẫn được giữ; tải lại hồ sơ để đối chiếu trước khi thử lại.'
+          ? 'Chưa biết hồ sơ đã lưu xong chưa. Bạn có thể xem lại hồ sơ đã lưu; nội dung đang sửa vẫn được giữ.'
           : 'Chưa tải được hồ sơ. Kiểm tra kết nối rồi thử lại.',
       });
     return false;
@@ -216,7 +227,7 @@ export const accountSession = {
         current.pending
       )
         throw Error(
-          'Đã dừng chuyển. Kiểm tra phiên, bản nháp hoặc yêu cầu đang chờ trong Chuyến đi. Bản gốc vẫn giữ nguyên.',
+          'Đã dừng thêm chuyến. Hãy hoàn tất thay đổi chưa lưu trong Chuyến đi rồi thử lại.',
         );
     };
     check();
@@ -225,9 +236,7 @@ export const accountSession = {
       const legacy = await readLegacyTrips();
       check();
       if (legacy.issues.length)
-        throw Error(
-          'Kho cũ có bản ghi lỗi; chưa chuyển chuyến nào. Giữ nguyên dữ liệu để đối soát.',
-        );
+        throw Error('Chưa đọc được chuyến đi cũ. Chưa có chuyến nào được thêm vào tài khoản.');
       let copied = 0,
         existing = 0;
       for (const saved of legacy.trips) {
@@ -256,16 +265,14 @@ export const accountSession = {
           epoch !== lifecycle ||
           accountTrips.getSnapshot().owner !== owner
         )
-          throw Error('Đã giữ bản nháp, chưa chuyển tiếp. Mở Chuyến đi để xử lý.');
+          throw Error('Chuyến đi chưa được thêm xong. Mở Chuyến đi để tiếp tục lưu.');
         if (!(await accountTrips.save()))
-          throw Error(
-            'Chưa xác nhận chuyển xong. Mở Chuyến đi để kiểm tra bản nháp/yêu cầu chờ và thử lại đúng yêu cầu. Bản gốc vẫn giữ nguyên.',
-          );
+          throw Error('Chưa xác nhận chuyển xong. Mở Chuyến đi và bấm “Thử lưu lại” để hoàn tất.');
         check();
         copied++;
       }
       await accountTrips.list();
-      return `Đã chuyển ${copied} chuyến; ${existing} bản đã có được giữ nguyên. Bản gốc trên thiết bị không bị xóa.`;
+      return `Đã thêm ${copied} chuyến. ${existing} chuyến đã có trong tài khoản được giữ nguyên.`;
     } finally {
       importing = false;
     }
@@ -369,7 +376,23 @@ export function useAccount() {
     },
     () => profileState,
   );
-  return { session: state, trips, catalog, profile, hasSavedSession: refreshStorage.exists() };
+  const workspaceState = useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    () => workspace,
+  );
+  return {
+    session: state,
+    trips,
+    catalog,
+    profile,
+    workspace: workspaceState,
+    hasSavedSession: refreshStorage.exists(),
+  };
 }
 export function startAccountLifecycle() {
   let ready = false;

@@ -13,14 +13,14 @@ export function budgetView(input: unknown) {
     unknown > 0
       ? `Còn ${unknown} khoản chưa có giá; tổng chưa đầy đủ.`
       : count === 0
-        ? 'Chưa có hoạt động; chi phí đã biết là 0 đ.'
-        : 'Tất cả hoạt động đã có giá nhập. Đây vẫn là chi phí ước tính.';
+        ? 'Thêm hoạt động để bắt đầu tính chi phí.'
+        : 'Đã đủ chi phí ước tính. Giá thực tế có thể thay đổi.';
   let difference: string;
-  if (summary.remainingVnd === null) difference = 'Chưa đặt ngân sách để đối chiếu.';
+  if (summary.remainingVnd === null) difference = 'Bạn chưa đặt ngân sách cho chuyến đi.';
   else if (summary.remainingVnd < 0)
-    difference = `Chi phí đã biết vượt ngân sách ${formatVnd(-summary.remainingVnd)}.`;
-  else if (summary.remainingVnd === 0) difference = 'Chi phí đã biết bằng ngân sách nhóm.';
-  else difference = `Ngân sách còn lại theo chi phí đã biết: ${formatVnd(summary.remainingVnd)}.`;
+    difference = `Các khoản đã nhập vượt ngân sách ${formatVnd(-summary.remainingVnd)}.`;
+  else if (summary.remainingVnd === 0) difference = 'Các khoản đã nhập bằng ngân sách nhóm.';
+  else difference = `Còn lại sau các khoản đã nhập: ${formatVnd(summary.remainingVnd)}.`;
   return {
     summary,
     budgetText: summary.budgetVnd === null ? 'Chưa đặt' : formatVnd(summary.budgetVnd),
@@ -63,10 +63,9 @@ export function parseGroupForm(
   if (result.success) return { ok: true, trip: result.data };
   const errors: GroupErrors = {};
   result.error.issues.forEach((issue) => {
-    if (issue.path[0] === 'people') errors.people = 'Số người phải là số nguyên từ 1 đến 20.';
+    if (issue.path[0] === 'people') errors.people = 'Nhập từ 1 đến 20 người, không nhập số lẻ.';
     if (issue.path[0] === 'budgetVnd')
-      errors.budgetVnd =
-        'Ngân sách là số nguyên 0–1.000.000.000 VND, không có dấu phân cách; hoặc để trống.';
+      errors.budgetVnd = 'Nhập ngân sách tối đa 1 tỷ đồng, chỉ gồm chữ số; hoặc để trống.';
   });
   return { ok: false, errors };
 }

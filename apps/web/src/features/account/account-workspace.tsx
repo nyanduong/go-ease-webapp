@@ -48,7 +48,7 @@ export function AccountWorkspace({
   }, [id, trips.ready]);
   useEffect(() => {
     if (mode === 'detail' && trips.draft && trips.draft.trip.id !== id)
-      setMessage('Có bản nháp khác chưa lưu. Hãy mở bản nháp để xử lý trước.');
+      setMessage('Bạn còn thay đổi chưa lưu ở chuyến khác. Hãy mở chuyến đó để tiếp tục.');
   }, [id, mode, trips.draft]);
   const places = useMemo(
     () =>
@@ -68,18 +68,18 @@ export function AccountWorkspace({
     try {
       setMessage('');
       await action();
-    } catch (error) {
+    } catch {
       setMessage(
-        error instanceof Error ? error.message : 'Chưa xử lý được. Bản nháp vẫn giữ nguyên.',
+        'Chưa thực hiện được. Hãy kiểm tra nội dung và thử lại; thay đổi của bạn vẫn được giữ.',
       );
     }
   }
   const selectedId =
     candidate?.id ?? (trips.pending?.kind === 'create' ? trips.pending.trip.id : trips.pending?.id);
   return (
-    <section className="flex min-w-0 flex-col gap-5" aria-label="Chuyến của tài khoản">
+    <section className="flex min-w-0 flex-col gap-5" aria-label="Chuyến đi của bạn">
       <div className="flex flex-wrap items-center justify-between gap-4 pt-3">
-        <h2>Chuyến của tài khoản</h2>
+        <h2>Chuyến đi của bạn</h2>
         <Button
           secondary
           disabled={blocked}
@@ -95,19 +95,17 @@ export function AccountWorkspace({
           href={`/trips/${encodeURIComponent(trips.draft.trip.id)}`}
           className="rounded-2xl bg-sand p-4 font-semibold text-teal-dark"
         >
-          Mở bản nháp chưa lưu: {trips.draft.trip.name}
+          Tiếp tục chỉnh sửa: {trips.draft.trip.name}
         </Link>
       )}
       {mode === 'detail' && !trip && (
-        <Notice>
-          Chưa mở được chuyến này. Kiểm tra kết nối, quyền truy cập hoặc bản nháp đang có.
-        </Notice>
+        <Notice>Chưa mở được chuyến đi. Hãy kiểm tra kết nối và thử lại.</Notice>
       )}
       {trips.message && <Notice error={trips.conflict}>{trips.message}</Notice>}
       {message && <Notice error>{message}</Notice>}
       {trips.pending && (
         <Notice error>
-          Có yêu cầu chưa xác nhận. Giữ nguyên nội dung để đối soát.
+          Chưa xác nhận được thay đổi đã lưu. Bạn có thể thử lại mà không cần nhập lại.
           <Button
             disabled={blocked}
             onClick={() => {
@@ -117,7 +115,7 @@ export function AccountWorkspace({
               });
             }}
           >
-            Thử lại đúng yêu cầu đã gửi
+            Thử lưu lại
           </Button>
         </Notice>
       )}
@@ -129,10 +127,10 @@ export function AccountWorkspace({
             void work(() => accountTrips.checkpoint());
           }}
         >
-          Thử ghi lại bản nháp trên thiết bị
+          Thử giữ lại thay đổi
         </Button>
       )}
-      {selectedId && (
+      {selectedId && trips.conflict && !trips.latest && (
         <Button
           secondary
           disabled={blocked}
@@ -140,27 +138,30 @@ export function AccountWorkspace({
             void work(() => accountTrips.read(selectedId));
           }}
         >
-          Đọc bản server để đối chiếu
+          Xem lịch trình mới nhất
         </Button>
       )}
       {trips.latest && (
         <div className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6">
-          <h3>Bản server hiện tại · v{trips.latest.version}</h3>
+          <h3>Lịch trình mới nhất</h3>
           <p>
             {trips.latest.trip.name} ·{' '}
             {trips.latest.trip.days.reduce((count, day) => count + day.activities.length, 0)} hoạt
             động
           </p>
-          <p>Bản nháp giữ nguyên. Kiểm tra rồi chọn bản sẽ giữ; hệ thống không tự gộp thay đổi.</p>
+          <p>
+            Chuyến đi đã được chỉnh sửa ở nơi khác. Chọn dùng lịch trình mới nhất hoặc giữ thay đổi
+            của bạn.
+          </p>
           <Button
             secondary
             disabled={blocked || !!trips.pending}
             onClick={() => {
-              if (window.confirm('Bỏ bản nháp để dùng bản server mới?'))
+              if (window.confirm('Bỏ thay đổi chưa lưu của bạn và dùng lịch trình mới nhất?'))
                 void work(() => accountTrips.useLatest());
             }}
           >
-            Bỏ bản nháp, dùng bản server mới
+            Dùng lịch trình mới nhất
           </Button>
           {trips.draft &&
             trips.latest.trip.id === trips.draft.trip.id &&
@@ -171,13 +172,13 @@ export function AccountWorkspace({
                 onClick={() => {
                   if (
                     window.confirm(
-                      'Giữ TOÀN BỘ bản nháp trên version mới? Lần lưu tiếp theo có thể thay nội dung của máy khác.',
+                      'Dùng toàn bộ thay đổi của bạn? Khi lưu, nội dung này sẽ thay thế những chỉnh sửa từ thiết bị khác.',
                     )
                   )
                     void work(() => accountTrips.rebase());
                 }}
               >
-                Giữ toàn bộ bản nháp trên version mới
+                Giữ thay đổi của tôi
               </Button>
             )}
         </div>
@@ -189,9 +190,6 @@ export function AccountWorkspace({
               className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
               key={item.id}
             >
-              <span className="inline-flex w-fit rounded-full bg-mint px-3 py-1 text-xs font-bold text-teal-dark">
-                Phiên bản {item.version}
-              </span>
               <h3>{item.name}</h3>
               <p>
                 {dateLabel(item.startDate)} · {item.durationDays} ngày · {item.people} người
@@ -295,7 +293,9 @@ export function AccountWorkspace({
           }}
           onSave={(candidate) => {
             if (trips.conflict) {
-              setMessage('Đọc bản server và xử lý xung đột trước khi lưu.');
+              setMessage(
+                'Chuyến đi đã thay đổi ở nơi khác. Hãy chọn nội dung muốn giữ trước khi lưu.',
+              );
               return;
             }
             if (blocked || trips.pending) return;
@@ -366,11 +366,11 @@ function NewAccountTrip({
         void onCreate(result.input);
       }}
     >
-      <h3>Chuyến tài khoản mới · Đà Lạt</h3>
+      <h3>Lên lịch trình Đà Lạt</h3>
       <TripForm values={form} onChange={setForm} errors={errors} disabled={disabled} />
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={disabled}>
-          Tạo bản nháp lịch trình mẫu
+          Tạo lịch trình
         </Button>
         <Button
           secondary
@@ -378,7 +378,7 @@ function NewAccountTrip({
           onClick={() => {
             if (
               JSON.stringify(form) === JSON.stringify(initial) ||
-              window.confirm('Bỏ thông tin chuyến tài khoản đang nhập?')
+              window.confirm('Bỏ thông tin chuyến đi đang nhập?')
             )
               onCancel();
           }}

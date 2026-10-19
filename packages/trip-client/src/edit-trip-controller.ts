@@ -37,7 +37,8 @@ export function parseActivityForm(
 ): { ok: true; activity: Activity } | { ok: false; errors: ActivityErrors } {
   const errors: ActivityErrors = {};
   const place = places.find((item) => item.id === form.placeId);
-  if (form.kind === 'catalog' && !place) errors.placeId = 'Chọn một địa điểm trong danh mục.';
+  if (form.kind === 'catalog' && !place)
+    errors.placeId = 'Chọn một địa điểm trong danh sách gợi ý.';
   const cost = form.costVnd.trim();
   const result = activitySchema.safeParse({
     id,
@@ -52,9 +53,9 @@ export function parseActivityForm(
   if (!result.success) {
     const messages: ActivityErrors = {
       name: 'Tên hoạt động từ 1 đến 120 ký tự.',
-      startTime: 'Nhập giờ HH:mm (00:00–23:59).',
-      endTime: 'Nhập đủ cặp giờ HH:mm; giờ kết thúc phải sau bắt đầu trong cùng ngày.',
-      costVnd: 'Nhập số nguyên 0–100.000.000 VND, không có dấu phân cách; hoặc để trống.',
+      startTime: 'Chọn giờ bắt đầu hợp lệ.',
+      endTime: 'Chọn cả giờ bắt đầu và kết thúc; giờ kết thúc cần muộn hơn trong cùng ngày.',
+      costVnd: 'Nhập chi phí tối đa 100 triệu đồng, chỉ gồm chữ số; hoặc để trống.',
       notes: 'Ghi chú tối đa 500 ký tự.',
     };
     result.error.issues.forEach((issue) => {

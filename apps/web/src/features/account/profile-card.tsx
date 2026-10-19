@@ -118,9 +118,6 @@ export function ProfileCard({
           <div className="mt-5 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl break-words sm:text-3xl">{profile.displayName}</h2>
-              <span className="rounded-full bg-mint px-3 py-1 text-xs font-bold text-teal-dark">
-                Google · Đã kết nối
-              </span>
             </div>
             <p className="text-sm break-all text-muted">
               {profile.email ?? 'Chưa có email hiển thị'}
@@ -203,9 +200,6 @@ export function ProfileCard({
                   readOnly
                   className="min-h-12 w-full rounded-2xl border border-line bg-cream px-4 font-normal text-muted"
                 />
-                <span className="text-xs font-normal text-muted">
-                  Email được liên kết với tài khoản Google.
-                </span>
               </label>
             </div>
             <label className="flex flex-col gap-2 text-sm font-bold">
@@ -255,7 +249,7 @@ export function ProfileCard({
                   void reload();
                 }}
               >
-                Tải lại hồ sơ để đối chiếu
+                Xem lại hồ sơ đã lưu
               </Button>
             </Notice>
           </div>

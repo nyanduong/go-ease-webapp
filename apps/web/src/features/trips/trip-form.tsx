@@ -24,7 +24,7 @@ export function TripForm({
     {
       key: 'budgetVnd',
       label: 'Ngân sách nhóm (VND)',
-      hint: 'Tùy chọn · Tổng cả nhóm, nhập số không có dấu phân cách',
+      hint: 'Không bắt buộc · Ví dụ: 5000000',
     },
   ];
   return (
@@ -32,7 +32,6 @@ export function TripForm({
       <label className="col-span-full">
         Điểm đến
         <input value="Đà Lạt" readOnly />
-        <small>Điểm đến trong bản demo hiện tại</small>
       </label>
       {fields.map(({ key, label, type, hint }) => (
         <label

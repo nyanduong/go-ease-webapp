@@ -20,7 +20,7 @@ export function HomeOverview({
         </div>
         <div className="rounded-3xl bg-sand p-5">
           <span className="text-3xl font-extrabold text-amber-800">{placeCount}</span>
-          <p className="mt-2 text-xs font-semibold text-muted">Địa điểm trong danh mục</p>
+          <p className="mt-2 text-xs font-semibold text-muted">Địa điểm gợi ý</p>
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-4 rounded-3xl border border-line bg-paper p-6">

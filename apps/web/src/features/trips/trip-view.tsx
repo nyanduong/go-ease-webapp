@@ -137,8 +137,7 @@ function TripSession({
     if (!editing || blocked || !projection.ok || encoded === sourceEncoded) return;
     let current = true;
     void Promise.resolve(latestChange.current(projection.trip)).catch(() => {
-      if (current)
-        setMessage('Chưa ghi được bản nháp. Nội dung đang nhập vẫn giữ; hãy thử lưu lại.');
+      if (current) setMessage('Chưa giữ được thay đổi. Hãy giữ trang này mở và thử lưu lại.');
     });
     return () => {
       current = false;
@@ -182,7 +181,7 @@ function TripSession({
         );
         if (id && targetDay) openEditor(id, targetDay.id);
       }
-      setMessage('Chưa lưu thay đổi. Kiểm tra các trường được đánh dấu.');
+      setMessage('Chưa lưu thay đổi. Kiểm tra các mục được đánh dấu.');
       return;
     }
     void onSave(projection.trip);
@@ -192,11 +191,11 @@ function TripSession({
       ? 'Đang lưu…'
       : 'Đang xử lý…'
     : saveStatus === 'unconfirmed'
-      ? 'Chưa xác nhận lưu'
+      ? 'Đang chờ xác nhận đã lưu'
       : saveStatus === 'conflict'
         ? 'Có thay đổi từ nơi khác'
         : saveStatus === 'error'
-          ? 'Chưa lưu được · Giữ nguyên bản nháp'
+          ? 'Chưa lưu được thay đổi'
           : dirty
             ? 'Có thay đổi chưa lưu'
             : editing
@@ -255,11 +254,6 @@ function TripSession({
             </div>
           )}
         </div>
-        <small className={editing ? undefined : 'hidden sm:block'}>
-          {storage === 'account'
-            ? 'Chuyến tài khoản · Bản nháp hợp lệ được giữ riêng trên thiết bị; chỉ gửi máy chủ khi bạn lưu.'
-            : 'Chuyến khách · Lưu trong trình duyệt trên thiết bị này.'}
-        </small>
       </header>
       <div
         role="tablist"
@@ -291,8 +285,7 @@ function TripSession({
           {message && <Notice error>{message}</Notice>}
           {editing && !projection.ok && (
             <p className="text-xs text-amber-900">
-              Có trường chưa hợp lệ. Nội dung đang nhập chỉ giữ trong màn hình này cho đến khi sửa
-              đúng.
+              Một số thông tin chưa đúng. Hãy kiểm tra trước khi rời trang.
             </p>
           )}
           {showErrors && projection.errors.aggregate && (
@@ -449,7 +442,7 @@ function TripSession({
                                 aria-label={`Xóa hoạt động ${activity.name}`}
                                 disabled={blocked}
                                 onClick={() => {
-                                  if (confirm(`Xóa hoạt động “${activity.name}” khỏi bản nháp?`))
+                                  if (confirm(`Xóa hoạt động “${activity.name}” khỏi lịch trình?`))
                                     mutate((value) => ({
                                       ...value,
                                       layout: removeActivity(value.layout, activity.id),
@@ -546,16 +539,9 @@ function TripSession({
                 {trip.people} người · {trip.durationDays} ngày
               </p>
               <Notice>
-                {trip.generationSource === 'ai'
-                  ? 'Lịch trình gợi ý bằng AI'
-                  : 'Lịch trình mẫu local'}{' '}
-                · Hãy kiểm tra giờ mở cửa và giá trước khi đi.
+                {trip.generationSource === 'ai' ? 'Lịch trình do AI gợi ý' : 'Lịch trình gợi ý'} ·
+                Hãy kiểm tra giờ mở cửa và giá trước khi đi.
               </Notice>
-              <p className="text-sm text-muted">
-                {storage === 'account'
-                  ? 'Chuyến được quản lý qua tài khoản. Bản nháp và yêu cầu chưa xác nhận được giữ riêng theo tài khoản.'
-                  : 'Chuyến khách được lưu trên trình duyệt của thiết bị này.'}
-              </p>
             </div>
           )}
           {typeof extra === 'function'
@@ -568,11 +554,6 @@ function TripSession({
         <div className="sticky bottom-22 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal/20 bg-paper/95 p-4 shadow-md backdrop-blur lg:bottom-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink">{status}</p>
-            <small>
-              {storage === 'account'
-                ? 'Lưu thay đổi để cập nhật chuyến tài khoản.'
-                : 'Lưu thay đổi để cập nhật chuyến trên thiết bị.'}
-            </small>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -585,7 +566,7 @@ function TripSession({
               secondary
               disabled={blocked}
               onClick={() => {
-                if (!dirty || confirm('Bỏ mọi thay đổi trong bản nháp này?')) onCancel();
+                if (!dirty || confirm('Bỏ các thay đổi chưa lưu?')) onCancel();
               }}
             >
               Hủy

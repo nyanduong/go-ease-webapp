@@ -1,5 +1,5 @@
 import { Component, useEffect, type ReactNode } from 'react';
-import { Brand, Notice } from '../components/ui';
+import { AccountGate, Brand, Notice } from '../components/ui';
 import { Navigation } from './navigation';
 import { MotionRegion } from '../components/motion';
 import { Link, usePath } from './router';
@@ -27,28 +27,20 @@ function Route({ path }: { path: string }) {
 }
 export function App() {
   const path = usePath();
-  const { session, trips } = useAccount();
+  const { session, trips, workspace } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
   if (session.phase !== 'backend-verified') return <LoginPage />;
   if (!trips.ready)
     return (
-      <main className="mx-auto flex max-w-xl flex-col gap-5 p-8">
-        <Notice>{session.busy ? 'Đang mở dữ liệu tài khoản…' : session.message}</Notice>
-        <button
-          onClick={() => {
-            void accountSession.restore();
-          }}
-        >
-          Thử tải lại
-        </button>
-        <button
-          onClick={() => {
-            void accountSession.logout();
-          }}
-        >
-          Đăng xuất
-        </button>
-      </main>
+      <AccountGate
+        error={workspace.busy || session.busy ? undefined : workspace.error || undefined}
+        onRetry={() => {
+          void accountSession.restore();
+        }}
+        onLogout={() => {
+          void accountSession.logout();
+        }}
+      />
     );
   return (
     <>

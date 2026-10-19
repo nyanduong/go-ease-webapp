@@ -59,7 +59,7 @@ export function BudgetSummary({
           <p className="text-xs text-muted">{model.difference}</p>
         ) : (
           <p className="text-xs leading-relaxed text-muted">
-            Chưa tính các hoạt động chưa có giá. Chưa thể kết luận ngân sách đủ cho chuyến.
+            Tổng này chưa gồm các hoạt động chưa có giá.
           </p>
         )}
         {onBudget && (
@@ -96,17 +96,12 @@ export function Budget({
         <p className={model.warning ? 'text-error' : 'text-muted'}>
           {model.warning || model.phase === 'complete'
             ? model.difference
-            : 'Chưa đủ dữ liệu để đối chiếu toàn bộ chuyến đi.'}
+            : 'Bổ sung chi phí còn thiếu để biết ngân sách có đủ không.'}
         </p>
-        <small>
-          Mỗi khoản là tổng nhóm, không nhân lại với {trip.people} người. Để trống nếu chưa biết;
-          nhập 0 nếu miễn phí.
-        </small>
       </div>
       {model.summary.unknownCostCount > 0 && (
         <div className="rounded-3xl border border-line bg-paper p-5">
           <h3>Bổ sung chi phí còn thiếu</h3>
-          <p className="mt-1 text-xs text-muted">Chọn hoạt động để nhập chi phí vào bản nháp.</p>
           <ul className="mt-4 divide-y divide-line">
             {trip.days.flatMap((day, index) =>
               day.activities

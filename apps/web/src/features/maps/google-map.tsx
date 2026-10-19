@@ -63,11 +63,9 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
     const previousFailure = window.gm_authFailure;
     window.gm_authFailure = () => {
       if (!disposed)
-        setStatus(
-          'Google Maps từ chối cấu hình bản đồ. Hãy dùng danh sách địa điểm và nút chỉ đường bên dưới.',
-        );
+        setStatus('Chưa hiển thị được bản đồ. Bạn có thể chọn địa điểm và mở chỉ đường bên dưới.');
     };
-    setStatus('Đang tải nền bản đồ…');
+    setStatus('Đang tải bản đồ…');
     void loadGoogleMaps(key)
       .then(async (maps) => {
         const { AdvancedMarkerElement } = (await maps.importLibrary(
@@ -107,13 +105,13 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
           if (!disposed) setStatus('');
         });
       })
-      .catch((error) => {
-        if (!disposed) setStatus(error instanceof Error ? error.message : 'Chưa tải được bản đồ.');
+      .catch(() => {
+        if (!disposed) setStatus('Chưa tải được bản đồ. Hãy thử lại hoặc mở chỉ đường bên dưới.');
       });
     const deadline = setTimeout(() => {
       if (!disposed)
         setStatus((current) =>
-          current ? 'Nền bản đồ chưa tải được. Kiểm tra kết nối hoặc thử tải lại.' : current,
+          current ? 'Bản đồ tải lâu hơn bình thường. Bạn có thể thử lại.' : current,
         );
     }, 25000);
     return () => {
@@ -129,7 +127,7 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
   return (
     <section className="flex min-w-0 flex-col gap-5" aria-label="Bản đồ theo ngày">
       {!model.pins.length ? (
-        <Notice>Ngày này chưa có địa điểm có tọa độ.</Notice>
+        <Notice>Chưa có địa điểm để hiển thị trên bản đồ ngày này.</Notice>
       ) : key ? (
         <>
           <div
@@ -150,16 +148,9 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
         <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-3xl bg-mint p-6 text-center [&>span]:text-5xl">
           <span aria-hidden="true">⌖</span>
           <h3>Địa điểm trong ngày của bạn</h3>
-          <p>
-            Bản đồ Google chưa được cấu hình trên phiên này. Bạn vẫn có thể mở chỉ đường tới từng
-            địa điểm.
-          </p>
+          <p>Bản đồ tạm thời chưa hiển thị. Bạn vẫn có thể mở chỉ đường tới từng địa điểm.</p>
         </div>
       )}
-      <p className="text-sm text-muted">
-        Tọa độ từ danh mục · Không sử dụng vị trí hiện tại trong GoEase. Google Maps sẽ xử lý chỉ
-        đường khi bạn mở liên kết.
-      </p>
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {model.pins.map((pin, index) => (
           <div className="rounded-3xl border border-line bg-paper p-5 sm:p-6" key={pin.placeId}>
@@ -190,17 +181,11 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
             {activity.order}. {activity.name}
           </h3>
           <p>
-            {activity.reason === 'custom'
-              ? 'Hoạt động tự nhập'
-              : 'Địa điểm không còn trong danh mục'}{' '}
-            · Chưa có tọa độ
+            {activity.reason === 'custom' ? 'Hoạt động tự nhập' : 'Địa điểm không còn trong gợi ý'}{' '}
+            · Chưa hiển thị được trên bản đồ
           </p>
         </div>
       ))}
-      <small>
-        Bản đồ chưa tối ưu tuyến hoặc tính thời gian di chuyển. Hướng dẫn giọng nói và điều hướng
-        được mở trong Google Maps.
-      </small>
     </section>
   );
 }

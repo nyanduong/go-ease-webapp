@@ -28,9 +28,6 @@ export function PlanningGuide() {
           </li>
         ))}
       </ol>
-      <p className="border-t border-teal/15 pt-5 text-xs leading-relaxed text-muted">
-        Chuyến khách lưu trên trình duyệt này. Bạn có thể quay lại chỉnh sửa bất cứ lúc nào.
-      </p>
     </aside>
   );
 }

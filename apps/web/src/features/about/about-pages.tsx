@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { travelLinks, createTravelLinkFlow } from '@goease/trip-client/travel-links-controller';
+import { travelLinks } from '@goease/trip-client/travel-links-controller';
 import { getDalatPlaces } from '@goease/catalog';
 import { Link } from '../../app/router';
-import { Button, Notice, PageTitle } from '../../components/ui';
+import { PageTitle } from '../../components/ui';
 
 export function AboutPage() {
   return (
@@ -27,11 +26,7 @@ export function AboutPage() {
           GoEase giúp nhóm bạn lên kế hoạch du lịch tại Việt Nam, chỉnh lịch trình và theo dõi ngân
           sách chung.
         </p>
-        <p>
-          Tạo, xem và chỉnh chuyến; thêm hoạt động, quản lý ngân sách và xem địa điểm theo ngày.
-          Chuyến đi được lưu trong tài khoản Google đã xác minh. Cần kết nối mạng để mở và lưu
-          chuyến.
-        </p>
+        <p>Lưu chuyến đi vào tài khoản để mở lại trên các thiết bị của bạn.</p>
         <span className="inline-flex w-fit rounded-full bg-mint px-3 py-1 text-xs font-bold text-teal-dark">
           Đà Lạt · 1–5 ngày · Tối đa 20 người
         </span>
@@ -43,11 +38,8 @@ export function AboutPage() {
         </Link>
       </div>
       <details className="rounded-3xl border border-line bg-paper p-5 sm:p-6">
-        <summary>Dữ liệu và lịch trình gợi ý · {getDalatPlaces().length} địa điểm demo</summary>
-        <p>
-          Lịch trình mẫu không tối ưu tuyến hoặc kiểm tra giờ mở cửa trực tiếp. Giá chưa biết được
-          hiển thị rõ, không coi là miễn phí.
-        </p>
+        <summary>Tham khảo {getDalatPlaces().length} địa điểm tại Đà Lạt</summary>
+        <p>Giờ mở cửa và giá có thể thay đổi. Hãy kiểm tra trước khi đi.</p>
         <div className="flex min-w-0 flex-col gap-5">
           {getDalatPlaces().map((place) => (
             <div key={place.id}>
@@ -72,17 +64,10 @@ export function AboutPage() {
   );
 }
 export function TravelServices() {
-  const [message, setMessage] = useState('');
-  const [flow] = useState(() =>
-    createTravelLinkFlow(async (url) => {
-      const popup = window.open(url, '_blank', 'noopener,noreferrer');
-      void popup;
-    }),
-  );
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <PageTitle
-        eyebrow="Website tham khảo"
+        eyebrow="Chỗ nghỉ & chuyến bay"
         description="Tìm thêm chỗ nghỉ và chuyến bay cho hành trình của bạn."
       >
         Một chuyến đi trọn vẹn
@@ -98,31 +83,21 @@ export function TravelServices() {
               {link.domain}
             </span>
             <p>{link.description}</p>
-            <Button
-              secondary
-              onClick={() => {
-                if (!flow.select(link.id)) return;
-                if (
-                  !window.confirm(
-                    `Mở ${link.name} (${link.domain})? Bạn sẽ đặt trực tiếp trên website bên ngoài.`,
-                  )
-                ) {
-                  flow.cancel();
-                  return;
-                }
-                void flow.confirm().then((result) => setMessage(result.message));
-              }}
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              referrerPolicy="no-referrer"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-mint px-5 py-3 text-sm font-bold text-teal-dark hover:bg-teal/15"
             >
               Mở {link.name} ↗
-            </Button>
+            </a>
           </div>
         ))}
       </div>
-      {message && <Notice>{message}</Notice>}
-      <Notice>
-        Giá và điều kiện do website bên ngoài cung cấp. GoEase chỉ mở website, không nhận thanh toán
-        hay xác nhận đặt phòng/vé. Liên kết không gửi kèm thông tin chuyến đi hoặc tài khoản.
-      </Notice>
+      <p className="text-sm text-muted">
+        Bạn sẽ đặt chỗ và thanh toán trực tiếp trên trang được mở.
+      </p>
     </div>
   );
 }

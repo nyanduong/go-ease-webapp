@@ -40,11 +40,10 @@ export function validateTripForm(
   if (result.success) return { ok: true, input: result.data };
   const messages: Record<keyof TripFormValues, string> = {
     name: 'Nhập tên chuyến từ 1 đến 80 ký tự.',
-    startDate: 'Nhập ngày có thật dạng YYYY-MM-DD, từ hôm nay; ngày cuối không quá năm 2100.',
-    durationDays: 'Số ngày phải là số nguyên từ 1 đến 5.',
-    people: 'Số người phải là số nguyên từ 1 đến 20.',
-    budgetVnd:
-      'Nhập số nguyên VND từ 0 đến 1.000.000.000, không dùng dấu phân cách; hoặc để trống.',
+    startDate: 'Chọn ngày từ hôm nay trở đi; chuyến đi cần kết thúc trước năm 2101.',
+    durationDays: 'Chọn từ 1 đến 5 ngày, không nhập số lẻ.',
+    people: 'Nhập từ 1 đến 20 người, không nhập số lẻ.',
+    budgetVnd: 'Nhập ngân sách tối đa 1 tỷ đồng, chỉ gồm chữ số; hoặc để trống.',
   };
   const errors: FormErrors = {};
   result.error.issues.forEach((issue) => {

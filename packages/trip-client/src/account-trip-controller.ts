@@ -104,9 +104,18 @@ export function createAccountTrips(options: {
       throw Error('Đăng nhập lại hoặc xử lý yêu cầu đang chờ trước.');
   }
   function error(cause: unknown) {
-    return cause instanceof ServerTripError
-      ? cause.message
-      : 'Không đọc/ghi được dữ liệu tài khoản. Bản nháp được giữ; chưa xác nhận đồng bộ.';
+    if (cause instanceof ServerTripError) {
+      if (cause.status === 409)
+        return 'Chuyến đi đã được chỉnh sửa ở nơi khác. Hãy xem lịch trình mới nhất trước khi lưu.';
+      if (cause.status === 404)
+        return 'Chuyến đi này không còn tồn tại hoặc bạn không có quyền mở.';
+      if (cause.status === 401 || cause.status === 403 || cause.code === 'AUTH_REQUIRED')
+        return 'Vui lòng đăng nhập lại để tiếp tục với chuyến đi của bạn.';
+      if (cause.status === 429) return 'Bạn thao tác hơi nhanh. Vui lòng chờ một lát rồi thử lại.';
+      if (cause.status === 400)
+        return 'Thông tin chuyến đi chưa hợp lệ. Hãy kiểm tra lại trước khi lưu.';
+    }
+    return 'Chưa tải hoặc lưu được chuyến đi. Thay đổi của bạn vẫn được giữ.';
   }
   async function saveLocal() {
     const epoch = generation;
@@ -118,8 +127,7 @@ export function createAccountTrips(options: {
       if (epoch === generation)
         set({
           durable: false,
-          message:
-            'Chưa ghi được bản nháp an toàn trên máy. Không gửi server; giữ màn này và thử lưu lại.',
+          message: 'Chưa giữ được thay đổi trên thiết bị. Hãy giữ trang này mở và thử lưu lại.',
         });
       return false;
     }
@@ -130,7 +138,7 @@ export function createAccountTrips(options: {
   ) {
     if (!state.ready || state.busy || !state.owner) return false;
     const epoch = generation;
-    set({ busy: true, message: 'Đang kết nối server…' });
+    set({ busy: true, message: 'Đang tải chuyến đi…' });
     try {
       const result = await options.request(operation);
       if (epoch !== generation) return false;
@@ -148,7 +156,7 @@ export function createAccountTrips(options: {
     const epoch = generation,
       operation = clone(state.pending);
     let stage: 'persist' | 'request' | 'cleanup' = 'persist';
-    set({ busy: true, message: 'Đang lưu yêu cầu trên máy trước khi gửi…' });
+    set({ busy: true, message: 'Đang lưu thay đổi…' });
     try {
       await persist();
       if (epoch !== generation) return false;
@@ -189,9 +197,9 @@ export function createAccountTrips(options: {
             : []),
         ],
         message: result.data.replayed
-          ? 'Đã nhận biên nhận cũ. Tải lại danh sách và đọc server trước khi sửa tiếp.'
+          ? 'Đã xử lý thay đổi trước đó. Tải lại chuyến đi để xem nội dung mới nhất.'
           : saved.kind === 'saved'
-            ? `Đã lưu trên server · v${saved.version}.`
+            ? 'Đã lưu thay đổi.'
             : 'Đã xóa chuyến khỏi tài khoản.',
         durable: true,
       });
@@ -206,20 +214,20 @@ export function createAccountTrips(options: {
         set({
           pending: null,
           conflict: cause instanceof ServerTripError && cause.status === 409,
-          message: error(cause) + ' Bản nháp giữ nguyên; đọc bản mới để đối chiếu.',
+          message: error(cause) + ' Thay đổi của bạn vẫn được giữ.',
         });
         if (!(await saveLocal())) return false;
       } else if (stage === 'request')
         set({
-          message: error(cause) + ' Giữ nguyên yêu cầu để thử lại sau khi đăng nhập/kết nối lại.',
+          message: error(cause) + ' Bấm “Thử lưu lại” khi kết nối trở lại.',
           durable: true,
         });
       else
         set({
           message:
             stage === 'cleanup'
-              ? 'Server đã trả kết quả, nhưng chưa dọn được yêu cầu cũ trên máy. Thử ghi lại trạng thái local; sau mở lại có thể cần replay/đối soát.'
-              : 'Chưa lưu được yêu cầu trên máy nên chưa gửi server. Giữ màn này và thử ghi lại.',
+              ? 'Thay đổi đã được xử lý, nhưng chưa cập nhật được trên thiết bị. Hãy tải lại chuyến đi trước khi sửa tiếp.'
+              : 'Chưa lưu được thay đổi. Giữ trang này mở và thử lưu lại.',
           durable: false,
         });
       return false;
@@ -240,7 +248,8 @@ export function createAccountTrips(options: {
       set(empty());
     },
     async activate(owner: string) {
-      if (!/^[a-z0-9]{20}\.[0-9a-f-]{36}$/i.test(owner)) throw Error('Identity không hợp lệ.');
+      if (!/^[a-z0-9]{20}\.[0-9a-f-]{36}$/i.test(owner))
+        throw Error('Chưa xác nhận được tài khoản. Vui lòng đăng nhập lại.');
       generation++;
       const epoch = generation;
       set({ ...empty(), owner, busy: true });
@@ -292,18 +301,17 @@ export function createAccountTrips(options: {
           draft,
           pending,
           message: pending
-            ? 'Có yêu cầu chưa xác nhận. Thử lại đúng yêu cầu cũ; không tạo bản mới.'
+            ? 'Chưa xác nhận được thay đổi đã lưu. Bấm “Thử lưu lại” để hoàn tất.'
             : draft
-              ? 'Đã khôi phục bản nháp riêng của tài khoản này; chưa đồng bộ.'
-              : 'Chưa tải danh sách server.',
+              ? 'Thay đổi chưa lưu của bạn đã được mở lại.'
+              : '',
         });
         return true;
       } catch {
         if (epoch === generation)
           set({
             ready: false,
-            message:
-              'Không đọc được bản nháp tài khoản. Giữ nguyên bytes, không ghi đè hoặc lấy dữ liệu khách thay thế.',
+            message: 'Chưa mở được thay đổi đã giữ trên thiết bị. Hãy thử tải lại trang.',
           });
         return false;
       } finally {
@@ -326,7 +334,7 @@ export function createAccountTrips(options: {
                   ]
                 : result.data.items,
               cursor: result.data.nextCursor,
-              message: 'Danh sách server đã tải.',
+              message: '',
             });
         },
       );
@@ -337,9 +345,10 @@ export function createAccountTrips(options: {
           if (state.draft || state.pending)
             set({
               latest: result.data,
-              message: 'Đã đọc bản server để đối chiếu; bản nháp giữ nguyên.',
+              message:
+                'Đã tải lịch trình mới nhất. Thay đổi của bạn vẫn được giữ để bạn chọn nội dung muốn dùng.',
             });
-          else set({ selected: result.data, message: 'Đã đọc chuyến server.' });
+          else set({ selected: result.data, message: '' });
         }
       });
     },
@@ -358,7 +367,8 @@ export function createAccountTrips(options: {
     },
     async change(trip: Trip) {
       editable();
-      if (!state.draft || trip.id !== state.draft.trip.id) throw Error('Không đổi ID bản nháp.');
+      if (!state.draft || trip.id !== state.draft.trip.id)
+        throw Error('Không thể áp dụng thay đổi cho chuyến đi khác.');
       set({ draft: { ...state.draft, trip: tripSchema.parse(trip) } });
       return saveLocal();
     },
@@ -370,7 +380,7 @@ export function createAccountTrips(options: {
     async rebase() {
       editable();
       if (!state.draft || !state.latest || state.latest.trip.id !== state.draft.trip.id)
-        throw Error('Đọc cùng ID chuyến server trước.');
+        throw Error('Hãy tải lịch trình mới nhất của chuyến đi này trước.');
       set({
         draft: { ...state.draft, baseVersion: state.latest.version },
         conflict: false,
@@ -380,7 +390,7 @@ export function createAccountTrips(options: {
     },
     async useLatest() {
       editable();
-      if (!state.latest) throw Error('Chưa đọc server.');
+      if (!state.latest) throw Error('Hãy tải lịch trình mới nhất trước.');
       set({
         selected: state.latest,
         latest: null,

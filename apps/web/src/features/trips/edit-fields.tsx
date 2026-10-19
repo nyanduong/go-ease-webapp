@@ -33,7 +33,7 @@ export function ActivityFields({
             }
           >
             <option value="custom">Tự nhập</option>
-            <option value="catalog">Địa điểm trong danh mục</option>
+            <option value="catalog">Địa điểm gợi ý</option>
           </select>
         </label>
         {value.kind === 'catalog' && (
@@ -115,7 +115,6 @@ export function ActivityFields({
         </label>
       </fieldset>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <small>Nội dung nằm trong bản nháp. Chọn “Lưu thay đổi” để lưu chuyến.</small>
         <Button secondary disabled={disabled} onClick={onClose}>
           Thu gọn chỉnh sửa
         </Button>
@@ -161,7 +160,7 @@ export function GroupFields({
         {errors.budgetVnd && <small className="text-error">{errors.budgetVnd}</small>}
       </label>
       <small className="sm:col-span-2">
-        Tổng cho cả nhóm. Để trống nếu chưa đặt; đổi số người không nhân lại các chi phí đã nhập.
+        Ngân sách cho cả nhóm. Có thể để trống nếu chưa quyết định.
       </small>
     </fieldset>
   );

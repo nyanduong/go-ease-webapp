@@ -1,7 +1,7 @@
 import { ProfileCard } from './profile-card';
 import { useEffect, useRef, useState } from 'react';
-import { Button, Brand, Notice, PageTitle } from '../../components/ui';
-import { accountSession, useAccount } from './session';
+import { AccountGate, Button, Brand, Notice, PageTitle } from '../../components/ui';
+import { accountSession, accountTrips, useAccount } from './session';
 
 export function LoginPage() {
   const { session, hasSavedSession } = useAccount();
@@ -17,44 +17,21 @@ export function LoginPage() {
   }, []);
   if (hasSavedSession)
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-cream px-6">
-        <section className="flex w-full max-w-md flex-col gap-6 rounded-3xl border border-line bg-paper p-8">
-          <Brand />
-          <PageTitle eyebrow="GoEase">
-            {session.busy
-              ? 'Đang mở lại tài khoản…'
-              : online
-                ? 'Chưa kết nối được máy chủ'
-                : 'Đang chờ kết nối'}
-          </PageTitle>
-          <p className="text-muted">
-            {session.busy
-              ? 'Bạn không cần đăng nhập lại. GoEase đang kiểm tra phiên đã lưu.'
-              : online
-                ? 'Máy chủ GoEase chưa phản hồi. Hệ thống sẽ tự thử lại và giữ phiên đăng nhập của bạn.'
-                : 'Sẽ tự kết nối lại khi có mạng. Bạn không cần đăng nhập Google lại vì lỗi kết nối tạm thời.'}
-          </p>
-          {!session.busy && (
-            <Button
-              secondary
-              onClick={() => {
-                void accountSession.resume();
-              }}
-            >
-              Thử kết nối lại
-            </Button>
-          )}
-          <Button
-            secondary
-            disabled={session.busy}
-            onClick={() => {
-              void accountSession.logout();
-            }}
-          >
-            Đăng xuất
-          </Button>
-        </section>
-      </main>
+      <AccountGate
+        error={
+          session.busy
+            ? undefined
+            : online
+              ? 'Chưa mở được GoEase. Vui lòng thử lại.'
+              : 'Bạn đang mất kết nối.'
+        }
+        onRetry={() => {
+          void accountSession.resume();
+        }}
+        onLogout={() => {
+          void accountSession.logout();
+        }}
+      />
     );
   return (
     <main className="postcard-login">
@@ -132,12 +109,12 @@ export function LoginPage() {
             </svg>
             Lịch trình của bạn, luôn có thể mở lại.
           </p>
-          {session.busy && <p role="status">{session.message}</p>}
+          {session.busy && <p role="status">Đang đăng nhập…</p>}
           {!session.busy &&
             session.message &&
             session.message !== 'Thiết bị không có refresh credential.' &&
             session.message !== 'Đăng nhập Google để bắt đầu chuyến đi của bạn.' && (
-              <Notice>{session.message}</Notice>
+              <Notice error>Chưa đăng nhập được. Vui lòng thử lại.</Notice>
             )}
           {session.phase === 'unverified' && !session.busy && (
             <Button
@@ -177,14 +154,16 @@ export function AccountPage() {
     const controller = new AbortController();
     migration.current = controller;
     setMigrating(true);
-    setMigrationMessage('Đang chuyển dữ liệu cũ…');
+    setMigrationMessage('Đang thêm chuyến đi…');
     try {
       const message = await accountSession.importLegacy(controller.signal);
       if (!controller.signal.aborted) setMigrationMessage(message);
-    } catch (error) {
+    } catch {
       if (!controller.signal.aborted)
         setMigrationMessage(
-          error instanceof Error ? error.message : 'Chưa chuyển xong; bản gốc vẫn giữ nguyên.',
+          accountTrips.getSnapshot().pending
+            ? 'Chưa xác nhận chuyển xong. Mở Chuyến đi và bấm “Thử lưu lại” để hoàn tất.'
+            : 'Chưa thêm được chuyến đi cũ. Các chuyến ban đầu vẫn được giữ; hãy thử lại.',
         );
     } finally {
       if (!controller.signal.aborted) setMigrating(false);
@@ -226,9 +205,6 @@ export function AccountPage() {
       <div className="flex items-center justify-between gap-4 rounded-3xl border border-line bg-paper p-5 sm:p-6">
         <div>
           <h2 className="text-lg">Tài khoản Google</h2>
-          <p className="mt-1 text-sm text-muted">
-            Bạn có thể đăng nhập lại để tiếp tục hành trình.
-          </p>
         </div>
         <Button
           secondary
@@ -246,10 +222,10 @@ export function AccountPage() {
         </summary>
         <div className="mt-5 flex flex-col gap-4">
           <section className="rounded-3xl border border-line bg-paper p-6">
-            <h2>Chuyển dữ liệu cũ</h2>
+            <h2>Chuyển chuyến đi cũ</h2>
             <p className="mt-3 text-muted">
-              Chuyển các chuyến đã tạo trước đây trên trình duyệt này vào tài khoản đang đăng nhập.
-              Giữ bản gốc; không ghi đè chuyến server đã có. Mỗi thiết bị/origin cần chuyển riêng.
+              Thêm chuyến cũ trên thiết bị này vào tài khoản. Các chuyến đã lưu sẽ không bị thay
+              thế.
             </p>
             <Button
               secondary
@@ -264,10 +240,6 @@ export function AccountPage() {
           </section>
         </div>
       </details>
-      <small>
-        Bản nháp hợp lệ được giữ riêng theo tài khoản trên thiết bị. Chỉ khi lưu thành công lên máy
-        chủ, bạn mới mở được phiên bản đó ở thiết bị khác.
-      </small>
     </div>
   );
 }

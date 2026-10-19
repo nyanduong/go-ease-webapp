@@ -35,10 +35,22 @@ test('conflict preserves draft; reading current server does not overwrite it; re
 });
 test('discard/use-server/delete and replayed receipts never report stale snapshots as current server data',async()=>{
  const f=setup(),t=trip();await f.store.activate(A);await f.store.begin(t,1);await f.store.read(t.id);await f.store.useLatest();assert.equal(f.store.getSnapshot().draft,null);assert.equal(f.store.getSnapshot().selected.version,2);await f.store.remove(f.store.getSnapshot().selected);assert.equal(f.store.getSnapshot().selected,null);
- const replay=setup({request:async op=>({kind:'mutation',data:{mutationId:op.mutationId,replayed:true,result:{kind:'saved',trip:op.trip,version:1,updatedAt:stamp}}})});await replay.store.activate(A);await replay.store.begin(t);await replay.store.save();assert.equal(replay.store.getSnapshot().selected,null);assert.match(replay.store.getSnapshot().message,/biên nhận cũ/);
+ const replay=setup({request:async op=>({kind:'mutation',data:{mutationId:op.mutationId,replayed:true,result:{kind:'saved',trip:op.trip,version:1,updatedAt:stamp}}})});await replay.store.activate(A);await replay.store.begin(t);await replay.store.save();assert.equal(replay.store.getSnapshot().selected,null);assert.match(replay.store.getSnapshot().message,/thay đổi trước đó/);
 });
 test('double save sends one mutation; late list responses are ignored after account switch',async()=>{
  let resolve,calls=0;const f=setup({request:op=>{calls++;return new Promise(r=>{resolve=()=>r(op.kind==='list'?{kind:'list',data:{items:[{id:'private-a',name:'Private A'}],nextCursor:null}}:{kind:'mutation',data:{mutationId:op.mutationId,replayed:false,result:{kind:'saved',trip:op.trip,version:1,updatedAt:stamp}}});});}});
  await f.store.activate(A);await f.store.begin(trip());const saving=f.store.save();await new Promise(r=>setImmediate(r));await assert.rejects(f.store.save());assert.equal(calls,1);resolve();await saving;
  const listing=f.store.list();f.store.lock();await f.store.activate(B);resolve();await listing;assert.deepEqual(f.store.getSnapshot().items,[]);assert.equal(f.store.getSnapshot().owner,B);
+});
+
+
+test('account errors explain the next action without exposing transport diagnostics',async()=>{
+ for(const status of [400,401,403,404,409,429,502]) {
+  const f=setup({request:async()=>{throw new ServerTripError('INTERNAL_CODE','Server API mutationId transport diagnostic',status);}});
+  await f.store.activate(A);
+  await f.store.list();
+  const message=f.store.getSnapshot().message;
+  assert.ok(message.length>0);
+  assert.doesNotMatch(message,/server|API|mutationId|INTERNAL_CODE|transport/i);
+ }
 });
