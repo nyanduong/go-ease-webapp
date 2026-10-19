@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import type { FormErrors, TripFormValues } from '@goease/trip-client/create-trip-controller';
-import { Button, Notice } from '../../components/ui';
 
 export function TripForm({
   values,
@@ -62,48 +60,5 @@ export function TripForm({
         </label>
       ))}
     </fieldset>
-  );
-}
-export function InlineName({
-  initial,
-  disabled,
-  onApply,
-  onDirty,
-}: {
-  initial: string;
-  disabled: boolean;
-  onApply: (name: string) => void;
-  onDirty: (dirty: boolean) => void;
-}) {
-  const [name, setName] = useState(initial);
-  return (
-    <form
-      className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (name.trim()) {
-          onApply(name.trim());
-          onDirty(false);
-        }
-      }}
-    >
-      <label>
-        Tên chuyến đi
-        <input
-          value={name}
-          required
-          maxLength={80}
-          disabled={disabled}
-          onChange={(event) => {
-            setName(event.target.value);
-            onDirty(event.target.value !== initial);
-          }}
-        />
-      </label>
-      {!name.trim() && <Notice error>Nhập tên chuyến từ 1 đến 80 ký tự.</Notice>}
-      <Button type="submit" secondary disabled={disabled || !name.trim()}>
-        Áp dụng tên
-      </Button>
-    </form>
   );
 }

@@ -272,6 +272,7 @@ export function GuestTrip({ id }: { id: string }) {
       return editor;
     }),
     [busy, setBusy] = useState(false),
+    [saveFailed, setSaveFailed] = useState(false),
     [message, setMessage] = useState(''),
     [deleted, setDeleted] = useState(false),
     [aiLocked, setAiLocked] = useState(false),
@@ -307,8 +308,11 @@ export function GuestTrip({ id }: { id: string }) {
       <TripView
         trip={trip}
         editing={editing}
+        baseline={saved?.trip}
         busy={busy || aiBusy}
         saveDisabled={aiLocked}
+        saveStatus={saveFailed ? 'error' : 'idle'}
+        initialDirty={state.draft?.baseRevision === null}
         places={places}
         onChange={(input) => editor.change(input)}
         onEdit={() => {
@@ -318,15 +322,24 @@ export function GuestTrip({ id }: { id: string }) {
             setMessage('Có bản nháp khác. Hãy xử lý trước khi mở chỉnh sửa.');
           }
         }}
-        onSave={() => {
+        onSave={async (candidate) => {
           setBusy(true);
-          void editor
-            .save()
-            .then((result) => setMessage(result.message))
-            .finally(() => setBusy(false));
+          setSaveFailed(false);
+          try {
+            editor.change(candidate);
+            const result = await editor.save();
+            setSaveFailed(!result.ok);
+            setMessage(result.message);
+          } catch {
+            setSaveFailed(true);
+            setMessage('Chưa lưu được chuyến. Nội dung chỉnh sửa vẫn giữ để thử lại.');
+          } finally {
+            setBusy(false);
+          }
         }}
         onCancel={() => {
           editor.cancel();
+          setSaveFailed(false);
           setMessage('Đã bỏ chỉnh sửa.');
         }}
         onDelete={() => {

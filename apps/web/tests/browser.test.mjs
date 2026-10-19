@@ -91,14 +91,12 @@ test('PWA guest CRUD, group budget, day movement, map links and persistence acro
     await page.getByRole('tab', { name: 'Ngân sách', exact: true }).click();
     await page.getByText('Còn 4 khoản chưa có giá; tổng chưa đầy đủ.', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
-    await page.getByRole('button', { name: 'Đổi ngân sách / số người', exact: true }).click();
     await page.getByLabel('Ngân sách nhóm (VND)', { exact: true }).fill('0');
-    await page.getByRole('button', { name: 'Áp dụng ngân sách', exact: true }).click();
     await page.getByRole('tab', { name: 'Lịch trình', exact: true }).click();
     await page.getByRole('button', { name: '+ Thêm hoạt động', exact: true }).click();
     await page.getByLabel('Tên hoạt động', { exact: true }).fill('Cà phê tự chọn');
     await page.getByLabel('Chi phí cả nhóm (VND)', { exact: true }).fill('0');
-    await page.getByRole('button', { name: 'Áp dụng hoạt động', exact: true }).click();
+    await page.getByRole('button', { name: 'Thu gọn chỉnh sửa', exact: true }).click();
     await page.getByText('Miễn phí', { exact: false }).waitFor();
     await page.getByLabel('Đưa lên Cà phê tự chọn', { exact: true }).click();
     await page
@@ -106,7 +104,7 @@ test('PWA guest CRUD, group budget, day movement, map links and persistence acro
       .selectOption({ label: 'Ngày 2' });
     await page.getByRole('button', { name: /^Ngày 2/ }).click();
     await page.getByRole('heading', { name: 'Cà phê tự chọn', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Lưu chuyến', exact: true }).click();
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
     await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
     await page.reload();
     await page.getByRole('button', { name: /^Ngày 2/ }).click();
@@ -214,11 +212,10 @@ test('two tabs cannot silently overwrite the same guest revision', async () => {
     ]) {
       await current.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
       await current.getByLabel('Tên chuyến đi', { exact: true }).fill(name);
-      await current.getByRole('button', { name: 'Áp dụng tên', exact: true }).click();
     }
     await Promise.all(
       [page, other].map((current) =>
-        current.getByRole('button', { name: 'Lưu chuyến', exact: true }).click(),
+        current.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click(),
       ),
     );
     await Promise.all(
@@ -430,7 +427,12 @@ test('account browser session, owner-bound drafts, explicit lost-response retry 
         exact: true,
       })
       .click();
-    await page.getByRole('button', { name: 'Lưu bản nháp lên server', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).waitFor();
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Chuyến tài khoản đã sửa');
+    await page.getByRole('tab', { name: 'Ngân sách', exact: true }).click();
+    await page.getByLabel('Ngân sách nhóm (VND)', { exact: true }).fill('5000000');
+    await page.getByRole('tab', { name: 'Thông tin', exact: true }).click();
+    assert.equal(fixture.writes.length, 0, 'Editing does not send a server mutation');
     await page.evaluate(() => {
       Object.defineProperty(document, 'visibilityState', {
         configurable: true,
@@ -450,12 +452,14 @@ test('account browser session, owner-bound drafts, explicit lost-response retry 
       });
     });
     await page.getByRole('button', { name: 'Khôi phục phiên', exact: true }).click();
-    await page.getByRole('button', { name: 'Lưu bản nháp lên server', exact: true }).click();
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
     await page.getByRole('button', { name: 'Thử lại đúng yêu cầu đã gửi', exact: true }).waitFor();
     await page
       .getByText('Giữ nguyên yêu cầu để thử lại sau khi đăng nhập/kết nối lại.', { exact: false })
       .waitFor();
     assert.equal(fixture.writes.length, 1);
+    assert.equal(fixture.writes[0].trip.name, 'Chuyến tài khoản đã sửa');
+    assert.equal(fixture.writes[0].trip.budgetVnd, 5000000);
     await page.getByRole('button', { name: 'Thử lại đúng yêu cầu đã gửi', exact: true }).click();
     await page.getByText('Đã nhận biên nhận cũ.', { exact: false }).waitFor();
     assert.equal(fixture.writes.length, 2);
@@ -463,11 +467,13 @@ test('account browser session, owner-bound drafts, explicit lost-response retry 
     await page.getByRole('button', { name: 'Tải lại danh sách server', exact: true }).click();
     await page
       .getByRole('button', {
-        name: 'Mở chuyến tài khoản: Chuyến khách gốc',
+        name: 'Mở chuyến tài khoản: Chuyến tài khoản đã sửa',
         exact: true,
       })
       .click();
-    await page.getByRole('heading', { level: 1, name: 'Chuyến khách gốc', exact: true }).waitFor();
+    await page
+      .getByRole('heading', { level: 1, name: 'Chuyến tài khoản đã sửa', exact: true })
+      .waitFor();
     const stored = await page.evaluate(() => ({
       local: { ...localStorage },
       session: { ...sessionStorage },
@@ -517,6 +523,7 @@ test('AI demo stays preview-only until saved and never repeats provider calls to
           today: input.startDate,
         });
       assert.equal(generated.ok, true);
+      generated.trip.days[0].activities[0].notes = `Đề xuất lượt ${calls}`;
       return route.fulfill({
         json: {
           apiVersion: '1',
@@ -548,6 +555,21 @@ test('AI demo stays preview-only until saved and never repeats provider calls to
     await page.reload();
     await page.getByRole('tab', { name: 'Thông tin', exact: true }).click();
     await page.getByText('Lịch trình gợi ý bằng AI', { exact: false }).waitFor();
+    await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
+    await page.getByRole('tab', { name: 'Lịch trình', exact: true }).click();
+    await page.getByText('Gợi ý bằng Gemini · Phiên nội bộ', { exact: true }).click();
+    await page
+      .getByLabel('Mã phiên AI nội bộ', { exact: true })
+      .fill('offline_fixture_session_code');
+    await page.getByRole('button', { name: 'Đề xuất lịch trình', exact: true }).click();
+    await page.getByRole('button', { name: 'Áp dụng vào bản nháp', exact: true }).click();
+    assert.equal(calls, 2);
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
+    await page.reload();
+    await page.getByText('Ghi chú hoạt động', { exact: true }).first().click();
+    await page.getByText('Đề xuất lượt 2', { exact: true }).waitFor();
+    assert.equal(calls, 2);
     assert.deepEqual(errors, []);
   } finally {
     await capture(context);
@@ -692,5 +714,213 @@ test('desktop and mobile use distinct layouts, with reduced-motion support', asy
     } finally {
       await context.close();
     }
+  }
+});
+
+test('one save retains raw input across all tabs and days, validates, then persists', async () => {
+  const { context, page, errors } = await setup();
+  try {
+    await create(page, 'Nháp xuyên tab', '2');
+    await page.getByRole('button', { name: /^Ngày 2/ }).click();
+    const activity = page.getByRole('heading', { level: 3 }).first();
+    const name = await activity.innerText();
+    await page.getByRole('button', { name: `Sửa ${name}`, exact: true }).click();
+    await page.getByLabel('Chi phí cả nhóm (VND)', { exact: true }).fill('12.000');
+    await page.getByLabel('Ghi chú', { exact: true }).fill('Ghi chú giữ qua tab');
+    for (const tab of ['Ngân sách', 'Bản đồ', 'Thông tin', 'Lịch trình']) {
+      await page.getByRole('tab', { name: tab, exact: true }).click();
+    }
+    await page.getByRole('button', { name: /^Ngày 1/ }).click();
+    await page.getByRole('button', { name: /^Ngày 2/ }).click();
+    assert.equal(
+      await page.getByLabel('Chi phí cả nhóm (VND)', { exact: true }).inputValue(),
+      '12.000',
+    );
+    assert.equal(
+      await page.getByLabel('Ghi chú', { exact: true }).inputValue(),
+      'Ghi chú giữ qua tab',
+    );
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page
+      .getByText('Chưa lưu thay đổi. Kiểm tra các trường được đánh dấu.', { exact: true })
+      .waitFor();
+    assert.equal(
+      await page.getByLabel('Chi phí cả nhóm (VND)', { exact: true }).getAttribute('aria-invalid'),
+      'true',
+    );
+    await page.getByLabel('Chi phí cả nhóm (VND)', { exact: true }).fill('12000');
+    await page.getByRole('tab', { name: 'Ngân sách', exact: true }).click();
+    await page.getByLabel('Số người', { exact: true }).fill('3');
+    await page.getByLabel('Ngân sách nhóm (VND)', { exact: true }).fill('5000000');
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Lưu cùng một lần');
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
+    await page.reload();
+    await page.getByRole('heading', { level: 1, name: 'Lưu cùng một lần', exact: true }).waitFor();
+    await page.getByRole('button', { name: /^Ngày 2/ }).click();
+    await page.getByText('12.000 đ · cả nhóm', { exact: true }).waitFor();
+    await page.getByRole('tab', { name: 'Ngân sách', exact: true }).click();
+    await page
+      .getByRole('heading', { name: 'Ngân sách đặt ra: 5.000.000 đ', exact: true })
+      .waitFor();
+    assert.deepEqual(errors, []);
+  } finally {
+    await capture(context);
+    await context.close();
+  }
+});
+
+test('cancel restores name, group, activity edits and layout; failed save keeps draft for retry', async () => {
+  const { context, page, errors } = await setup();
+  try {
+    await create(page, 'Bản gốc để hủy', '2');
+    const name = await page.getByRole('heading', { level: 3 }).first().innerText();
+    await page.getByRole('button', { name: `Sửa ${name}`, exact: true }).click();
+    await page.getByLabel('Chi phí cả nhóm (VND)', { exact: true }).fill('15000');
+    await page.getByRole('button', { name: 'Thu gọn chỉnh sửa', exact: true }).click();
+    await page.getByLabel(`Chuyển ngày ${name}`, { exact: true }).selectOption({ label: 'Ngày 2' });
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Bản bỏ đi');
+    await page.getByRole('tab', { name: 'Ngân sách', exact: true }).click();
+    await page.getByLabel('Số người', { exact: true }).fill('3');
+    await page.getByLabel('Ngân sách nhóm (VND)', { exact: true }).fill('0');
+    await page.getByRole('button', { name: 'Hủy', exact: true }).click();
+    await page.getByRole('heading', { level: 1, name: 'Bản gốc để hủy', exact: true }).waitFor();
+    await page
+      .getByRole('heading', { name: 'Ngân sách đặt ra: 10.000.000 đ', exact: true })
+      .waitFor();
+    await page.getByRole('tab', { name: 'Lịch trình', exact: true }).click();
+    await page.getByRole('heading', { name, exact: true }).waitFor();
+    assert.equal(await page.getByText('15.000 đ · cả nhóm', { exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Giữ nháp khi đầy đĩa');
+    await page.evaluate(() => {
+      const put = IDBObjectStore.prototype.put;
+      window.goeaseFailWrite = true;
+      IDBObjectStore.prototype.put = function (...args) {
+        if (window.goeaseFailWrite) throw Error('fixture disk full');
+        return put.apply(this, args);
+      };
+    });
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.getByText('Chưa lưu được · Giữ nguyên bản nháp', { exact: true }).first().waitFor();
+    assert.equal(
+      await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
+      'Giữ nháp khi đầy đĩa',
+    );
+    await page.evaluate(() => {
+      window.goeaseFailWrite = false;
+    });
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page
+      .getByRole('heading', { level: 1, name: 'Giữ nháp khi đầy đĩa', exact: true })
+      .waitFor();
+    await page.reload();
+    await page
+      .getByRole('heading', { level: 1, name: 'Giữ nháp khi đầy đĩa', exact: true })
+      .waitFor();
+    assert.deepEqual(errors, []);
+  } finally {
+    await capture(context);
+    await context.close();
+  }
+});
+
+test('detail header is compact with a desktop budget sidebar and readable mobile cards', async () => {
+  const { context, page, errors } = await setup({ viewport: { width: 1440, height: 960 } });
+  try {
+    await create(page, 'Đà Lạt cùng bạn', '5');
+    const firstCard = page.getByRole('heading', { level: 3 }).first();
+    assert((await firstCard.boundingBox()).y < 600, 'First activity is above the desktop fold');
+    const sidebar = page.getByRole('complementary', { name: 'Tóm tắt chuyến đi' });
+    assert.equal(await sidebar.isVisible(), true);
+    await sidebar.getByText('Chưa đủ dữ liệu để dự toán', { exact: true }).waitFor();
+    await page.evaluate(() =>
+      Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {}))),
+    );
+    await page.screenshot({ path: root + '/test-results/pwa-detail-desktop.png', fullPage: true });
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: root + '/test-results/pwa-detail-mobile.png', fullPage: true });
+    assert.deepEqual(errors, []);
+  } finally {
+    await capture(context);
+    await context.close();
+  }
+});
+
+test('locking the account while local save is pending cannot send a server mutation', async () => {
+  const { context, page, errors } = await setup();
+  try {
+    const fixture = await accountFixture(context);
+    await create(page, 'Nháp cần khóa', '1');
+    await page.goto(base + '/account');
+    await page.getByLabel('Email GoEase', { exact: true }).fill('user@example.test');
+    await page.getByLabel('Mật khẩu GoEase', { exact: true }).fill('offline_fixture_password');
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+    await page.getByText('Nhập chuyến từ thiết bị · 1 chuyến khách', { exact: true }).click();
+    await page.getByRole('button', { name: 'Nhập bản sao: Nháp cần khóa', exact: true }).click();
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).waitFor();
+    await page.evaluate(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('goease.customer.v1', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = reject;
+      });
+      const tx = db.transaction('values', 'readwrite'),
+        store = tx.objectStore('values');
+      window.goeaseReleaseStorage = false;
+      window.goeaseStorageReleased = new Promise((resolve) => {
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+      });
+      await new Promise((resolve) => {
+        const hold = () => {
+          const read = store.get('fixture-lock');
+          read.onsuccess = () => {
+            resolve();
+            if (!window.goeaseReleaseStorage) hold();
+          };
+        };
+        hold();
+      });
+    });
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.goeaseReleaseStorage = true;
+    });
+    await page.getByRole('heading', { name: 'Chào mừng bạn trở lại', exact: true }).waitFor();
+    await page.evaluate(async () => {
+      await window.goeaseStorageReleased;
+      // A queued readwrite barrier finishes after the blocked draft transaction/continuation.
+      await new Promise((resolve, reject) => {
+        const open = indexedDB.open('goease.customer.v1', 1);
+        open.onerror = reject;
+        open.onsuccess = () => {
+          const db = open.result,
+            tx = db.transaction('values', 'readwrite');
+          tx.objectStore('values').get('fixture-barrier');
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onabort = reject;
+        };
+      });
+    });
+    assert.equal(fixture.writes.length, 0);
+    assert.deepEqual(errors, []);
+  } finally {
+    await capture(context);
+    await context.close();
   }
 });

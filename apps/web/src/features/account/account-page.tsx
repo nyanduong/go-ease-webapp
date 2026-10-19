@@ -134,6 +134,8 @@ function AccountWorkspace() {
   const { trips, catalog } = useAccount(),
     guests = useGuestTrips();
   const [creating, setCreating] = useState(false),
+    [saveFailed, setSaveFailed] = useState(false),
+    [saving, setSaving] = useState(false),
     [message, setMessage] = useState('');
   const trip = trips.draft?.trip ?? trips.selected?.trip;
   const places = useMemo(
@@ -148,7 +150,7 @@ function AccountWorkspace() {
     () => new Set(catalog.filter((place) => place.enabled).map((place) => place.entry.id)),
     [catalog],
   );
-  const blocked = trips.busy || !trips.ready,
+  const blocked = saving || trips.busy || !trips.ready,
     locked = blocked || !!trips.pending || !!trips.draft;
   async function work(action: () => Promise<unknown>) {
     try {
@@ -345,31 +347,72 @@ function AccountWorkspace() {
       )}
       {trip && (
         <TripView
-          key={`${trip.id}:${trips.draft ? 'draft' : 'saved'}`}
+          key={trip.id}
           trip={trip}
           places={places}
           activePlaceIds={activePlaceIds}
           editing={!!trips.draft}
           busy={blocked}
           locked={!!trips.pending}
-          saveLabel="Lưu bản nháp lên server"
-          onChange={(input) => {
-            void work(() => accountTrips.change(input));
-          }}
+          storage="account"
+          baseline={trips.selected?.trip.id === trip.id ? trips.selected.trip : undefined}
+          initialDirty={
+            !!trips.draft &&
+            (!trips.selected ||
+              trips.draft.baseVersion === null ||
+              JSON.stringify(trips.draft.trip) !== JSON.stringify(trips.selected.trip))
+          }
+          saveStatus={
+            trips.pending
+              ? 'unconfirmed'
+              : trips.conflict
+                ? 'conflict'
+                : !trips.durable || (saveFailed && !!trips.draft)
+                  ? 'error'
+                  : 'idle'
+          }
+          onChange={(input) => accountTrips.change(input)}
           onEdit={() => {
+            setSaveFailed(false);
             if (trips.selected)
               void work(() => accountTrips.begin(trips.selected!.trip, trips.selected!.version));
           }}
           onCancel={() => {
+            setSaveFailed(false);
             void work(() => accountTrips.discard());
           }}
-          onSave={() => {
+          onSave={(candidate) => {
             if (trips.conflict) {
               setMessage('Đọc bản server và xử lý xung đột trước khi lưu.');
               return;
             }
-            if (window.confirm('Lưu bản nháp lên tài khoản hiện tại?'))
-              void work(() => accountTrips.save());
+            if (blocked || trips.pending) return;
+            const owner = trips.owner,
+              baseVersion = trips.draft?.baseVersion;
+            setSaving(true);
+            void work(async () => {
+              setSaveFailed(false);
+              try {
+                if (!(await accountTrips.change(candidate))) {
+                  setSaveFailed(true);
+                  return;
+                }
+                const current = accountTrips.getSnapshot();
+                // Local persistence may finish after a lock, logout or draft replacement.
+                // Never let that continuation submit another owner's/current draft.
+                if (
+                  !current.ready ||
+                  current.owner !== owner ||
+                  current.pending ||
+                  current.draft?.baseVersion !== baseVersion ||
+                  JSON.stringify(current.draft?.trip) !== JSON.stringify(candidate)
+                )
+                  return;
+                setSaveFailed(!(await accountTrips.save()));
+              } finally {
+                setSaving(false);
+              }
+            });
           }}
           onDelete={() => {
             if (

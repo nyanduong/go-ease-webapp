@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests scripts vite.config.ts",
-    "test": "node --test tests/service-worker.test.mjs",
+    "test": "tsc -p tsconfig.logic-tests.json && node --test tests/service-worker.test.mjs tests/trip-edit.test.mjs",
     "test:e2e": "node scripts/test-browser.mjs"
   },
   "dependencies": {
