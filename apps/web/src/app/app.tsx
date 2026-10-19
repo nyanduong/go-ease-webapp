@@ -39,7 +39,7 @@ export function App() {
             void accountSession.restore();
           }}
         >
-          Khôi phục phiên và tải lại
+          Thử tải lại
         </button>
         <button
           onClick={() => {

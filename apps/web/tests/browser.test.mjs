@@ -47,13 +47,18 @@ function fixtureUser(key = 'A') {
     is_anonymous: false,
     identities: [{ provider: 'google', id: ids[key] }],
     app_metadata: { provider: 'google', providers: ['google'] },
-    user_metadata: {},
+    email: key === 'A' ? 'ban.a@example.test' : 'ban.b@example.test',
+    user_metadata: {
+      full_name: key === 'A' ? 'Bạn A' : 'Bạn B',
+      avatar_url: 'https://lh3.googleusercontent.com/fixture-avatar',
+    },
     created_at: new Date().toISOString(),
   };
 }
 async function setup(options = {}) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } }),
     page = await context.newPage();
+  context.setDefaultTimeout(10000);
   page.setDefaultTimeout(10000);
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -69,6 +74,14 @@ async function setup(options = {}) {
     mismatch: false,
     lose: false,
     mapFail: false,
+    profiles: new Map(),
+    profileWrites: [],
+    profileFail: false,
+    shortSession: false,
+    refreshes: [],
+    rejectRefresh: false,
+    refreshBusy: 0,
+    maxRefreshBusy: 0,
   };
   const codes = new Map();
   const cors = {
@@ -119,21 +132,43 @@ async function setup(options = {}) {
         );
         owner = saved.owner;
         state.exchange.push(body);
-      } else if (url.searchParams.get('grant_type') === 'refresh_token')
+      } else if (url.searchParams.get('grant_type') === 'refresh_token') {
+        state.refreshes.push(body.refresh_token);
+        state.refreshBusy++;
+        state.maxRefreshBusy = Math.max(state.maxRefreshBusy, state.refreshBusy);
+        if (state.rejectRefresh) {
+          state.refreshBusy--;
+          return reply(route, {}, 400);
+        }
+        // Scheduling delay exposes refresh overlap between browser tabs in this fixture.
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        state.refreshBusy--;
         owner = body.refresh_token.endsWith('_B') ? 'B' : 'A';
-      else assert.fail('Password login is not allowed');
+      } else assert.fail('Password login is not allowed');
       return reply(route, {
         token_type: 'bearer',
         access_token: tokens[owner],
         refresh_token: 'fixture_refresh_' + owner,
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        expires_in: state.shortSession && url.searchParams.get('grant_type') === 'pkce' ? 90 : 3600,
+        expires_at:
+          Math.floor(Date.now() / 1000) +
+          (state.shortSession && url.searchParams.get('grant_type') === 'pkce' ? 90 : 3600),
         user: fixtureUser(owner),
       });
     }
     if (url.pathname === '/auth/v1/user') {
       const owner = request.headers().authorization === 'Bearer ' + tokens.B ? 'B' : 'A';
-      return reply(route, fixtureUser(owner));
+      if (request.method() === 'PUT') {
+        const body = request.postDataJSON();
+        state.profileWrites.push({ owner, body });
+        if (state.profileFail) return reply(route, {}, 503);
+        assert.deepEqual(Object.keys(body), ['data']);
+        assert.deepEqual(Object.keys(body.data), ['goease_profile']);
+        state.profiles.set(owner, body.data.goease_profile);
+      }
+      const user = fixtureUser(owner);
+      if (state.profiles.has(owner)) user.user_metadata.goease_profile = state.profiles.get(owner);
+      return reply(route, user);
     }
     return route.fulfill({ status: 204, headers: cors });
   });
@@ -254,6 +289,13 @@ async function create(page, name = 'Đà Lạt cùng bạn', days = '2') {
 }
 async function finish({ context, page, errors }, name) {
   try {
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          window.scrollTo(0, 0);
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+    );
     await page.screenshot({
       path: root + '/test-results/' + name + '.png',
       fullPage: true,
@@ -344,7 +386,7 @@ test('PKCE roundtrip verifies provider/backend, strips callback and never persis
     session: { ...sessionStorage },
   }));
   assert(!JSON.stringify(storage).includes(tokens.A));
-  assert(JSON.stringify(storage.session).includes('fixture_refresh_A'));
+  assert(JSON.stringify(storage.local).includes('fixture_refresh_A'));
   assert(!JSON.stringify(storage).includes('code-verifier'));
   assert(!JSON.stringify(storage).includes('google-flow'));
   await finish(f, 'google-login');
@@ -546,7 +588,7 @@ test('offline shell stays gated, cannot create guest trips and never caches OAut
   );
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).waitFor();
+  await page.getByText(/Sẽ tự kết nối lại khi có mạng/).waitFor();
   assert.equal(await page.getByRole('navigation').count(), 0);
   assert.equal(state.records.size, 1);
   assert.equal(page.url(), url);
@@ -595,6 +637,12 @@ test('legacy migration copies only after explicit Google-account action; preserv
   await page.evaluate((raw) => localStorage.setItem('goease.guest-trips.v1', raw), raw);
   await page.goto(base + '/account');
   assert.equal(state.records.size, 0);
+  if (
+    !(await page
+      .getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true })
+      .isVisible())
+  )
+    await page.getByText('Dữ liệu chuyến đi cũ', { exact: true }).click();
   await page.getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true }).click();
   await page
     .getByText(
@@ -608,6 +656,12 @@ test('legacy migration copies only after explicit Google-account action; preserv
   assert.match(copy.trip.id, /^legacy-[a-f0-9]{64}$/);
   assert.equal(await page.evaluate(() => localStorage.getItem('goease.guest-trips.v1')), raw);
   await page.reload();
+  if (
+    !(await page
+      .getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true })
+      .isVisible())
+  )
+    await page.getByText('Dữ liệu chuyến đi cũ', { exact: true }).click();
   await page.getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true }).click();
   await page
     .getByText(
@@ -624,6 +678,7 @@ test('corrupt legacy data is not overwritten or partly imported', async () => {
   const f = await setup();
   await login(f.page, '/account');
   await f.page.evaluate(() => localStorage.setItem('goease.guest-trips.v1', 'corrupt-original'));
+  await f.page.getByText('Dữ liệu chuyến đi cũ', { exact: true }).click();
   await f.page.getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true }).click();
   await f.page.getByText(/Kho chuyến không đọc được/).waitFor();
   assert.equal(f.state.writes.length, 0);
@@ -652,6 +707,12 @@ test('legacy migration stops on lost response and resumes the original mutation 
   );
   await page.goto(base + '/account');
   state.lose = true;
+  if (
+    !(await page
+      .getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true })
+      .isVisible())
+  )
+    await page.getByText('Dữ liệu chuyến đi cũ', { exact: true }).click();
   await page.getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true }).click();
   await page.getByText(/Chưa xác nhận chuyển xong/).waitFor();
   assert.equal(state.records.size, 1);
@@ -661,6 +722,12 @@ test('legacy migration stops on lost response and resumes the original mutation 
   await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
   assert.deepEqual(state.writes[0], state.writes[1]);
   await page.goto(base + '/account');
+  if (
+    !(await page
+      .getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true })
+      .isVisible())
+  )
+    await page.getByText('Dữ liệu chuyến đi cũ', { exact: true }).click();
   await page.getByRole('button', { name: 'Chuyển chuyến cũ vào tài khoản', exact: true }).click();
   await page
     .getByText(
@@ -671,4 +738,152 @@ test('legacy migration stops on lost response and resumes the original mutation 
   assert.equal(state.records.size, 1);
   assert.equal(state.writes.length, 2);
   await finish(f, 'legacy-migration-retry');
+});
+
+test('profile shows Google identity, persists edits across reload and isolates accounts', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  await login(page, '/account');
+  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+  assert.equal(await page.getByText('ban.a@example.test', { exact: true }).count(), 1);
+  await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+  assert.equal(await page.getByLabel('Email Google', { exact: true }).getAttribute('readonly'), '');
+  await page.getByLabel('Tên hiển thị', { exact: true }).fill('Nyan đi Đà Lạt');
+  await page.getByLabel('Giới thiệu ngắn', { exact: true }).fill('Thích săn mây và cà phê.');
+  await page.getByRole('radio', { name: 'Cắm trại', exact: true }).check();
+  await page.getByRole('button', { name: 'Lưu hồ sơ', exact: true }).click();
+  await page.getByText('Đã lưu hồ sơ của bạn.', { exact: true }).waitFor();
+  assert.deepEqual(state.profileWrites[0], {
+    owner: 'A',
+    body: {
+      data: {
+        goease_profile: {
+          displayName: 'Nyan đi Đà Lạt',
+          bio: 'Thích săn mây và cà phê.',
+          avatar: 'tent',
+        },
+      },
+    },
+  });
+  await page.reload();
+  await page.getByRole('heading', { name: 'Nyan đi Đà Lạt', exact: true }).waitFor();
+  await page.getByText('Thích săn mây và cà phê.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+  await page.getByLabel('Tên hiển thị', { exact: true }).fill('Tên chưa lưu');
+  await page.getByRole('button', { name: 'Hủy chỉnh sửa', exact: true }).click();
+  assert.equal(state.profileWrites.length, 1);
+  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  state.owner = 'B';
+  await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).click();
+  await page.getByRole('navigation').waitFor();
+  await page.goto(base + '/account');
+  await page.getByRole('heading', { name: 'Bạn B', exact: true }).waitFor();
+  assert.equal(await page.getByText('Nyan đi Đà Lạt', { exact: true }).count(), 0);
+  await finish(f, 'profile-mobile');
+});
+
+test('failed profile save preserves draft, requires explicit retry and fits mobile/desktop', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  await login(page, '/account');
+  await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+  await page.getByLabel('Tên hiển thị', { exact: true }).fill('Tên đang sửa');
+  state.profileFail = true;
+  await page.getByRole('button', { name: 'Lưu hồ sơ', exact: true }).click();
+  await page.getByText(/Chưa xác nhận lưu hồ sơ/).waitFor();
+  assert.equal(await page.getByLabel('Tên hiển thị', { exact: true }).inputValue(), 'Tên đang sửa');
+  assert.equal(state.profileWrites.length, 1);
+  state.profileFail = false;
+  await page.getByRole('button', { name: 'Lưu hồ sơ', exact: true }).click();
+  await page.getByText('Đã lưu hồ sơ của bạn.', { exact: true }).waitFor();
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      true,
+    );
+  }
+  await finish(f, 'profile-desktop');
+});
+
+test('access token refresh is automatic and preserves unsaved profile input', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  state.shortSession = true;
+  await page.clock.install();
+  await login(page, '/account');
+  await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+  await page.getByLabel('Tên hiển thị', { exact: true }).fill('Tên chưa lưu khi refresh');
+  const verified = page.waitForResponse((response) => response.url().includes('/v1/auth/me'));
+  await page.clock.fastForward(45000);
+  await verified;
+  await page.waitForFunction(
+    () => document.querySelector('button[type="submit"]')?.disabled === false,
+  );
+  await page.getByRole('button', { name: 'Lưu hồ sơ', exact: true }).waitFor({ state: 'visible' });
+  assert.equal(
+    await page.getByLabel('Tên hiển thị', { exact: true }).inputValue(),
+    'Tên chưa lưu khi refresh',
+  );
+  assert.equal(state.refreshes.length, 1);
+  assert.equal(state.profileWrites.length, 0);
+  assert.equal(await page.getByRole('button', { name: 'Khôi phục phiên', exact: true }).count(), 0);
+  await finish(f, 'automatic-refresh');
+});
+
+test('persistent login survives closing a tab; concurrent tabs serialize refresh and logout everywhere', async () => {
+  const f = await setup(),
+    { page, context, state } = f;
+  await login(page, '/account');
+  const second = await context.newPage(),
+    third = await context.newPage();
+  await Promise.all([second.goto(base + '/account'), third.goto(base + '/account')]);
+  await Promise.all([
+    second.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor(),
+    third.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor(),
+  ]);
+  assert.equal(state.maxRefreshBusy, 1);
+  await second.close();
+  await third.close();
+  await page.close();
+  const reopened = await context.newPage();
+  await reopened.goto(base + '/account');
+  await reopened.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+  assert.equal(state.authorize.length, 1, 'No second Google login');
+  const other = await context.newPage();
+  await other.goto(base + '/account');
+  await other.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+  await reopened.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  await other.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).waitFor();
+  assert.equal(await other.getByRole('heading', { name: 'Bạn A', exact: true }).count(), 0);
+  state.owner = 'B';
+  await other.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).click();
+  await other.getByRole('heading', { name: 'Bạn B', exact: true }).waitFor();
+  await reopened.bringToFront();
+  await reopened.getByRole('navigation', { name: 'Điều hướng chính' }).waitFor();
+  await reopened.goto(base + '/account');
+  await reopened.getByRole('heading', { name: 'Bạn B', exact: true }).waitFor();
+  assert.equal(await reopened.getByRole('heading', { name: 'Bạn A', exact: true }).count(), 0);
+  assert.equal(state.writes.length, 0);
+  await other.close();
+  await finish({ ...f, page: reopened }, 'persistent-login');
+});
+
+test('a revoked refresh token requires Google login and clears persistent credentials', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  await login(page, '/account');
+  state.rejectRefresh = true;
+  await page.reload();
+  await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).waitFor();
+  await page
+    .getByText('Provider/API từ chối phiên hoặc thông tin đăng nhập.', { exact: true })
+    .waitFor();
+  assert.equal(
+    await page.evaluate(
+      () => Object.keys(localStorage).filter((key) => key.endsWith('.session')).length,
+    ),
+    0,
+  );
+  await finish(f, 'revoked-session');
 });

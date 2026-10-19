@@ -1,3 +1,4 @@
+import { readAccountProfile, validateProfile, type ProfileInput } from './account-profile.js';
 import { authIdentityResponseSchema } from '@goease/contracts';
 import {
   callServerTripApi,
@@ -7,7 +8,7 @@ import {
 
 export interface RefreshStorage {
   get(): Promise<string | null>;
-  set(value: string): Promise<void>;
+  set(value: string, userId?: string): Promise<void>;
   remove(): Promise<void>;
 }
 export interface AuthPilotState {
@@ -22,6 +23,7 @@ class PilotError extends Error {
   constructor(
     message: string,
     readonly transient = false,
+    readonly status = 0,
   ) {
     super(message);
   }
@@ -48,6 +50,8 @@ export function createAuthPilot(options: {
   timeoutMs?: number;
   preserveRefreshOnTransient?: boolean;
   requiredProvider?: 'google';
+  refreshOnUnauthorized?: boolean;
+  sessionLock?: <T>(work: () => Promise<T>) => Promise<T>;
   onChange?: (state: AuthPilotState) => void;
 }) {
   let state: AuthPilotState = {
@@ -109,6 +113,7 @@ export function createAuthPilot(options: {
             ? 'Provider/API từ chối phiên hoặc thông tin đăng nhập.'
             : 'Auth chưa đáp ứng; không tự retry hoặc dùng phiên giả.',
           response.status >= 500 || response.status === 429,
+          response.status,
         );
       }
       if (!json) {
@@ -190,6 +195,9 @@ export function createAuthPilot(options: {
       { headers: headers(next.access) },
       signal,
     );
+    return verifiedUser(data, next);
+  }
+  function verifiedUser(data: unknown, next: Session) {
     const user = data as Record<string, unknown> | null;
     if (
       !user ||
@@ -214,6 +222,7 @@ export function createAuthPilot(options: {
   function run(
     work: (signal: AbortSignal, generation: number) => Promise<void>,
     dropSession = true,
+    retainValidOnTransient = false,
   ) {
     if (pending) return Promise.resolve(); // Serialize login/refresh/storage; double tap never sends twice.
     if (dropSession) {
@@ -227,8 +236,25 @@ export function createAuthPilot(options: {
     publish({ busy: true, message: 'Đang xác minh…' });
     pending = (async () => {
       try {
-        await work(controller.signal, generation);
+        if (options.sessionLock)
+          await options.sessionLock(() => work(controller.signal, generation));
+        else await work(controller.signal, generation);
       } catch (error) {
+        const transient = !(error instanceof PilotError) || error.transient;
+        if (
+          retainValidOnTransient &&
+          transient &&
+          generation === epoch &&
+          !controller.signal.aborted &&
+          session &&
+          session.expires > now()
+        ) {
+          publish({
+            message:
+              'Kết nối tạm gián đoạn. Phiên hiện tại vẫn còn hiệu lực; sẽ tự thử làm mới lại.',
+          });
+          return;
+        }
         session = null;
         verifiedBackend = null;
         let message =
@@ -258,7 +284,7 @@ export function createAuthPilot(options: {
     const id = await providerUser(next, signal);
     if (generation !== epoch || signal.aborted) fail('Đã hủy phiên.');
     try {
-      await options.storage.set(next.refresh);
+      await options.storage.set(next.refresh, id);
     } catch {
       fail('Không lưu được refresh credential an toàn; cần đăng nhập lại.');
     }
@@ -298,6 +324,76 @@ export function createAuthPilot(options: {
       return { ...state };
     },
     cancel,
+    needsRefresh(withinSeconds = 60) {
+      return (
+        !!session &&
+        !!verifiedBackend &&
+        state.phase === 'backend-verified' &&
+        session.expires <= now() + withinSeconds
+      );
+    },
+    refreshSession() {
+      const backend = verifiedBackend,
+        owner = state.userId;
+      if (!session || !backend || !owner || state.phase !== 'backend-verified' || pending)
+        return Promise.resolve();
+      return run(
+        async (signal, generation) => {
+          const refresh = await options.storage.get();
+          if (!refresh || !/^[A-Za-z0-9_.~-]{8,1024}$/.test(refresh))
+            fail('Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập Google lại.');
+          const next = parseSession(
+            await request(
+              config().url + '/auth/v1/token?grant_type=refresh_token',
+              {
+                method: 'POST',
+                headers: { ...headers(), 'content-type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refresh }),
+              },
+              signal,
+            ),
+          );
+          if (generation !== epoch || signal.aborted) fail('Đã hủy phiên.');
+          // Persist the rotated refresh token before further network verification, so a transient
+          // /user or backend outage does not strand the next refresh on an old token.
+          try {
+            await options.storage.set(next.refresh, owner);
+          } catch {
+            fail('Không lưu được phiên mới trên thiết bị. Vui lòng đăng nhập lại.');
+          }
+          if (generation !== epoch || signal.aborted) {
+            await erase();
+            fail('Đã hủy phiên.');
+          }
+          const id = await providerUser(next, signal);
+          if (id !== owner) fail('Danh tính phiên đã thay đổi. Vui lòng đăng nhập lại.');
+          const data = authIdentityResponseSchema.safeParse(
+            await request(
+              backend + '/v1/auth/me',
+              { headers: { authorization: 'Bearer ' + next.access, accept: 'application/json' } },
+              signal,
+            ),
+          );
+          if (
+            !data.success ||
+            data.data.identity.id !== owner ||
+            generation !== epoch ||
+            signal.aborted ||
+            next.expires <= now()
+          )
+            fail('Chưa xác minh được phiên đăng nhập mới.');
+          session = next;
+          verifiedBackend = backend;
+          publish({
+            phase: 'backend-verified',
+            userId: owner,
+            message: 'Phiên đăng nhập đã được làm mới.',
+          });
+        },
+        false,
+        true,
+      );
+    },
     acceptOAuth(data: unknown) {
       return run(async (signal, generation) => {
         config();
@@ -436,6 +532,71 @@ export function createAuthPilot(options: {
         });
       }, false);
     },
+    async userProfile(input?: ProfileInput) {
+      const active = session,
+        owner = state.userId,
+        generation = epoch;
+      if (
+        pending ||
+        !active ||
+        active.expires <= now() ||
+        !owner ||
+        !verifiedBackend ||
+        state.phase !== 'backend-verified'
+      )
+        throw Error('Khôi phục phiên trước khi mở hồ sơ.');
+      const fields = input === undefined ? undefined : validateProfile(input);
+      const controller = new AbortController();
+      current = controller;
+      publish({ busy: true });
+      const task = request(
+        config().url + '/auth/v1/user',
+        {
+          method: fields ? 'PUT' : 'GET',
+          headers: {
+            ...headers(active.access),
+            ...(fields ? { 'content-type': 'application/json' } : {}),
+          },
+          ...(fields ? { body: JSON.stringify({ data: { goease_profile: fields } }) } : {}),
+        },
+        controller.signal,
+      );
+      pending = task.then(
+        () => {},
+        () => {},
+      );
+      try {
+        const data = await task;
+        if (
+          generation !== epoch ||
+          controller.signal.aborted ||
+          active.expires <= now() ||
+          verifiedUser(data, active) !== owner
+        )
+          throw Error('Phiên đã đổi; chưa xác nhận hồ sơ. Hãy tải lại hồ sơ để đối chiếu.');
+        const profile = readAccountProfile(data);
+        if (
+          fields &&
+          (profile.displayName !== fields.displayName ||
+            profile.bio !== fields.bio ||
+            profile.avatar !== fields.avatar)
+        )
+          throw Error('Provider chưa xác nhận đúng thay đổi hồ sơ. Hãy tải lại để đối chiếu.');
+        return profile;
+      } catch (error) {
+        if (error instanceof PilotError && error.status === 401) {
+          cancel();
+          if (!options.refreshOnUnauthorized) await erase();
+        }
+        throw error;
+      } finally {
+        if (current === controller) {
+          current = null;
+          pending = null;
+          publish({ busy: false });
+        }
+      }
+    },
     async serverTrips(operation: ServerTripRequest) {
       const active = session,
         backend = verifiedBackend,
@@ -473,7 +634,7 @@ export function createAuthPilot(options: {
       } catch (error) {
         if (error instanceof ServerTripError && error.status === 401) {
           cancel();
-          await erase();
+          if (!options.refreshOnUnauthorized) await erase();
         }
         throw error;
       } finally {

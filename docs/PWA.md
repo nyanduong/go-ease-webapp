@@ -28,12 +28,20 @@ Tên chuyến sửa tại tiêu đề; hoạt động sửa trực tiếp trong 
 
 Ngân sách phân biệt chưa có dữ liệu, tổng một phần và tổng ước tính đầy đủ. Để trống chi phí là chưa biết, `0` là miễn phí; không nhân lại khi đổi số người. Danh sách khoản thiếu có nút mở đúng hoạt động/ngày để nhập. Chưa đủ giá thì không kết luận ngân sách còn lại đủ cho chuyến.
 
+## Hồ sơ cá nhân
+
+Mục Tài khoản hiển thị tên, email và ảnh đại diện Google. **Chỉnh sửa hồ sơ** cho phép đổi tên hiển thị (1–80 ký tự), giới thiệu ngắn (tối đa 160 ký tự), chọn ảnh Google hoặc 6 avatar du lịch có sẵn. Chưa hỗ trợ tải ảnh cá nhân lên. Email lấy từ danh tính Google và chỉ đọc.
+
+Lưu qua endpoint user của Supabase dưới `user_metadata.goease_profile`, theo [cơ chế cập nhật metadata của Supabase](https://supabase.com/docs/reference/javascript/auth-updateuser). Đây chỉ là thông tin hiển thị, không thay Google profile, ownership, JWT subject hoặc quyền admin. Metadata Google khác được giữ nguyên; client chỉ gửi ba trường cho phép. Dữ liệu hồ sơ không lưu vào localStorage/IndexedDB và được ẩn cùng phiên riêng. Lưu lỗi giữ form, không tự gửi lại; tải lại hồ sơ để đối soát khi chưa rõ kết quả. Có Lưu/Hủy và cảnh báo rời trang khi còn thay đổi.
+
+Phần chuyển chuyến cũ được thu gọn trong **Dữ liệu chuyến đi cũ** bên dưới hồ sơ. Gia hạn phiên diễn ra tự động, không còn nút Khôi phục phiên.
+
 ## Dữ liệu và phiên
 
 - PWA không còn tạo/sửa chuyến khách. Dữ liệu legacy IndexedDB/localStorage được giữ nguyên; chỉ đọc khi người đã đăng nhập chọn Tài khoản → Chuyển chuyến cũ vào tài khoản. Bản sao dùng ID ổn định theo owner/chuyến gốc; chạy lại không tạo trùng, không ghi đè server. Lỗi dừng batch và giữ nháp/yêu cầu chờ để đối soát. Chuyến server cũ giữ nguyên.
 - Draft/yêu cầu chờ của account ở IndexedDB có namespace owner. Chỉ mở sau xác minh lại đúng identity. Lỗi server không fallback sang kho guest, không tự retry hay đồng bộ nền.
-- Access token chỉ ở RAM; refresh ở sessionStorage của tab, xóa khi logout. Đây không phải SecureStore native hoặc HttpOnly cookie. Không lưu mật khẩu. CSP/XSS và cookie/BFF có thể nâng cấp riêng khi triển khai production.
-- Xuống nền/hết phiên sẽ khóa private RAM; khôi phục cần provider/backend xác minh lại. Các chỉnh sửa hợp lệ tự cập nhật bản nháp account trên thiết bị, chưa gửi máy chủ. Chỉ bấm **Lưu thay đổi** mới gửi mutation. Nội dung chưa hợp lệ chỉ giữ trong màn hình đang mở; không khôi phục sau reload/khóa phiên.
+- Access token chỉ ở RAM; refresh token và UUID owner lưu ở localStorage theo Supabase project để duy trì đăng nhập sau khi đóng/mở trình duyệt, xóa khi logout. PKCE verifier vẫn ở sessionStorage. Khi nâng cấp, credential tab cũ chuyển sang kho mới sau lần refresh được xác minh thành công. Đây không phải SecureStore native hoặc HttpOnly cookie. Không lưu mật khẩu. CSP/XSS và cookie/BFF có thể nâng cấp riêng khi triển khai production.
+- Khi app đang hiển thị, kiểm tra mỗi 5 giây và refresh trước hạn 60 giây. Access token và refresh token mới được xoay vòng; xác minh đúng owner/provider/backend rồi tiếp tục mà không remount form. Quay lại từ nền/mạng online sẽ tự kiểm tra lại. Đóng/mở app sẽ dùng refresh token đã lưu để xác minh, không bắt Google login lại nếu phiên còn hợp lệ. Web Locks tuần tự hóa thao tác Auth giữa các tab; cần Chrome/Safari hiện đại trên HTTPS hoặc loopback. Logout/đổi account được đồng bộ qua storage event; không gửi dữ liệu của owner cũ dưới token mới. Lỗi tạm thời giữ credential và lùi lần thử 15 giây đến tối đa 5 phút; không tự retry mutation. Refresh bị thu hồi/không hợp lệ mới yêu cầu login lại, còn outage tạm thời hiển thị chờ kết nối. Các chỉnh sửa hợp lệ tự cập nhật bản nháp account trên thiết bị, chưa gửi máy chủ. Chỉ bấm **Lưu thay đổi** mới gửi mutation. Nội dung chưa hợp lệ chỉ giữ trong màn hình đang mở; không khôi phục sau reload/khóa phiên.
 
 Xóa site data/profile có thể xóa nháp và dữ liệu legacy. Cache giao diện không thay backup tài khoản.
 

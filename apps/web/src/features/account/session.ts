@@ -1,3 +1,5 @@
+import { createRefreshStorage } from '../../platform/refresh-storage';
+import type { AccountProfile, ProfileInput } from '@goease/trip-client/account-profile';
 import { useSyncExternalStore } from 'react';
 import { createAuthPilot, type AuthPilotState } from '@goease/trip-client/auth-pilot-controller';
 import { createBrowserGoogleAuth, safeReturnPath } from '@goease/trip-client/browser-google-auth';
@@ -12,6 +14,31 @@ const project = import.meta.env.VITE_SUPABASE_URL?.match(
   /^https:\/\/([a-z0-9]{20})\.supabase\.co$/,
 )?.[1];
 const refreshKey = `goease.web.${project ?? 'unconfigured'}.refresh`;
+const persistentKey = `goease.web.${project ?? 'unconfigured'}.session`;
+const refreshStorage = createRefreshStorage(
+  localStorage,
+  sessionStorage,
+  persistentKey,
+  refreshKey,
+);
+async function sessionLock<T>(work: () => Promise<T>): Promise<T> {
+  if (!navigator.locks) throw Error('Cần cập nhật trình duyệt để duy trì đăng nhập an toàn.');
+  return navigator.locks.request(
+    persistentKey + '.lock',
+    { signal: AbortSignal.timeout(30000) },
+    async () => {
+      assertSessionOwner();
+      return work();
+    },
+  );
+}
+function assertSessionOwner() {
+  const owner = refreshStorage.owner();
+  if (session.userId && owner !== session.userId) {
+    accountSession.cancel();
+    throw Error('Tài khoản đã thay đổi ở tab khác.');
+  }
+}
 const listeners = new Set<() => void>();
 let session: AuthPilotState = {
   busy: false,
@@ -19,13 +46,29 @@ let session: AuthPilotState = {
   userId: null,
   message: 'Đăng nhập Google để bắt đầu chuyến đi của bạn.',
 };
+let profileState: { value: AccountProfile | null; busy: boolean; error: string } = {
+  value: null,
+  busy: false,
+  error: '',
+};
+const setProfile = (patch: Partial<typeof profileState>) => {
+  profileState = { ...profileState, ...patch };
+  publish();
+};
 let catalog: ManagedPlace[] = [],
   lifecycle = 0;
 const publish = () => listeners.forEach((listener) => listener());
 export const accountTrips = createAccountTrips({
   storage: browserStorage,
   newId: () => crypto.randomUUID(),
-  request: (operation) => auth.serverTrips(operation),
+  request: async (operation) => {
+    const owner = session.userId;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId)
+      throw Error('Tài khoản đã thay đổi. Không gửi dữ liệu chuyến trước đó.');
+    return auth.serverTrips(operation);
+  },
 });
 const google = createBrowserGoogleAuth({
   url: import.meta.env.VITE_SUPABASE_URL,
@@ -39,18 +82,13 @@ const auth = createAuthPilot({
   key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   preserveRefreshOnTransient: true,
   requiredProvider: 'google',
-  storage: {
-    get: async () => sessionStorage.getItem(refreshKey),
-    set: async (value) => {
-      sessionStorage.setItem(refreshKey, value);
-    },
-    remove: async () => {
-      sessionStorage.removeItem(refreshKey);
-    },
-  },
+  refreshOnUnauthorized: true,
+  storage: refreshStorage,
+  sessionLock,
   onChange(next) {
     session = next;
     if (next.phase !== 'backend-verified' || !next.userId) {
+      profileState = { value: null, busy: false, error: '' };
       catalog = [];
       accountTrips.lock();
     }
@@ -72,6 +110,13 @@ async function connect() {
     )
       return;
     catalog = response.places;
+    await profileRequest();
+    if (
+      epoch !== lifecycle ||
+      auth.snapshot().userId !== current.userId ||
+      auth.snapshot().phase !== 'backend-verified'
+    )
+      return;
     if (await accountTrips.activate(project + '.' + current.userId)) await accountTrips.list();
   } catch {
     session = {
@@ -82,14 +127,83 @@ async function connect() {
   }
 }
 let importing = false;
+let maintaining: Promise<void> | null = null,
+  nextRefreshAttempt = 0,
+  refreshFailures = 0;
+async function maintainSession(force = false) {
+  if (restoring) return;
+  if (maintaining) return maintaining;
+  try {
+    assertSessionOwner();
+  } catch {
+    return;
+  }
+  if (session.busy || importing) return;
+  if (!force && Date.now() < nextRefreshAttempt) return;
+  if (!navigator.onLine) {
+    auth.snapshot();
+    return;
+  }
+  maintaining = (async () => {
+    if (auth.needsRefresh()) {
+      nextRefreshAttempt = Date.now() + 15000;
+      await auth.refreshSession();
+      auth.snapshot();
+    } else if (auth.snapshot().phase !== 'backend-verified' && refreshStorage.exists()) {
+      nextRefreshAttempt = Date.now() + 15000;
+      await accountSession.restore();
+    }
+    if (auth.needsRefresh() || auth.snapshot().phase !== 'backend-verified') {
+      refreshFailures++;
+      nextRefreshAttempt =
+        Date.now() + Math.min(300000, 15000 * 2 ** Math.min(refreshFailures - 1, 5));
+    } else {
+      refreshFailures = 0;
+      nextRefreshAttempt = 0;
+    }
+  })().finally(() => {
+    maintaining = null;
+  });
+  return maintaining;
+}
 let restoring: Promise<void> | null = null,
   initialized: Promise<void> | null = null;
+async function profileRequest(input?: ProfileInput) {
+  if (profileState.busy) return false;
+  const owner = session.userId,
+    epoch = lifecycle;
+  setProfile({ busy: true, error: '' });
+  try {
+    if (input) await maintainSession(true);
+    assertSessionOwner();
+    if (owner !== session.userId) return false;
+    const value = await auth.userProfile(input);
+    if (epoch !== lifecycle || owner !== session.userId || session.phase !== 'backend-verified')
+      return false;
+    setProfile({ value });
+    return true;
+  } catch {
+    if (epoch === lifecycle && owner === session.userId && session.phase === 'backend-verified')
+      setProfile({
+        error: input
+          ? 'Chưa xác nhận lưu hồ sơ. Nội dung đang sửa vẫn được giữ; tải lại hồ sơ để đối chiếu trước khi thử lại.'
+          : 'Chưa tải được hồ sơ. Kiểm tra kết nối rồi thử lại.',
+      });
+    return false;
+  } finally {
+    if (epoch === lifecycle && owner === session.userId) setProfile({ busy: false });
+  }
+}
 export const accountSession = {
+  resume: () => maintainSession(true),
+  loadProfile: () => profileRequest(),
+  saveProfile: (input: ProfileInput) => profileRequest(input),
   async importLegacy(signal: AbortSignal) {
     if (importing) throw Error('Đang chuyển dữ liệu cũ.');
     const owner = accountTrips.getSnapshot().owner,
       epoch = lifecycle;
     const check = () => {
+      assertSessionOwner();
       const current = accountTrips.getSnapshot();
       if (
         signal.aborted ||
@@ -174,6 +288,16 @@ export const accountSession = {
   initialize() {
     initialized ??= (async () => {
       if (location.pathname !== '/auth/callback') {
+        if (!navigator.onLine && refreshStorage.exists()) {
+          session = {
+            ...session,
+            phase: 'unverified',
+            busy: false,
+            message: 'Đang chờ kết nối để mở lại tài khoản.',
+          };
+          publish();
+          return;
+        }
         await accountSession.restore();
         return;
       }
@@ -236,20 +360,49 @@ export function useAccount() {
     () => session,
   );
   const trips = useSyncExternalStore(accountTrips.subscribe, accountTrips.getSnapshot);
-  return { session: state, trips, catalog };
+  const profile = useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    () => profileState,
+  );
+  return { session: state, trips, catalog, profile, hasSavedSession: refreshStorage.exists() };
 }
 export function startAccountLifecycle() {
-  void accountSession.initialize();
-  const hidden = () => {
-    if (document.visibilityState === 'hidden') accountSession.cancel();
+  let ready = false;
+  void accountSession.initialize().finally(() => {
+    ready = true;
+    void maintainSession().catch(() => {});
+  });
+  const resume = () => {
+    if (ready && document.visibilityState === 'visible') void maintainSession(true).catch(() => {});
   };
-  document.addEventListener('visibilitychange', hidden);
+  document.addEventListener('visibilitychange', resume);
+  window.addEventListener('online', resume);
+  const changed = (event: StorageEvent) => {
+    if (event.storageArea !== localStorage || (event.key !== persistentKey && event.key !== null))
+      return;
+    const owner = refreshStorage.owner();
+    if (owner && !session.userId && session.busy) return;
+    if (!owner || owner !== session.userId) {
+      refreshStorage.clearLegacy();
+      accountSession.cancel();
+      if (owner && ready && document.visibilityState === 'visible')
+        void maintainSession(true).catch(() => {});
+    }
+  };
+  window.addEventListener('storage', changed);
   const timer = setInterval(() => {
-    auth.snapshot();
-  }, 1000);
+    if (ready && document.visibilityState === 'visible') void maintainSession().catch(() => {});
+  }, 5000);
   return () => {
     clearInterval(timer);
-    document.removeEventListener('visibilitychange', hidden);
+    document.removeEventListener('visibilitychange', resume);
+    window.removeEventListener('online', resume);
+    window.removeEventListener('storage', changed);
     accountSession.cancel();
   };
 }

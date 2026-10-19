@@ -56,13 +56,14 @@ Tài khoản PWA cần Supabase, API bật Auth/Trips và **HTTPS API origin** t
 - Chuyến tài khoản: Google login bắt buộc; tạo lịch trình mẫu 1–5 ngày, 1–20 người; sửa tên, thêm/sửa/xóa/sắp xếp/chuyển ngày hoạt động rồi chủ động lưu lên server.
 - Ngân sách: phân biệt chưa biết (`null`), miễn phí (`0`) và số đã nhập; chi phí tổng nhóm không nhân lại số người.
 - PWA: responsive bằng Tailwind; IndexedDB giữ nháp theo owner; manifest/icons và cache giao diện hỗ trợ cài ứng dụng. Chuyến cần mạng. Worker mới chờ người dùng chọn cập nhật.
-- Tài khoản: đăng nhập/khôi phục/đăng xuất, CRUD chuyến server, draft theo owner, expected version và retry đúng mutation ID. Browser refresh ở sessionStorage của tab, access token ở RAM; dữ liệu riêng bị ẩn khi xuống nền/hết phiên.
+- Tài khoản: đăng nhập/khôi phục/đăng xuất, CRUD chuyến server, draft theo owner, expected version và retry đúng mutation ID. Access token ở RAM, refresh token lưu localStorage theo project; tự xoay vòng/gia hạn, giữ đăng nhập khi đóng/mở trình duyệt. Web Locks chống tranh chấp giữa tab; logout/đổi account được đồng bộ, lỗi mạng tạm thời không buộc Google login lại.
+- Hồ sơ: xem tên/email/ảnh Google; sửa tên hiển thị, giới thiệu ngắn và avatar có sẵn; lưu theo tài khoản, có Lưu/Hủy.
 - Bản đồ ngày: Google Maps JavaScript khi có `VITE_GOOGLE_MAPS_API_KEY` hợp lệ; pin/danh sách theo catalog. Chỉ đường mở Google Maps; chưa có điều hướng giọng nói/background trong GoEase.
 - AI: tạm tắt giao diện beta trong PWA khi chuyển sang tài khoản bắt buộc; API và Expo cũ vẫn giữ mã AI. Tích hợp AI vào nháp tài khoản là việc sau, không thuộc luồng bàn giao lõi này.
 - Admin: quyền cấp ở DB, thêm/sửa/tắt Place, version và lịch sử revision.
 - Chỗ nghỉ/chuyến bay: mở website tham khảo; không thanh toán hoặc xác nhận booking trong GoEase.
 
-Chuyến server cũ giữ nguyên ownership và dữ liệu. Bytes chuyến khách cũ trên trình duyệt vẫn được giữ. Sau Google login, vào Tài khoản → Chuyển chuyến cũ vào tài khoản để sao chép vào server; chỉ đọc kho cũ, không xóa bản gốc. Chạy lại không tạo bản sao trùng và không ghi đè bản đã có. Không tự gán dữ liệu cũ khi vừa login. Dev và preview có kho nháp riêng; không xóa site data nếu còn dữ liệu cũ cần lấy lại. Expo giữ luồng cũ phục vụ phát triển, chưa chuyển Google native.
+Chuyến server cũ giữ nguyên ownership và dữ liệu. Bytes chuyến khách cũ trên trình duyệt vẫn được giữ. Sau Google login, vào Tài khoản → Dữ liệu chuyến đi cũ → Chuyển chuyến cũ vào tài khoản để sao chép vào server; chỉ đọc kho cũ, không xóa bản gốc. Chạy lại không tạo bản sao trùng và không ghi đè bản đã có. Không tự gán dữ liệu cũ khi vừa login. Dev và preview có kho nháp riêng; không xóa site data nếu còn dữ liệu cũ cần lấy lại. Expo giữ luồng cũ phục vụ phát triển, chưa chuyển Google native.
 
 ## Cấu trúc
 

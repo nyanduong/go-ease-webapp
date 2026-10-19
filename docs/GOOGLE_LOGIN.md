@@ -56,10 +56,10 @@ Lấy URL HTTPS mới Cloudflare in ra, thay `VITE_API_BASE_URL` trong web/admin
 
 ## Phiên và dữ liệu
 
-- Access token ở RAM; refresh token PWA ở sessionStorage của tab. SDK chỉ lưu PKCE verifier qua redirect; không lưu provider token hoặc toàn bộ SDK session vào localStorage. Admin không giữ refresh token sau callback.
-- Xuống nền/hết phiên khóa dữ liệu riêng; bấm **Khôi phục phiên** để xác minh lại. Reload cùng tab PWA khôi phục phiên và đọc lại chuyến server; admin cần login lại.
+- Access token ở RAM; refresh token PWA và owner UUID được lưu localStorage theo project để nhớ đăng nhập qua lần đóng/mở trình duyệt. Credential sessionStorage cũ được nâng cấp sau lần refresh thành công. SDK chỉ lưu PKCE verifier qua redirect; không lưu provider token hoặc toàn bộ SDK session vào localStorage. Admin không giữ refresh token sau callback.
+- PWA tự refresh trước hạn 60 giây, khi mở lại/quay lại app hoặc có mạng trở lại; cấp và lưu refresh token mới sau mỗi lần xoay vòng. Không khóa form chỉ vì chuyển tab, không có thao tác Khôi phục phiên thông thường. Web Locks chống refresh đồng thời; logout/đổi account cập nhật các tab khác. Lỗi mạng tạm thời giữ credential, chờ kết nối và retry Auth với backoff 15 giây–5 phút; không tự gửi lại chuyến. Phiên bị thu hồi hoặc bị giới hạn theo chính sách Supabase mới cần Google login lại. Admin vẫn dùng phiên RAM riêng, cần login lại khi reload/xuống nền.
 - Nháp hợp lệ và mutation chưa xác nhận ở IndexedDB theo issuer/user. Đổi tài khoản không chuyển nháp hoặc gửi mutation của người trước. Retry ghi cần thao tác rõ, giữ đúng mutation ID/version.
-- Chuyến server cũ không đổi owner/ID. Kho khách legacy không bị xóa hoặc sửa. Sau đăng nhập, chọn **Tài khoản → Chuyển chuyến cũ vào tài khoản**, xác nhận tài khoản hiện tại rồi sao chép tất cả bản hợp lệ. ID bản sao ổn định theo owner/chuyến gốc; chạy lại bỏ qua bản đã có, không ghi đè. Kho hỏng dừng trước khi ghi; lỗi giữa batch giữ phần đã lưu và nháp/mutation đang chờ. Vào Chuyến đi để đối soát/retry đúng yêu cầu rồi chạy chuyển lại phần còn lại. Mỗi thiết bị/origin có kho riêng; không tự chuyển dữ liệu từ điện thoại sang trình duyệt.
+- Chuyến server cũ không đổi owner/ID. Kho khách legacy không bị xóa hoặc sửa. Sau đăng nhập, chọn **Tài khoản → Dữ liệu chuyến đi cũ → Chuyển chuyến cũ vào tài khoản**, xác nhận tài khoản hiện tại rồi sao chép tất cả bản hợp lệ. ID bản sao ổn định theo owner/chuyến gốc; chạy lại bỏ qua bản đã có, không ghi đè. Kho hỏng dừng trước khi ghi; lỗi giữa batch giữ phần đã lưu và nháp/mutation đang chờ. Vào Chuyến đi để đối soát/retry đúng yêu cầu rồi chạy chuyển lại phần còn lại. Mỗi thiết bị/origin có kho riêng; không tự chuyển dữ liệu từ điện thoại sang trình duyệt.
 - Expo giữ luồng cũ, chưa có Google native. Không tắt Google-only trên API sản phẩm để mở lại đăng nhập password; legacy chỉ chạy môi trường riêng có chủ đích.
 
 ## Kiểm tra và giới hạn
@@ -67,3 +67,7 @@ Lấy URL HTTPS mới Cloudflare in ra, thay `VITE_API_BASE_URL` trong web/admin
 `pnpm test:web` dùng provider double kiểm tra PKCE thật, callback một lần, gate, CRUD, đổi owner, offline và responsive. `pnpm test:db` dùng PostgreSQL thật cô lập và browser admin với provider double. Smoke Google thật đã xác nhận login → backend → tạo chuyến → reload/đọc lại trên máy local ngày 20/10/2026.
 
 Chưa nghiệm thu production domain, Google public Audience, Maps key live hoặc cài trên Android/iPhone. Không coi các test Chromium là bằng chứng đã kiểm tra các phần đó.
+
+Cơ chế gia hạn tuân theo [Supabase sessions và refresh-token rotation](https://supabase.com/docs/guides/auth/sessions). Không kéo dài tuổi thọ JWT hoặc tắt reuse detection; không thay đổi chính sách lifetime/inactivity của project cloud. localStorage là browser storage, không phải HttpOnly cookie; không đưa token vào log/URL/cache. BFF/cookie và CSP được xử lý trong mốc hardening production.
+
+SDK trong `browser-google-auth` chỉ đảm nhiệm Google PKCE/code exchange; `autoRefreshToken=false` ở SDK là có chủ đích. Việc gia hạn do auth controller và lifecycle PWA quản lý qua cùng Web Lock, tránh hai cơ chế cùng xoay vòng refresh token.

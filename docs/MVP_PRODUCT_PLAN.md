@@ -64,7 +64,7 @@ Chỉ landing/login/callback và nội dung pháp lý tĩnh cần thiết có th
 7. Xem ngân sách, bổ sung khoản thiếu; xem pin/danh sách theo ngày và mở Google Maps để chỉ đường.
 8. Về Chuyến đi để mở lại; đăng nhập cùng Google trên thiết bị khác tải được phiên bản đã lưu server. Không hứa cộng tác hay cập nhật realtime.
 9. Khi lưu mất phản hồi, giữ đúng yêu cầu cũ để retry chủ động. Khi hai thiết bị sửa cùng version, báo xung đột và cho đối chiếu/chọn bản; không tự gộp hoặc ghi đè.
-10. Hết phiên/xuống nền/đăng xuất thì ẩn dữ liệu riêng theo chính sách phiên. Khôi phục phải xác minh đúng owner; nháp hợp lệ đã ghi có thể khôi phục. Không gửi nháp/yêu cầu cũ dưới tài khoản Google khác.
+10. Phiên tự gia hạn bằng refresh token trước khi access token hết hạn; đóng/mở app không cần Google login lại nếu phiên còn hợp lệ. Đăng xuất/phiên bị thu hồi sẽ ẩn dữ liệu riêng; khôi phục tự động phải xác minh đúng owner. Mất mạng tạm thời giữ credential và chờ kết nối; nháp hợp lệ đã ghi có thể khôi phục. Không gửi nháp/yêu cầu cũ dưới tài khoản Google khác.
 11. Mất mạng hiển thị trạng thái và giữ nháp đang có khi có thể; không tự chuyển sang lưu khách hoặc báo đồng bộ thành công. Có mạng lại phải xác minh phiên rồi cho retry, không tự gửi mutation nền.
 
 Input chưa hợp lệ chỉ giữ trong màn hình đang mở, không hứa khôi phục sau reload/khóa phiên; có cảnh báo rời màn. Logout không xóa chuyến server. Việc chuyển Google account không được trộn danh sách, cache hoặc bản nháp.
