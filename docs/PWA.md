@@ -10,7 +10,7 @@ if (-not (Test-Path apps/web/.env.local)) { Copy-Item apps/web/.env.example apps
 pnpm dev:web
 ```
 
-PWA ở http://127.0.0.1:5174; admin ở 5173; API ở 3000. Guest không cần server. Account cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, **HTTPS origin chính xác** ở `VITE_API_BASE_URL`; API phải bật Auth/Trips, có DB và dùng cùng Supabase project.
+PWA ở http://127.0.0.1:5174; admin ở 5173; API ở 3000. Mọi route sử dụng yêu cầu Google login. Cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, **HTTPS origin chính xác** ở `VITE_API_BASE_URL`; API phải bật Auth/Trips, có DB và dùng cùng Supabase project.
 
 `API_CORS_ORIGINS` phải có origin mở PWA, ví dụ `http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:4174`. Giữ origins admin/Expo hiện có. Metro tunnel không chuyển tiếp API; dùng HTTPS proxy/tunnel được vận hành. Không hạ HTTPS guard để gửi JWT qua HTTP LAN.
 
@@ -30,14 +30,12 @@ Ngân sách phân biệt chưa có dữ liệu, tổng một phần và tổng �
 
 ## Dữ liệu và phiên
 
-- Guest ở IndexedDB `goease.customer.v1`, cùng schema/revision mobile. Một read-write transaction bao trọn đọc/kiểm tra/ghi để chống ghi đè giữa tab.
-- Nếu cùng origin có key Expo Web cũ `goease.guest-trips.v1` ở localStorage, adapter đọc bytes đó khi chưa có IndexedDB. Không xóa bytes gốc hoặc tạo kho rỗng thay kho corrupt.
-- Expo Go, web dev và web preview có kho riêng. Để chuyển từ điện thoại, nhập chuyến khách vào tài khoản trên Expo rồi mở tài khoản trên PWA.
+- PWA không còn tạo/sửa chuyến khách. Dữ liệu legacy IndexedDB/localStorage được giữ nguyên; chỉ đọc khi người đã đăng nhập chọn Tài khoản → Chuyển chuyến cũ vào tài khoản. Bản sao dùng ID ổn định theo owner/chuyến gốc; chạy lại không tạo trùng, không ghi đè server. Lỗi dừng batch và giữ nháp/yêu cầu chờ để đối soát. Chuyến server cũ giữ nguyên.
 - Draft/yêu cầu chờ của account ở IndexedDB có namespace owner. Chỉ mở sau xác minh lại đúng identity. Lỗi server không fallback sang kho guest, không tự retry hay đồng bộ nền.
 - Access token chỉ ở RAM; refresh ở sessionStorage của tab, xóa khi logout. Đây không phải SecureStore native hoặc HttpOnly cookie. Không lưu mật khẩu. CSP/XSS và cookie/BFF có thể nâng cấp riêng khi triển khai production.
 - Xuống nền/hết phiên sẽ khóa private RAM; khôi phục cần provider/backend xác minh lại. Các chỉnh sửa hợp lệ tự cập nhật bản nháp account trên thiết bị, chưa gửi máy chủ. Chỉ bấm **Lưu thay đổi** mới gửi mutation. Nội dung chưa hợp lệ chỉ giữ trong màn hình đang mở; không khôi phục sau reload/khóa phiên.
 
-Xóa site data/profile có thể xóa guest. Cache giao diện không thay backup tài khoản.
+Xóa site data/profile có thể xóa nháp và dữ liệu legacy. Cache giao diện không thay backup tài khoản.
 
 ## Bản đồ
 
@@ -45,9 +43,11 @@ Xóa site data/profile có thể xóa guest. Cache giao diện không thay backu
 
 Chưa có key/tải lỗi vẫn giữ danh sách và nút chỉ đường tới tọa độ. Không vẽ map giả. Pin theo ngày từ catalog; chưa tối ưu tuyến, tính thời gian di chuyển hoặc GPS trong GoEase. Điều hướng giọng nói/background mở trong Google Maps qua URL. Không cache map tiles hoặc bật billing/tạo key trong lần migrate này.
 
-## AI nội bộ
+## Google và AI
 
-Mặc định `VITE_AI_DEMO_ENABLED=false`. Muốn thử: bật `true`, cấu hình `VITE_AI_API_BASE_URL` là HTTPS demo origin được vận hành và nhập mã phiên tạm trong giao diện. Không đặt mã phiên/bearer/Gemini key vào env public. Preview chưa thay chuyến; Lưu/Áp dụng mới thay draft. Lưu lại không gọi provider thêm. Chính sách demo/quota backend giữ nguyên; đây chưa là AI endpoint public production.
+Xem [Google OAuth](GOOGLE_LOGIN.md) để cấu hình provider, callback và HTTPS API. Google login thành công vẫn phải được backend xác minh trước khi mở chuyến.
+
+Giao diện AI beta PWA được tạm tắt trong lần chuyển sang tài khoản bắt buộc. Backend/Expo giữ mã hiện có; áp dụng AI vào nháp tài khoản cần triển khai và nghiệm thu riêng. Các biến `VITE_AI_*` cũ không bật UI nữa.
 
 ## Cài PWA và offline
 
@@ -58,7 +58,7 @@ pnpm preview:web
 
 Mở http://127.0.0.1:4174, chờ “Sẵn sàng dùng ngoại tuyến”. Android/Chrome: menu Cài ứng dụng. iPhone/Safari: Chia sẻ → Thêm vào Màn hình chính. HTTP loopback dành phát triển; điện thoại qua LAN cần HTTPS để service worker hoạt động.
 
-Build sinh manifest/icons, `sw.js` có version hash. Chỉ cache giao diện, assets và catalog bundled; API, authorization, Supabase, Maps và mutation không cache. Guest dùng ngoại tuyến sau lần tải đầu; account/AI/bản đồ online cần mạng. Worker mới chờ bấm cập nhật, không tự reload mất form. [Service worker](https://web.dev/learn/pwa/service-workers).
+Build sinh manifest/icons, `sw.js` có version hash. Chỉ cache giao diện, assets và catalog bundled; API, authorization, Supabase, Maps và mutation không cache. Offline chỉ mở shell và màn đăng nhập; chuyến tài khoản và bản đồ cần mạng. Worker mới chờ bấm cập nhật, không tự reload mất form. [Service worker](https://web.dev/learn/pwa/service-workers).
 
 ## Deploy
 

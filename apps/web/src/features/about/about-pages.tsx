@@ -29,7 +29,8 @@ export function AboutPage() {
         </p>
         <p>
           Tạo, xem và chỉnh chuyến; thêm hoạt động, quản lý ngân sách và xem địa điểm theo ngày.
-          Chuyến khách được lưu trong trình duyệt và có thể mở lại khi mất mạng sau lần tải đầu.
+          Chuyến đi được lưu trong tài khoản Google đã xác minh. Cần kết nối mạng để mở và lưu
+          chuyến.
         </p>
         <span className="inline-flex w-fit rounded-full bg-mint px-3 py-1 text-xs font-bold text-teal-dark">
           Đà Lạt · 1–5 ngày · Tối đa 20 người

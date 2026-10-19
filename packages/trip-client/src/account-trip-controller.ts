@@ -192,7 +192,7 @@ export function createAccountTrips(options: {
           ? 'Đã nhận biên nhận cũ. Tải lại danh sách và đọc server trước khi sửa tiếp.'
           : saved.kind === 'saved'
             ? `Đã lưu trên server · v${saved.version}.`
-            : 'Đã xóa chuyến server. Chuyến khách giữ nguyên.',
+            : 'Đã xóa chuyến khỏi tài khoản.',
         durable: true,
       });
       stage = 'cleanup';

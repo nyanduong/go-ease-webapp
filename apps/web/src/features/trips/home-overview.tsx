@@ -1,11 +1,16 @@
-import { getDalatPlaces } from '@goease/catalog';
-import type { SavedTrip } from '@goease/trip-storage';
+import type { Trip } from '@goease/contracts';
 import { Link } from '../../app/router';
 import { dateLabel } from '../../components/ui';
 import { Icon } from '../../components/icon';
 
-export function HomeOverview({ trips }: { trips: SavedTrip[] }) {
-  const latest = trips.at(-1)?.trip;
+export function HomeOverview({
+  trips,
+  placeCount,
+}: {
+  trips: Pick<Trip, 'id' | 'name' | 'startDate' | 'durationDays' | 'people'>[];
+  placeCount: number;
+}) {
+  const latest = trips[0];
   return (
     <aside aria-label="Tổng quan chuyến đi" className="hidden flex-col gap-4 xl:flex">
       <div className="grid grid-cols-2 gap-3">
@@ -14,8 +19,8 @@ export function HomeOverview({ trips }: { trips: SavedTrip[] }) {
           <p className="mt-2 text-xs font-semibold text-muted">Chuyến đã lưu</p>
         </div>
         <div className="rounded-3xl bg-sand p-5">
-          <span className="text-3xl font-extrabold text-amber-800">{getDalatPlaces().length}</span>
-          <p className="mt-2 text-xs font-semibold text-muted">Địa điểm demo</p>
+          <span className="text-3xl font-extrabold text-amber-800">{placeCount}</span>
+          <p className="mt-2 text-xs font-semibold text-muted">Địa điểm trong danh mục</p>
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-4 rounded-3xl border border-line bg-paper p-6">

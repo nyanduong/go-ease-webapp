@@ -1,480 +1,146 @@
-import { useEffect, useMemo, useState } from 'react';
-import { todayAtDestination } from '@goease/contracts';
-import { generateSampleTrip } from '@goease/itinerary';
-import {
-  initialTripForm,
-  validateTripForm,
-  type FormErrors,
-} from '@goease/trip-client/create-trip-controller';
-import { Button, dateLabel, Notice, PageTitle } from '../../components/ui';
-import { useLeaveGuard } from '../../app/router';
-import { TripForm } from '../trips/trip-form';
-import { TripView } from '../trips/trip-view';
-import { useGuestTrips } from '../trips/guest-store';
-import { accountSession, accountTrips, useAccount } from './session';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Brand, Notice, PageTitle } from '../../components/ui';
+import { accountSession, useAccount } from './session';
+import { PwaStatus } from '../../platform/pwa';
 
-export function AccountPage() {
-  const { session, trips } = useAccount();
-  const [email, setEmail] = useState(''),
-    [password, setPassword] = useState('');
-  useEffect(() => {
-    void accountSession.restore();
-    const hidden = () => {
-      if (document.visibilityState === 'hidden') {
-        setEmail('');
-        setPassword('');
-      }
-    };
-    document.addEventListener('visibilitychange', hidden);
-    return () => document.removeEventListener('visibilitychange', hidden);
-  }, []);
+export function LoginPage() {
+  const { session } = useAccount();
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <PageTitle
-        eyebrow="Tài khoản GoEase"
-        description="Chuyến tài khoản được quản lý qua máy chủ. Chuyến khách trên thiết bị vẫn được giữ riêng."
-      >
-        {session.phase === 'backend-verified' ? 'Góc hành trình của bạn' : 'Chào mừng bạn trở lại'}
-      </PageTitle>
-      {session.phase !== 'backend-verified' && (
-        <form
-          className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const value = password;
-            setPassword('');
-            void accountSession.login(email.trim(), value);
-          }}
-        >
-          <h2>Đăng nhập GoEase</h2>
-          <label>
-            Email GoEase
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              required
-              maxLength={254}
-              disabled={session.busy}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-          <label>
-            Mật khẩu GoEase
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              required
-              maxLength={256}
-              disabled={session.busy}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
-          <Button type="submit" disabled={session.busy}>
-            Đăng nhập
-          </Button>
-          <Button
-            secondary
-            disabled={session.busy}
-            onClick={() => {
-              void accountSession.restore();
-            }}
-          >
-            Khôi phục phiên
-          </Button>
-        </form>
-      )}
-      {session.message && <Notice>{session.message}</Notice>}
-      <div className="flex flex-wrap items-center gap-3">
-        {session.busy && (
-          <Button secondary onClick={() => accountSession.cancel()}>
-            Hủy chờ / ẩn phiên
-          </Button>
-        )}
-        {session.phase === 'backend-verified' && (
-          <Button
-            secondary
-            disabled={session.busy || trips.busy}
-            onClick={() => {
-              void accountSession.restore();
-            }}
-          >
-            Làm mới phiên và danh mục
-          </Button>
-        )}
+    <main className="grid min-h-dvh bg-cream lg:grid-cols-2">
+      <section className="relative hidden bg-[url('/dalat-illustration.png')] bg-cover bg-center p-12 lg:flex lg:items-end">
+        <div className="rounded-3xl bg-cream/95 p-8">
+          <h1 className="text-4xl">
+            Một kế hoạch,
+            <br />
+            cả nhóm cùng đi.
+          </h1>
+          <p className="mt-4 max-w-md text-muted">
+            Lên lịch trình Đà Lạt, dự toán chi phí và giữ mọi chuyến đi trong tài khoản của bạn.
+          </p>
+        </div>
+      </section>
+      <section className="flex min-w-0 flex-col justify-center gap-7 px-6 py-10 sm:px-12 lg:mx-auto lg:w-full lg:max-w-xl">
+        <Brand />
+        <PageTitle eyebrow="Bắt đầu với GoEase">
+          Chuyến đi tiếp theo
+          <br />
+          đang chờ bạn
+        </PageTitle>
+        <p className="text-muted">
+          Đăng nhập bằng Google để tạo, chỉnh sửa và mở lại lịch trình trên các thiết bị.
+        </p>
         <Button
           secondary
-          disabled={session.busy || trips.busy}
+          disabled={session.busy}
+          onClick={() => {
+            void accountSession.loginGoogle();
+          }}
+        >
+          <span aria-hidden="true" className="font-bold">
+            G
+          </span>{' '}
+          Tiếp tục với Google
+        </Button>
+        {session.busy && <p role="status">{session.message}</p>}
+        {!session.busy && session.message && <Notice>{session.message}</Notice>}
+        <Button
+          secondary
+          disabled={session.busy}
+          onClick={() => {
+            void accountSession.restore();
+          }}
+        >
+          Khôi phục phiên
+        </Button>
+        <small>
+          GoEase không lưu mật khẩu Google. Chuyến đi chỉ hiển thị sau khi tài khoản được xác minh.
+        </small>
+        <PwaStatus />
+      </section>
+    </main>
+  );
+}
+export function AccountPage() {
+  const { session, trips } = useAccount();
+  const [migrating, setMigrating] = useState(false),
+    [migrationMessage, setMigrationMessage] = useState('');
+  const migration = useRef<AbortController | null>(null);
+  useEffect(() => () => migration.current?.abort(), []);
+  async function importLegacy() {
+    if (
+      migrating ||
+      !window.confirm(
+        'Chuyển tất cả chuyến cũ trên trình duyệt này vào tài khoản Google đang đăng nhập? Bản gốc được giữ nguyên.',
+      )
+    )
+      return;
+    const controller = new AbortController();
+    migration.current = controller;
+    setMigrating(true);
+    setMigrationMessage('Đang chuyển dữ liệu cũ…');
+    try {
+      const message = await accountSession.importLegacy(controller.signal);
+      if (!controller.signal.aborted) setMigrationMessage(message);
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setMigrationMessage(
+          error instanceof Error ? error.message : 'Chưa chuyển xong; bản gốc vẫn giữ nguyên.',
+        );
+    } finally {
+      if (!controller.signal.aborted) setMigrating(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-5">
+      <PageTitle eyebrow="Tài khoản GoEase">Tài khoản của bạn</PageTitle>
+      <div className="rounded-3xl border border-line bg-paper p-6">
+        <h2>Đã đăng nhập bằng Google</h2>
+        <p className="mt-3 text-muted">
+          Mọi chuyến đi được quản lý trong mục Chuyến đi và lưu vào tài khoản của bạn.
+        </p>
+      </div>
+      {session.message && <Notice>{session.message}</Notice>}
+      <div className="flex flex-wrap gap-3">
+        <Button
+          secondary
+          disabled={session.busy || trips.busy || migrating}
+          onClick={() => {
+            void accountSession.restore();
+          }}
+        >
+          Làm mới phiên và danh mục
+        </Button>
+        <Button
+          secondary
+          disabled={session.busy || trips.busy || migrating}
           onClick={() => {
             void accountSession.logout();
           }}
         >
-          Đăng xuất / xóa phiên trên tab
+          Đăng xuất
         </Button>
       </div>
-      {session.phase === 'backend-verified' && trips.owner && (
-        <AccountWorkspace key={trips.owner} />
-      )}
-      <details className="rounded-3xl border border-line bg-paper p-5 sm:p-6">
-        <summary>Phiên và dữ liệu của bạn</summary>
-        <p>
-          Khi chuyển tab, đóng nền hoặc hết phiên, dữ liệu tài khoản đang hiển thị sẽ được ẩn. Bấm
-          Khôi phục phiên để xác minh lại.
+      <section className="rounded-3xl border border-line bg-paper p-6">
+        <h2>Chuyển dữ liệu cũ</h2>
+        <p className="mt-3 text-muted">
+          Chuyển các chuyến đã tạo trước đây trên trình duyệt này vào tài khoản đang đăng nhập. Giữ
+          bản gốc; không ghi đè chuyến server đã có. Mỗi thiết bị/origin cần chuyển riêng.
         </p>
-        <p>
-          Phiên được giữ trong tab hiện tại. Bản nháp đã áp dụng và yêu cầu chưa xác nhận được lưu
-          riêng theo tài khoản trên thiết bị. Không tự gửi lại khi có mạng.
-        </p>
-      </details>
+        <Button
+          secondary
+          disabled={migrating || session.busy || trips.busy || !!trips.draft || !!trips.pending}
+          onClick={() => {
+            void importLegacy();
+          }}
+        >
+          Chuyển chuyến cũ vào tài khoản
+        </Button>
+        {migrationMessage && <Notice>{migrationMessage}</Notice>}
+      </section>
+      <small>
+        Bản nháp hợp lệ được giữ riêng theo tài khoản trên thiết bị. Chỉ khi lưu thành công lên máy
+        chủ, bạn mới mở được phiên bản đó ở thiết bị khác.
+      </small>
     </div>
-  );
-}
-function AccountWorkspace() {
-  const { trips, catalog } = useAccount(),
-    guests = useGuestTrips();
-  const [creating, setCreating] = useState(false),
-    [saveFailed, setSaveFailed] = useState(false),
-    [saving, setSaving] = useState(false),
-    [message, setMessage] = useState('');
-  const trip = trips.draft?.trip ?? trips.selected?.trip;
-  const places = useMemo(
-    () =>
-      catalog.map((place) => {
-        const { id, name, destinationId, coordinates, sources } = place.entry;
-        return { id, name, destinationId, coordinates, sources };
-      }),
-    [catalog],
-  );
-  const activePlaceIds = useMemo(
-    () => new Set(catalog.filter((place) => place.enabled).map((place) => place.entry.id)),
-    [catalog],
-  );
-  const blocked = saving || trips.busy || !trips.ready,
-    locked = blocked || !!trips.pending || !!trips.draft;
-  async function work(action: () => Promise<unknown>) {
-    try {
-      setMessage('');
-      await action();
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : 'Chưa xử lý được. Bản nháp vẫn giữ nguyên.',
-      );
-    }
-  }
-  const selectedId =
-    trip?.id ?? (trips.pending?.kind === 'create' ? trips.pending.trip.id : trips.pending?.id);
-  return (
-    <section className="flex min-w-0 flex-col gap-5" aria-label="Chuyến của tài khoản">
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-3">
-        <h2>Chuyến của tài khoản</h2>
-        <Button
-          secondary
-          disabled={blocked}
-          onClick={() => {
-            void work(() => accountTrips.list());
-          }}
-        >
-          Tải lại danh sách server
-        </Button>
-      </div>
-      {trips.message && <Notice error={trips.conflict}>{trips.message}</Notice>}
-      {message && <Notice error>{message}</Notice>}
-      {trips.pending && (
-        <Notice error>
-          Có yêu cầu chưa xác nhận. Giữ nguyên nội dung để đối soát.
-          <Button
-            disabled={blocked}
-            onClick={() => {
-              void work(() => accountTrips.retry());
-            }}
-          >
-            Thử lại đúng yêu cầu đã gửi
-          </Button>
-        </Notice>
-      )}
-      {!trips.durable && (
-        <Button
-          secondary
-          disabled={blocked}
-          onClick={() => {
-            void work(() => accountTrips.checkpoint());
-          }}
-        >
-          Thử ghi lại bản nháp trên thiết bị
-        </Button>
-      )}
-      {selectedId && (
-        <Button
-          secondary
-          disabled={blocked}
-          onClick={() => {
-            void work(() => accountTrips.read(selectedId));
-          }}
-        >
-          Đọc bản server để đối chiếu
-        </Button>
-      )}
-      {trips.latest && (
-        <div className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6">
-          <h3>Bản server hiện tại · v{trips.latest.version}</h3>
-          <p>
-            {trips.latest.trip.name} ·{' '}
-            {trips.latest.trip.days.reduce((count, day) => count + day.activities.length, 0)} hoạt
-            động
-          </p>
-          <p>Bản nháp giữ nguyên. Kiểm tra rồi chọn bản sẽ giữ; hệ thống không tự gộp thay đổi.</p>
-          <Button
-            secondary
-            disabled={blocked || !!trips.pending}
-            onClick={() => {
-              if (window.confirm('Bỏ bản nháp để dùng bản server mới?'))
-                void work(() => accountTrips.useLatest());
-            }}
-          >
-            Bỏ bản nháp, dùng bản server mới
-          </Button>
-          {trips.draft &&
-            trips.latest.trip.id === trips.draft.trip.id &&
-            trips.draft.baseVersion !== null && (
-              <Button
-                secondary
-                disabled={blocked || !!trips.pending}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      'Giữ TOÀN BỘ bản nháp trên version mới? Lần lưu tiếp theo có thể thay nội dung của máy khác.',
-                    )
-                  )
-                    void work(() => accountTrips.rebase());
-                }}
-              >
-                Giữ toàn bộ bản nháp trên version mới
-              </Button>
-            )}
-        </div>
-      )}
-      <div className="grid min-w-0 gap-4 md:grid-cols-2">
-        {trips.items.map((item) => (
-          <div
-            className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
-            key={item.id}
-          >
-            <span className="inline-flex w-fit rounded-full bg-mint px-3 py-1 text-xs font-bold text-teal-dark">
-              Phiên bản {item.version}
-            </span>
-            <h3>{item.name}</h3>
-            <p>
-              {dateLabel(item.startDate)} · {item.durationDays} ngày · {item.people} người
-            </p>
-            <Button
-              secondary
-              aria-label={`Mở chuyến tài khoản: ${item.name}`}
-              disabled={locked}
-              onClick={() => {
-                void work(() => accountTrips.read(item.id));
-              }}
-            >
-              Xem lịch trình
-            </Button>
-          </div>
-        ))}
-      </div>
-      {trips.cursor && (
-        <Button
-          secondary
-          disabled={blocked}
-          onClick={() => {
-            void work(() => accountTrips.list(true));
-          }}
-        >
-          Xem thêm chuyến
-        </Button>
-      )}
-      {!trips.items.length && trips.ready && <p>Chưa có chuyến trong danh sách server.</p>}
-      {!creating && (
-        <Button disabled={locked} onClick={() => setCreating(true)}>
-          Tạo chuyến tài khoản
-        </Button>
-      )}
-      {creating && (
-        <NewAccountTrip
-          disabled={locked}
-          onCancel={() => setCreating(false)}
-          onCreate={async (input) => {
-            const today = todayAtDestination(new Date()),
-              result = generateSampleTrip(
-                input,
-                catalog.filter((place) => place.enabled).map((place) => place.entry),
-                { tripId: crypto.randomUUID(), today },
-              );
-            if (!result.ok) {
-              setMessage(result.message);
-              return;
-            }
-            await work(async () => {
-              await accountTrips.begin(result.trip);
-              setCreating(false);
-            });
-          }}
-        />
-      )}
-      {!trips.draft && !trips.pending && (
-        <details className="rounded-3xl border border-line bg-paper p-5 sm:p-6">
-          <summary>Nhập chuyến từ thiết bị · {guests.trips.length} chuyến khách</summary>
-          <p>Tạo bản sao với ID mới; chuyến khách gốc vẫn giữ nguyên.</p>
-          <div className="flex min-w-0 flex-col gap-5">
-            {guests.trips.map((saved) => (
-              <Button
-                secondary
-                key={saved.trip.id}
-                disabled={locked || guests.loadStatus !== 'ready' || !!guests.issues.length}
-                onClick={() => {
-                  if (window.confirm(`Nhập bản sao “${saved.trip.name}” vào tài khoản hiện tại?`))
-                    void work(() =>
-                      accountTrips.begin({
-                        ...saved.trip,
-                        id: crypto.randomUUID(),
-                      }),
-                    );
-                }}
-              >
-                Nhập bản sao: {saved.trip.name}
-              </Button>
-            ))}
-          </div>
-        </details>
-      )}
-      {trip && (
-        <TripView
-          key={trip.id}
-          trip={trip}
-          places={places}
-          activePlaceIds={activePlaceIds}
-          editing={!!trips.draft}
-          busy={blocked}
-          locked={!!trips.pending}
-          storage="account"
-          baseline={trips.selected?.trip.id === trip.id ? trips.selected.trip : undefined}
-          initialDirty={
-            !!trips.draft &&
-            (!trips.selected ||
-              trips.draft.baseVersion === null ||
-              JSON.stringify(trips.draft.trip) !== JSON.stringify(trips.selected.trip))
-          }
-          saveStatus={
-            trips.pending
-              ? 'unconfirmed'
-              : trips.conflict
-                ? 'conflict'
-                : !trips.durable || (saveFailed && !!trips.draft)
-                  ? 'error'
-                  : 'idle'
-          }
-          onChange={(input) => accountTrips.change(input)}
-          onEdit={() => {
-            setSaveFailed(false);
-            if (trips.selected)
-              void work(() => accountTrips.begin(trips.selected!.trip, trips.selected!.version));
-          }}
-          onCancel={() => {
-            setSaveFailed(false);
-            void work(() => accountTrips.discard());
-          }}
-          onSave={(candidate) => {
-            if (trips.conflict) {
-              setMessage('Đọc bản server và xử lý xung đột trước khi lưu.');
-              return;
-            }
-            if (blocked || trips.pending) return;
-            const owner = trips.owner,
-              baseVersion = trips.draft?.baseVersion;
-            setSaving(true);
-            void work(async () => {
-              setSaveFailed(false);
-              try {
-                if (!(await accountTrips.change(candidate))) {
-                  setSaveFailed(true);
-                  return;
-                }
-                const current = accountTrips.getSnapshot();
-                // Local persistence may finish after a lock, logout or draft replacement.
-                // Never let that continuation submit another owner's/current draft.
-                if (
-                  !current.ready ||
-                  current.owner !== owner ||
-                  current.pending ||
-                  current.draft?.baseVersion !== baseVersion ||
-                  JSON.stringify(current.draft?.trip) !== JSON.stringify(candidate)
-                )
-                  return;
-                setSaveFailed(!(await accountTrips.save()));
-              } finally {
-                setSaving(false);
-              }
-            });
-          }}
-          onDelete={() => {
-            if (
-              trips.selected &&
-              window.confirm('Xóa chuyến server này? Chuyến khách vẫn giữ nguyên.')
-            )
-              void work(() => accountTrips.remove(trips.selected!));
-          }}
-        />
-      )}
-    </section>
-  );
-}
-function NewAccountTrip({
-  disabled,
-  onCancel,
-  onCreate,
-}: {
-  disabled: boolean;
-  onCancel: () => void;
-  onCreate: (
-    input: Extract<ReturnType<typeof validateTripForm>, { ok: true }>['input'],
-  ) => Promise<void>;
-}) {
-  const [initial] = useState(() => initialTripForm(new Date())),
-    [form, setForm] = useState(initial),
-    [errors, setErrors] = useState<FormErrors>({});
-  useLeaveGuard(JSON.stringify(form) !== JSON.stringify(initial), disabled);
-  return (
-    <form
-      className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        const result = validateTripForm(form, todayAtDestination(new Date()));
-        if (!result.ok) {
-          setErrors(result.errors);
-          return;
-        }
-        void onCreate(result.input);
-      }}
-    >
-      <h3>Chuyến tài khoản mới · Đà Lạt</h3>
-      <TripForm values={form} onChange={setForm} errors={errors} disabled={disabled} />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={disabled}>
-          Tạo bản nháp lịch trình mẫu
-        </Button>
-        <Button
-          secondary
-          disabled={disabled}
-          onClick={() => {
-            if (
-              JSON.stringify(form) === JSON.stringify(initial) ||
-              window.confirm('Bỏ thông tin chuyến tài khoản đang nhập?')
-            )
-              onCancel();
-          }}
-        >
-          Hủy tạo chuyến
-        </Button>
-      </div>
-    </form>
   );
 }

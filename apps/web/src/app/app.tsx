@@ -3,21 +3,22 @@ import { Brand, Notice } from '../components/ui';
 import { Navigation } from './navigation';
 import { MotionRegion } from '../components/motion';
 import { Link, usePath } from './router';
-import { GuestList, GuestTrip, NewGuestTrip } from '../features/trips/guest-pages';
-import { AccountPage } from '../features/account/account-page';
-import { startAccountLifecycle } from '../features/account/session';
+import { AccountWorkspace } from '../features/account/account-workspace';
+import { AccountHome } from '../features/account/account-home';
+import { AccountPage, LoginPage } from '../features/account/account-page';
+import { startAccountLifecycle, useAccount, accountSession } from '../features/account/session';
 import { AboutPage, TravelServices } from '../features/about/about-pages';
 import { PwaStatus } from '../platform/pwa';
 
 function Route({ path }: { path: string }) {
-  if (path === '/') return <GuestList home />;
-  if (path === '/trips') return <GuestList />;
-  if (path === '/trips/new') return <NewGuestTrip />;
+  if (path === '/' || path === '/login' || path === '/auth/callback') return <AccountHome />;
+  if (path === '/trips') return <AccountWorkspace />;
+  if (path === '/trips/new') return <AccountWorkspace mode="new" />;
   if (path === '/account') return <AccountPage />;
   if (path === '/about') return <AboutPage />;
   if (path === '/travel-services') return <TravelServices />;
   const match = /^\/trips\/([A-Za-z0-9_-]{1,80})$/.exec(path);
-  if (match) return <GuestTrip id={match[1]} />;
+  if (match) return <AccountWorkspace mode="detail" id={match[1]} />;
   return (
     <Notice>
       Trang không tồn tại. <Link href="/">Về trang chủ</Link>
@@ -26,7 +27,29 @@ function Route({ path }: { path: string }) {
 }
 export function App() {
   const path = usePath();
+  const { session, trips } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
+  if (session.phase !== 'backend-verified') return <LoginPage />;
+  if (!trips.ready)
+    return (
+      <main className="mx-auto flex max-w-xl flex-col gap-5 p-8">
+        <Notice>{session.busy ? 'Đang mở dữ liệu tài khoản…' : session.message}</Notice>
+        <button
+          onClick={() => {
+            void accountSession.restore();
+          }}
+        >
+          Khôi phục phiên và tải lại
+        </button>
+        <button
+          onClick={() => {
+            void accountSession.logout();
+          }}
+        >
+          Đăng xuất
+        </button>
+      </main>
+    );
   return (
     <>
       <a
@@ -71,7 +94,7 @@ export function App() {
         >
           <ErrorBoundary key={path}>
             <MotionRegion key={path} motionKey={path}>
-              <Route path={path} />
+              <Route key={`${session.userId}:${path}`} path={path} />
             </MotionRegion>
           </ErrorBoundary>
         </main>

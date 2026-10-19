@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createBrowserGoogleAuth } from '@goease/trip-client/browser-google-auth';
 import { createRoot } from 'react-dom/client';
 import { catalogEntrySchema, type ManagedPlace } from '@goease/contracts';
 import { createAdminClient } from './controller';
@@ -13,21 +14,53 @@ function App() {
       }),
     [],
   );
-  const [email, setEmail] = useState(''),
-    [password, setPassword] = useState(''),
-    [places, setPlaces] = useState<ManagedPlace[]>([]),
+  const [places, setPlaces] = useState<ManagedPlace[]>([]),
     [authed, setAuthed] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [editing, setEditing] = useState<ManagedPlace | null | undefined>(undefined);
+  const google = useMemo(
+    () =>
+      createBrowserGoogleAuth({
+        url: import.meta.env.VITE_SUPABASE_URL,
+        key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        storage: sessionStorage,
+        origin: location.origin,
+        namespace: 'goease.admin',
+        callbackPath: '/auth/callback',
+      }),
+    [],
+  );
   useEffect(() => {
+    let cancelled = false;
+    if (location.pathname === '/auth/callback') {
+      const callback = location.href;
+      history.replaceState(history.state, '', '/');
+      setBusy(true);
+      void google
+        .complete(callback)
+        .then(async (result) => {
+          if (cancelled) return;
+          const data = await client.acceptOAuth(result.session);
+          if (!cancelled) {
+            setPlaces(data.places);
+            setAuthed(true);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setError('Chưa đăng nhập được hoặc tài khoản chưa có quyền quản trị.');
+        })
+        .finally(() => {
+          if (!cancelled) setBusy(false);
+        });
+    }
     const hide = () => {
       if (document.hidden) {
+        cancelled = true;
         client.logout();
         setAuthed(false);
         setPlaces([]);
         setEditing(undefined);
-        setPassword('');
       }
     };
     document.addEventListener('visibilitychange', hide);
@@ -39,11 +72,12 @@ function App() {
       }
     }, 1000);
     return () => {
+      cancelled = true;
       client.logout();
       clearInterval(timer);
       document.removeEventListener('visibilitychange', hide);
     };
-  }, [client]);
+  }, [client, google]);
   const working = useRef(false);
   async function work(operation: () => Promise<void>) {
     if (working.current) return;
@@ -74,6 +108,7 @@ function App() {
         {authed && (
           <button
             onClick={() => {
+              google.clear();
               client.logout();
               setAuthed(false);
               setPlaces([]);
@@ -95,44 +130,16 @@ function App() {
           <p>
             Quyền catalog do server cấp. Tài khoản quản trị không mặc nhiên được đọc chuyến riêng.
           </p>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              const submitted = password;
-              setPassword('');
+          <button
+            disabled={busy}
+            onClick={() => {
               void work(async () => {
-                const data = await client.login(email.trim(), submitted);
-                setPlaces(data.places);
-                setAuthed(true);
+                location.assign(await google.begin('/'));
               });
             }}
           >
-            <label>
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                maxLength={254}
-                autoComplete="username"
-                disabled={busy}
-              />
-            </label>
-            <label>
-              Mật khẩu
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                maxLength={256}
-                autoComplete="current-password"
-                disabled={busy}
-              />
-            </label>
-            <button disabled={busy}>{busy ? 'Đang xác minh…' : 'Đăng nhập'}</button>
-          </form>
+            {busy ? 'Đang xác minh…' : 'Tiếp tục với Google'}
+          </button>
           <p>
             Phiên chỉ ở RAM. Refresh trang hoặc xuống nền cần đăng nhập lại. Không lưu credential
             trong trình duyệt.

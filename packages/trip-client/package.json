@@ -15,14 +15,15 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@goease/contracts": "workspace:*",
     "@goease/catalog": "workspace:*",
+    "@goease/contracts": "workspace:*",
     "@goease/itinerary": "workspace:*",
-    "@goease/trip-storage": "workspace:*"
+    "@goease/trip-storage": "workspace:*",
+    "@supabase/supabase-js": "2.118.0"
   },
   "devDependencies": {
-    "typescript": "~6.0.3",
     "eslint": "^9.39.5",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2"
   }
 }

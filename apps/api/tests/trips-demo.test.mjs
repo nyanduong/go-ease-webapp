@@ -5,6 +5,7 @@ import { readConfig } from '../dist/config/env.js';
 const config = readConfig({
   TRIPS_ENABLED: 'true',
   AUTH_ENABLED: 'true',
+  AUTH_GOOGLE_ONLY: 'false',
   API_REQUEST_TIMEOUT_MS: '8000',
   DATABASE_URL: 'postgresql://goease_runtime:offline_fixture@127.0.0.1:55475/goease_test_guard',
 });

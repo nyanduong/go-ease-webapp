@@ -1,9 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import { createAuthPilot, type AuthPilotState } from '@goease/trip-client/auth-pilot-controller';
+import { createBrowserGoogleAuth, safeReturnPath } from '@goease/trip-client/browser-google-auth';
 import { createAccountTrips } from '@goease/trip-client/account-trip-controller';
 import { fetchManagedCatalog } from '@goease/trip-client/catalog-api-controller';
 import type { ManagedPlace } from '@goease/contracts';
-import { browserStorage } from '../../platform/browser-storage';
+import { ServerTripError } from '@goease/trip-client/server-trip-controller';
+import { readLegacyTrips, browserStorage } from '../../platform/browser-storage';
+import { navigate } from '../../app/router';
 
 const project = import.meta.env.VITE_SUPABASE_URL?.match(
   /^https:\/\/([a-z0-9]{20})\.supabase\.co$/,
@@ -14,27 +17,34 @@ let session: AuthPilotState = {
   busy: false,
   phase: 'signed-out',
   userId: null,
-  message: 'Đăng nhập để quản lý chuyến tài khoản. Chuyến khách được giữ riêng.',
+  message: 'Đăng nhập Google để bắt đầu chuyến đi của bạn.',
 };
-let catalog: ManagedPlace[] = [];
+let catalog: ManagedPlace[] = [],
+  lifecycle = 0;
+const publish = () => listeners.forEach((listener) => listener());
 export const accountTrips = createAccountTrips({
   storage: browserStorage,
   newId: () => crypto.randomUUID(),
   request: (operation) => auth.serverTrips(operation),
 });
+const google = createBrowserGoogleAuth({
+  url: import.meta.env.VITE_SUPABASE_URL,
+  key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  storage: sessionStorage,
+  origin: location.origin,
+  namespace: `goease.web.${project ?? 'unconfigured'}`,
+});
 const auth = createAuthPilot({
   url: import.meta.env.VITE_SUPABASE_URL,
   key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   preserveRefreshOnTransient: true,
-  // Browser refresh is tab-scoped, never added to durable trip storage or the service worker cache.
+  requiredProvider: 'google',
   storage: {
-    async get() {
-      return sessionStorage.getItem(refreshKey);
-    },
-    async set(value) {
+    get: async () => sessionStorage.getItem(refreshKey),
+    set: async (value) => {
       sessionStorage.setItem(refreshKey, value);
     },
-    async remove() {
+    remove: async () => {
       sessionStorage.removeItem(refreshKey);
     },
   },
@@ -44,46 +54,176 @@ const auth = createAuthPilot({
       catalog = [];
       accountTrips.lock();
     }
-    listeners.forEach((listener) => listener());
+    publish();
   },
 });
 async function connect() {
   if (auth.snapshot().phase === 'provider-verified')
     await auth.verifyBackend(import.meta.env.VITE_API_BASE_URL);
-  const current = auth.snapshot();
+  const current = auth.snapshot(),
+    epoch = lifecycle;
   if (!project || !current.userId || current.phase !== 'backend-verified') return;
   try {
     const response = await fetchManagedCatalog(import.meta.env.VITE_API_BASE_URL ?? '');
-    if (auth.snapshot().userId !== current.userId || auth.snapshot().phase !== 'backend-verified')
+    if (
+      epoch !== lifecycle ||
+      auth.snapshot().userId !== current.userId ||
+      auth.snapshot().phase !== 'backend-verified'
+    )
       return;
     catalog = response.places;
+    if (await accountTrips.activate(project + '.' + current.userId)) await accountTrips.list();
   } catch {
     session = {
       ...session,
-      message: 'Chưa tải được danh mục máy chủ. Kiểm tra kết nối rồi khôi phục phiên.',
+      message: 'Chưa tải được dữ liệu chuyến. Kiểm tra kết nối rồi thử khôi phục phiên.',
     };
-    listeners.forEach((listener) => listener());
-    return;
+    publish();
   }
-  if (await accountTrips.activate(project + '.' + current.userId)) await accountTrips.list();
 }
-let restoring: Promise<void> | null = null;
+let importing = false;
+let restoring: Promise<void> | null = null,
+  initialized: Promise<void> | null = null;
 export const accountSession = {
-  async login(email: string, password: string) {
-    await auth.login(email, password);
-    await connect();
+  async importLegacy(signal: AbortSignal) {
+    if (importing) throw Error('Đang chuyển dữ liệu cũ.');
+    const owner = accountTrips.getSnapshot().owner,
+      epoch = lifecycle;
+    const check = () => {
+      const current = accountTrips.getSnapshot();
+      if (
+        signal.aborted ||
+        epoch !== lifecycle ||
+        !owner ||
+        current.owner !== owner ||
+        !current.ready ||
+        current.busy ||
+        current.draft ||
+        current.pending
+      )
+        throw Error(
+          'Đã dừng chuyển. Kiểm tra phiên, bản nháp hoặc yêu cầu đang chờ trong Chuyến đi. Bản gốc vẫn giữ nguyên.',
+        );
+    };
+    check();
+    importing = true;
+    try {
+      const legacy = await readLegacyTrips();
+      check();
+      if (legacy.issues.length)
+        throw Error(
+          'Kho cũ có bản ghi lỗi; chưa chuyển chuyến nào. Giữ nguyên dữ liệu để đối soát.',
+        );
+      let copied = 0,
+        existing = 0;
+      for (const saved of legacy.trips) {
+        // Stable per owner/source ID: repeated runs do not create duplicate copies.
+        const digest = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(owner + ':' + saved.trip.id),
+        );
+        check();
+        const id =
+          'legacy-' +
+          [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+        try {
+          await auth.serverTrips({ kind: 'get', id });
+          check();
+          existing++;
+          continue;
+        } catch (error) {
+          check();
+          if (!(error instanceof ServerTripError) || error.status !== 404) throw error;
+        }
+        const begun = await accountTrips.begin({ ...saved.trip, id });
+        if (
+          !begun ||
+          signal.aborted ||
+          epoch !== lifecycle ||
+          accountTrips.getSnapshot().owner !== owner
+        )
+          throw Error('Đã giữ bản nháp, chưa chuyển tiếp. Mở Chuyến đi để xử lý.');
+        if (!(await accountTrips.save()))
+          throw Error(
+            'Chưa xác nhận chuyển xong. Mở Chuyến đi để kiểm tra bản nháp/yêu cầu chờ và thử lại đúng yêu cầu. Bản gốc vẫn giữ nguyên.',
+          );
+        check();
+        copied++;
+      }
+      await accountTrips.list();
+      return `Đã chuyển ${copied} chuyến; ${existing} bản đã có được giữ nguyên. Bản gốc trên thiết bị không bị xóa.`;
+    } finally {
+      importing = false;
+    }
+  },
+  async loginGoogle() {
+    if (session.busy) return;
+    session = { ...session, busy: true, message: 'Đang mở Google…' };
+    publish();
+    try {
+      location.assign(await google.begin(safeReturnPath(location.pathname)));
+    } catch (error) {
+      session = {
+        ...session,
+        busy: false,
+        message: error instanceof Error ? error.message : 'Chưa mở được Google.',
+      };
+      publish();
+    }
+  },
+  initialize() {
+    initialized ??= (async () => {
+      if (location.pathname !== '/auth/callback') {
+        await accountSession.restore();
+        return;
+      }
+      const callback = location.href,
+        epoch = lifecycle;
+      history.replaceState(history.state, '', '/login'); // Do not leave code/error data in browser history.
+      session = { ...session, busy: true, message: 'Đang xác minh đăng nhập Google…' };
+      publish();
+      try {
+        const result = await google.complete(callback);
+        if (epoch !== lifecycle) return;
+        await auth.acceptOAuth(result.session);
+        await connect();
+        if (epoch === lifecycle && auth.snapshot().phase === 'backend-verified')
+          navigate(result.returnTo, true);
+      } catch (error) {
+        auth.cancel();
+        session = {
+          ...session,
+          busy: false,
+          message: error instanceof Error ? error.message : 'Chưa xác minh được Google.',
+        };
+        publish();
+      } finally {
+        if (auth.snapshot().phase !== 'backend-verified') navigate('/login', true);
+      }
+    })();
+    return initialized;
   },
   restore() {
     restoring ??= (async () => {
       await auth.restore();
       await connect();
+      if (location.pathname === '/login' && auth.snapshot().phase === 'backend-verified')
+        navigate('/', true);
     })().finally(() => {
       restoring = null;
     });
     return restoring;
   },
-  logout: () => auth.logout(),
-  cancel: () => auth.cancel(),
+  async logout() {
+    lifecycle++;
+    google.clear();
+    await auth.logout();
+    navigate('/login', true);
+  },
+  cancel() {
+    lifecycle++;
+    auth.cancel();
+  },
 };
 export function useAccount() {
   const state = useSyncExternalStore(
@@ -99,8 +239,9 @@ export function useAccount() {
   return { session: state, trips, catalog };
 }
 export function startAccountLifecycle() {
+  void accountSession.initialize();
   const hidden = () => {
-    if (document.visibilityState === 'hidden') auth.cancel();
+    if (document.visibilityState === 'hidden') accountSession.cancel();
   };
   document.addEventListener('visibilitychange', hidden);
   const timer = setInterval(() => {
@@ -109,6 +250,6 @@ export function startAccountLifecycle() {
   return () => {
     clearInterval(timer);
     document.removeEventListener('visibilitychange', hidden);
-    auth.cancel();
+    accountSession.cancel();
   };
 }

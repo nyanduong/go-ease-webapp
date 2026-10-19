@@ -62,9 +62,9 @@ export function PwaStatus() {
     >
       <span>
         {offline
-          ? 'Ngoại tuyến · Chuyến khách vẫn dùng được'
+          ? 'Ngoại tuyến · Cần mạng để xác minh và lưu chuyến tài khoản'
           : ready
-            ? 'Sẵn sàng dùng ngoại tuyến'
+            ? 'Đã lưu giao diện · Dữ liệu tài khoản cần mạng'
             : 'Lên kế hoạch cho hành trình của bạn'}
       </span>
       {install && (

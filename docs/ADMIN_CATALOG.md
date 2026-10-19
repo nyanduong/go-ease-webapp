@@ -5,8 +5,6 @@
 ## Khởi chạy local
 
 ```powershell
-git switch main
-git pull --ff-only origin main
 pnpm install --frozen-lockfile
 pnpm db:backup
 pnpm db:local
@@ -25,6 +23,8 @@ pnpm dev:admin
 ```
 
 Mở `http://127.0.0.1:5173`. Web không phải trang lịch trình khách; `pnpm dev:web` mở PWA khách ở port 5174. `pnpm build` giờ build API, Expo Android/iOS/web, PWA khách và Vite admin; root typecheck/lint/test bao gồm apps/admin. Hosted SPA cần rewrite đường dẫn UI về index.html, API vẫn ở origin riêng và route API không rewrite sang HTML.
+
+Đăng nhập bằng **Google**; cấu hình provider/callback theo [Google login](GOOGLE_LOGIN.md). Phiên admin ở RAM, reload/xuống nền cần đăng nhập lại; không có form mật khẩu. Google login không tự cấp quyền catalog.
 
 ## Cấp và thu hồi quyền
 

@@ -74,6 +74,7 @@ async function fixture(run, patch = {}) {
     TRIPS_ENABLED: 'true',
     DATABASE_URL: runtimeUrl,
     AUTH_ENABLED: 'true',
+    AUTH_GOOGLE_ONLY: 'false',
     AUTH_TIMEOUT_MS: '1000',
     API_REQUEST_TIMEOUT_MS: '8000',
     SUPABASE_AUTH_URL: project,

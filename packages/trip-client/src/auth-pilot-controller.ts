@@ -47,6 +47,7 @@ export function createAuthPilot(options: {
   now?: () => number;
   timeoutMs?: number;
   preserveRefreshOnTransient?: boolean;
+  requiredProvider?: 'google';
   onChange?: (state: AuthPilotState) => void;
 }) {
   let state: AuthPilotState = {
@@ -200,6 +201,14 @@ export function createAuthPilot(options: {
       next.expires <= now()
     )
       return fail('Provider chưa xác minh được user có phiên hợp lệ.');
+    if (options.requiredProvider === 'google') {
+      const identities = user.identities;
+      if (
+        !Array.isArray(identities) ||
+        !identities.some((identity) => identity && identity.provider === 'google')
+      )
+        fail('Cần đăng nhập bằng Google.');
+    }
     return user.id;
   }
   function run(
@@ -289,6 +298,13 @@ export function createAuthPilot(options: {
       return { ...state };
     },
     cancel,
+    acceptOAuth(data: unknown) {
+      return run(async (signal, generation) => {
+        config();
+        await erase();
+        await accept(parseSession(data), signal, generation);
+      });
+    },
     login(email: string, password: string) {
       return run(async (signal, generation) => {
         config();

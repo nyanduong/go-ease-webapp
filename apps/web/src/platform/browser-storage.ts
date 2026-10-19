@@ -85,3 +85,17 @@ export const browserTrips: TripRepository = {
   delete: (id, revision) =>
     transaction((store) => createLocalTripRepository(store).delete(id, revision)),
 };
+
+// Migration reads only: never normalize, replace or delete legacy bytes.
+export async function readLegacyTrips() {
+  const db = await openDatabase(),
+    tx = db.transaction('values', 'readonly');
+  const raw = await result(tx.objectStore('values').get(STORAGE_KEY));
+  const bytes = raw === undefined ? localStorage.getItem(STORAGE_KEY) : (raw as string);
+  return createLocalTripRepository({
+    getItem: async () => bytes,
+    setItem: async () => {
+      throw Error('Kho cũ chỉ đọc trong khi chuyển.');
+    },
+  }).list();
+}

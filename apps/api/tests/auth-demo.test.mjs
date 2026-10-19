@@ -6,6 +6,7 @@ import { authDemoGuard } from '../dist-demos/dev/demos/auth/session.js';
 const project = 'https://abcdefghijklmnopqrst.supabase.co';
 const env = {
   AUTH_ENABLED: 'true',
+  AUTH_GOOGLE_ONLY: 'false',
   SUPABASE_AUTH_URL: project,
   SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_offline_fixture_00000000',
 };

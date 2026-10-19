@@ -104,6 +104,45 @@ export function createAdminClient(options: {
   return {
     logout: stop,
     valid: () => !!access && expires > now(),
+    acceptOAuth(data: unknown) {
+      if (current) return Promise.reject(Error('Đang xử lý.'));
+      stop();
+      return session(async (signal) => {
+        try {
+          base();
+          const value = data as Record<string, unknown>;
+          if (
+            !value ||
+            value.token_type !== 'bearer' ||
+            typeof value.access_token !== 'string' ||
+            value.access_token.length > 4096 ||
+            !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value.access_token) ||
+            typeof value.expires_at !== 'number' ||
+            value.expires_at * 1000 <= now() ||
+            value.expires_at * 1000 > now() + 7200000
+          )
+            throw Error('Phiên Google không hợp lệ.');
+          access = value.access_token;
+          expires = value.expires_at * 1000;
+          const user = (await wire(
+            options.url + '/auth/v1/user',
+            { headers: { apikey: options.key, authorization: 'Bearer ' + access } },
+            signal,
+          )) as { is_anonymous?: boolean; identities?: { provider: string }[] };
+          if (
+            user.is_anonymous ||
+            !user.identities?.some((identity) => identity.provider === 'google')
+          )
+            throw Error('Cần đăng nhập Google.');
+          return managedCatalogSchema.parse(
+            await wire(base() + '/v1/admin/catalog', { headers: headers() }, signal),
+          );
+        } catch (error) {
+          stop();
+          throw error;
+        }
+      });
+    },
     login(email: string, password: string) {
       if (current) return Promise.reject(Error('Đang xử lý.'));
       stop();
