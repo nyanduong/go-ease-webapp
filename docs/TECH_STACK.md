@@ -68,4 +68,4 @@ Development build và EAS Build dành cho thư viện native tùy chỉnh hoặc
 
 ## Gemini backend sau #72
 
-[Runbook Gemini](../apps/api/GEMINI.md) dùng REST server-side, model allowlist, structured JSON và kiểm tra runtime; không thêm SDK/native dependency mobile. Quota/cost guards lưu lượt trước outbound, mặc định tắt và không tự retry. Gemini live Free tier đạt ngày 14/10/2026; bằng chứng redacted ghi rõ SHA và phạm vi một ngày. Không bật billing; team tự cấu hình secret backend, không dùng key trong app/Git.
+[Runbook Gemini](../apps/api/docs/GEMINI.md) dùng REST server-side, model allowlist, structured JSON và kiểm tra runtime; không thêm SDK/native dependency mobile. Quota/cost guards lưu lượt trước outbound, mặc định tắt và không tự retry. Gemini live Free tier đạt ngày 14/10/2026; bằng chứng redacted ghi rõ SHA và phạm vi một ngày. Không bật billing; team tự cấu hình secret backend, không dùng key trong app/Git.

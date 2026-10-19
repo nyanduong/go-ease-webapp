@@ -19,8 +19,8 @@ Tài liệu mô tả cấu trúc mới, không xác nhận phần mềm đã ch�
 
 - [API NestJS local v1, catalog dùng chung và mobile fetch](../apps/api/README.md)
 
-- [Gemini backend: adapter, giới hạn và bằng chứng live](../apps/api/GEMINI.md)
-- [HTTPS demo nội bộ: mã phiên, Expo Go và cách dừng](../apps/api/HTTPS_DEMO.md)
+- [Gemini backend: adapter, giới hạn và bằng chứng live](../apps/api/docs/GEMINI.md)
+- [HTTPS demo nội bộ: mã phiên, Expo Go và cách dừng](../apps/api/docs/HTTPS_DEMO.md)
 - [Mobile AI: tạo, review, chỉnh/lưu và nghiệm thu còn chờ](MOBILE_AI.md)
 - [Auth spike: email/password Expo Go và backend xác minh](AUTH_SPIKE.md)
 - [PostgreSQL, CRUD chuyến riêng, backup và pilot đồng bộ #76](SERVER_TRIPS.md)

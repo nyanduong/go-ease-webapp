@@ -4,7 +4,7 @@
 
 ## Dùng trong Expo Go (phiên demo được cấp phép)
 
-1. Team pull main và cài đúng lockfile. Chỉ người vận hành có quyền mới khởi động API/tunnel theo [runbook HTTPS #73](../apps/api/HTTPS_DEMO.md). Gemini key/bearer ở backend, không gửi cho app. Giữ quota bền/Free tier, không tăng/reset để né giới hạn. Nếu URL/quyền chưa sẵn sàng, tiếp tục mẫu local.
+1. Team pull main và cài đúng lockfile. Chỉ người vận hành có quyền mới khởi động API/tunnel theo [runbook HTTPS #73](../apps/api/docs/HTTPS_DEMO.md). Gemini key/bearer ở backend, không gửi cho app. Giữ quota bền/Free tier, không tăng/reset để né giới hạn. Nếu URL/quyền chưa sẵn sàng, tiếp tục mẫu local.
 2. `EXPO_PUBLIC_API_BASE_URL` chỉ là HTTPS origin API được team cấp; đổi env thì restart Metro/quét QR mới. Metro URL không phải API URL. Nhập **mã phiên tạm** 30 phút ở app lúc dùng; không đặt code trong EXPO_PUBLIC/Git/storage. Đây là demo nội bộ ở `__DEV__`, không auth sản phẩm hoặc public production feature.
 3. Tạo chuyến: nhập tên/ngày tương lai/1–5 ngày/1–20 người/ngân sách như form cũ. Có hai lựa chọn riêng: mẫu local lưu theo luồng cũ, hoặc đề xuất AI để xem trước. API chưa cấu hình HTTPS thì AI bị vô hiệu, không tự đổi lỗi AI thành mẫu.
 4. Bấm đề xuất AI → xác nhận một lượt quota. Trong lúc gọi, form bị khóa, bấm lặp bị chặn; có Hủy request. Lỗi vẫn giữ input/draft/đề xuất trước, không tự retry. Mã sai/hết hạn, quota, timeout, offline hoặc sai DTO đều không tạo chuyến. Muốn gọi lại phải bấm/xác nhận; có thể tốn lượt kể cả lỗi/hủy.
@@ -27,7 +27,7 @@ CI giữ dependency/lockfile hiện tại theo yêu cầu không nâng Expo. `pn
 
 - Logic mobile dùng provider fixture **offline được ghi rõ**: 1/5 ngày review không ghi; validate sai request/catalog/price/time/budget/kind; lỗi, bấm lặp, hủy/response muộn, stale draft, apply xác nhận, ID/revision, save/reopen/source, lỗi đọc/ghi/ambiguous + retry không gọi AI thêm; cùng editor adopt draft mới, chỉnh và save/cancel.
 - Client tests dùng fetch doubles cho HTTPS-only, body người dùng, DTO/timeout/cancel/redaction và không fallback. Root integration chạy **Nest HTTP/TCP loopback thật**, cùng client/controller/repository, request 5 ngày/4 người/ngân sách 0, request ID, review → lưu/mở lại và auth lỗi. Transport shim chỉ đổi HTTPS test URL sang loopback HTTP; Google provider là double. **Không phải test TLS, native fetch hoặc Gemini live.**
-- Live #72 chỉ xác minh server-loopback Gemini một ngày trên SHA đã ghi ở [GEMINI.md](../apps/api/GEMINI.md). Không có Gemini call/quota mới ở #74; không sao chép chứng cứ đó thành pass mobile.
+- Live #72 chỉ xác minh server-loopback Gemini một ngày trên SHA đã ghi ở [GEMINI.md](../apps/api/docs/GEMINI.md). Không có Gemini call/quota mới ở #74; không sao chép chứng cứ đó thành pass mobile.
 
 ## Checklist Android + iPhone còn chờ
 

@@ -49,6 +49,8 @@ jobs:
         run: pnpm check:expo
       - name: TypeScript
         run: pnpm typecheck
+      - name: Kiểm tra định dạng backend
+        run: pnpm --filter @goease/api format:check
       - name: ESLint
         run: pnpm lint
       - name: Kiểm thử packages, mobile và HTTP API thật
