@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "pnpm build && concurrently -k -n types,api \"tsc --watch --preserveWatchOutput\" \"node --env-file-if-exists=.env --watch dist/main.js\"",
     "start": "node --env-file-if-exists=.env dist/main.js",
-    "build": "prisma generate && tsc -p tsconfig.json",
-    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src tests tests-db scripts prisma.config.ts",
-    "test": "pnpm build && node --test tests/*.test.mjs",
+    "build": "node scripts/clean-build.mjs dist && prisma generate && tsc -p tsconfig.json",
+    "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.demos.json --noEmit",
+    "lint": "eslint src dev tests tests-db scripts prisma.config.ts",
+    "test": "pnpm build && pnpm build:demos && node --test tests/*.test.mjs",
     "test:gemini:live": "node --env-file-if-exists=.env scripts/gemini-live.mjs",
-    "demo": "node --env-file-if-exists=.env dist/demo.js",
-    "demo:auth": "node --env-file-if-exists=.env dist/auth-demo.js",
-    "demo:trips": "node --env-file-if-exists=.env dist/trips-demo.js"
+    "demo": "pnpm build:demos && node --env-file-if-exists=.env dist-demos/dev/demos/ai/main.js",
+    "demo:auth": "pnpm build:demos && node --env-file-if-exists=.env dist-demos/dev/demos/auth/main.js",
+    "demo:trips": "pnpm build:demos && node --env-file-if-exists=.env dist-demos/dev/demos/trips/main.js",
+    "build:demos": "node scripts/clean-build.mjs dist-demos && tsc -p tsconfig.demos.json",
+    "format": "prettier --write \"src/**/*.ts\" \"dev/**/*.ts\" \"tests/**/*.mjs\" \"tests-db/**/*.mjs\" \"scripts/**/*.mjs\" \"*.{js,ts,json}\" \".prettierrc.json\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"dev/**/*.ts\" \"tests/**/*.mjs\" \"tests-db/**/*.mjs\" \"scripts/**/*.mjs\" \"*.{js,ts,json}\" \".prettierrc.json\""
   },
   "dependencies": {
     "@goease/catalog": "workspace:*",
@@ -35,6 +38,7 @@
     "@types/pg": "^8.23.1",
     "concurrently": "10.0.6",
     "eslint": "^9.39.5",
+    "prettier": "3.9.10",
     "prisma": "7.10.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2"

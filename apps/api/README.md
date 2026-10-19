@@ -1,12 +1,25 @@
 # GoEase API v1 — NestJS và catalog dùng chung
 
-Nền API local cho [issue #71](https://github.com/nyanduong/go-ease-webapp/issues/71), NestJS 12.1.3 + TypeScript trên Node 24 theo root repo. Dùng `@goease/contracts` và `@goease/catalog`, cùng 15 địa điểm, ID/tọa độ/nguồn với app. Chưa DB, tài khoản hoặc deployment. Adapter Gemini #72 đã có, mặc định tắt; live Free tier đã đạt, xem [GEMINI.md](GEMINI.md). Giá chưa xác minh giữ unknown/null.
+Backend NestJS 12.1.3 + TypeScript trên Node 24, gồm health, catalog/quản trị, xác minh Supabase, chuyến riêng PostgreSQL và adapter Gemini. Các tính năng có cờ cấu hình, mặc định tắt theo `.env.example`; catalog tĩnh vẫn dùng được khi database chưa bật. API `/v1` và contracts giữ nguyên sau refactor. Giá chưa xác minh giữ unknown/null.
+
+## Cấu trúc sau refactor
+
+- `src/main.ts` mở server; `bootstrap.ts` tạo app cho runtime/test; `app.module.ts` ghép module.
+- `src/config/`, `src/common/http/`, `src/database/` giữ config, HTTP và Prisma/actor transaction.
+- `src/modules/` gồm health, auth, catalog (kèm admin), trips và ai.
+- `dev/demos/` chứa entry/guard phiên QA, build riêng vào `dist-demos/`; production ở `dist/` không import demo.
+- `tests/` giữ Node HTTP/unit tests; `tests-db/` dùng PostgreSQL thật cô lập.
+- Runbook AI/HTTPS nằm trong `docs/`. Xem [ranh giới kiến trúc](../../docs/architecture/BACKEND.md).
+
+Tên lệnh root không đổi. `pnpm --filter @goease/api build` chỉ build production; `pnpm --filter @goease/api build:demos` build demo riêng. `pnpm test:api` build cả hai trước khi chạy test. `createApi(env, catalogLoader?, aiOptions?, authOptions?)` nằm ở `src/bootstrap.ts`; wrapper phiên demo nằm ngoài source production.
+
+Format code viết tay bằng `pnpm --filter @goease/api format`; kiểm tra bằng `pnpm --filter @goease/api format:check` (CI cũng chạy). Prettier được ghim phiên bản; không format generated Prisma, output build, dữ liệu runtime hoặc `.env`.
 
 ## Chạy từ root repo
 
 ```powershell
 pnpm install --frozen-lockfile
-Copy-Item -LiteralPath apps/api/.env.example -Destination apps/api/.env
+if (-not (Test-Path apps/api/.env)) { Copy-Item apps/api/.env.example apps/api/.env }
 pnpm dev:api
 ```
 
@@ -38,7 +51,7 @@ Schemas runtime nằm tại [contracts API](../../packages/contracts/src/api.ts)
 | GET /v1/health | Không query | `{apiVersion:'1', service:'goease-api', status:'ok', scope:'process', dependencies:{database:'not-configured', gemini:'not-configured'}}` |
 | GET /v1/catalog | `destinationId=da-lat`, bỏ query mặc định Đà Lạt | `{apiVersion:'1', catalog:{destinationId, accessedOn, label, sourceName, sourceUrl, entries}}`; entries theo CatalogEntry, hiện 15 địa điểm |
 
-Health chỉ xác nhận tiến trình HTTP trả lời được, **không kiểm tra/readiness DB/Gemini/catalog**. Database chưa tích hợp; Gemini báo not-configured khi tắt/thiếu biến hoặc configured-unverified khi đủ cấu hình, không báo provider/quota ready. Catalog validate mỗi lần trước khi gửi; dữ liệu server sai trả 500 thay vì danh sách rỗng/thành công giả. Query sai/không hỗ trợ/key lạ/lặp/nested trả 400. Catalog không có POST/ghi chuyến; POST AI tạo đề xuất riêng theo GEMINI.md. Route/method không có trả 404. HEAD theo GET của Express nhưng không body; CORS preflight hợp lệ trả 204.
+Health chỉ xác nhận tiến trình HTTP trả lời được, **không kiểm tra/readiness DB/Gemini/catalog**. Database báo not-configured hoặc configured-unverified theo cấu hình; Gemini báo not-configured khi tắt/thiếu biến hoặc configured-unverified khi đủ cấu hình, không báo provider/quota ready. Catalog validate mỗi lần trước khi gửi; dữ liệu server sai trả 500 thay vì danh sách rỗng/thành công giả. Query sai/không hỗ trợ/key lạ/lặp/nested trả 400. Catalog không có POST/ghi chuyến; POST AI tạo đề xuất riêng theo GEMINI.md. Route/method không có trả 404. HEAD theo GET của Express nhưng không body; CORS preflight hợp lệ trả 204.
 
 Lỗi ứng dụng có envelope chung:
 
@@ -100,15 +113,15 @@ Tài liệu framework: [Nest controllers](https://docs.nestjs.com/controllers), 
 
 ## Gemini backend #72
 
-[Adapter, endpoint, quota và runbook Gemini live](GEMINI.md). Mặc định tắt; ca live Free tier #72 đã đạt và có bằng chứng redacted trong runbook. Endpoint cần bearer credential backend; không nhúng token/key vào app. HTTP/doubles kiểm tra độc lập với live; không tự mua quota/bật billing hoặc fallback sample giả AI.
+[Adapter, endpoint, quota và runbook Gemini live](docs/GEMINI.md). Mặc định tắt; ca live Free tier #72 đã đạt và có bằng chứng redacted trong runbook. Endpoint cần bearer credential backend; không nhúng token/key vào app. HTTP/doubles kiểm tra độc lập với live; không tự mua quota/bật billing hoặc fallback sample giả AI.
 
 ## HTTPS demo #73
 
-Xem [HTTPS_DEMO.md](HTTPS_DEMO.md): phiên có mã truy cập 30 phút ở loopback 3100, tunnel tạm riêng với Metro, màn QA native và checklist còn thiếu. Không tunnel API dev thường port 3000; không bật billing. Code/test đã chuẩn bị, chưa ghi nghiệm thu HTTPS Android/iPhone.
+Xem [HTTPS_DEMO.md](docs/HTTPS_DEMO.md): phiên có mã truy cập 30 phút ở loopback 3100, tunnel tạm riêng với Metro, màn QA native và checklist còn thiếu. Không tunnel API dev thường port 3000; không bật billing. Code/test đã chuẩn bị, chưa ghi nghiệm thu HTTPS Android/iPhone.
 
 ## Auth verifier spike #75
 
-GET /v1/auth/me nhận user access JWT, không query/userId/role, trả UUID/provider sau HTTPS xác minh trực tiếp với Supabase project cấu hình. Default tắt/thiếu cấu hình trả 503, không mock user; không thay bearer AI/mã demo hoặc public route của tunnel #73. [Cấu hình, giới hạn và nghiệm thu còn thiếu](../../docs/AUTH_SPIKE.md). GoEase Supabase Free đã tạo, settings/negative token đã kiểm tra live; chủ repo xác nhận positive/native backend HTTPS đạt trên iPhone/LDPlayer. Chưa có dữ liệu chuyến server. Pilot native dev có login/logout/restore với SecureStore; provider-verified khác backend-verified. `pnpm demo:auth` tạo session local 30 phút chỉ GET /v1/auth/me; runbook hướng dẫn HTTPS riêng, nghiệm thu và cleanup. Health process-only không chứng minh auth sẵn sàng.
+GET /v1/auth/me nhận user access JWT, không query/userId/role, trả UUID/provider sau HTTPS xác minh trực tiếp với Supabase project cấu hình. Default tắt/thiếu cấu hình trả 503, không mock user; không thay bearer AI/mã demo hoặc public route của tunnel #73. [Cấu hình, giới hạn và nghiệm thu còn thiếu](../../docs/AUTH_SPIKE.md). GoEase Supabase Free đã tạo, settings/negative token đã kiểm tra live; chủ repo xác nhận positive/native backend HTTPS đạt trên iPhone/LDPlayer. Chuyến riêng trên server đã có ở #76 bên dưới. Pilot native dev có login/logout/restore với SecureStore; provider-verified khác backend-verified. `pnpm demo:auth` tạo session local 30 phút chỉ GET /v1/auth/me; runbook hướng dẫn HTTPS riêng, nghiệm thu và cleanup. Health process-only không chứng minh auth sẵn sàng.
 
 ## Chuyến riêng và PostgreSQL #76
 
@@ -117,3 +130,7 @@ Xem [runbook chuyến server](../../docs/SERVER_TRIPS.md) để tạo cluster Po
 ## Catalog quản lý #78
 
 Khi có DB chuyến, public catalog đọc Place từ DB, admin CRUD theo CatalogAdmin registry + RLS. Seed không ghi đè sửa đổi; version/revision và immutable tọa độ bảo toàn chuyến cũ. [Setup web, cấp/thu hồi quyền và API](../../docs/ADMIN_CATALOG.md). Admin catalog không được đọc chuyến người khác; không có admin trips endpoint.
+
+## Quản trị catalog
+
+`/v1/admin/catalog` dùng quyền do server cấp, transaction và lịch sử version. Xem [runbook admin](../../docs/ADMIN_CATALOG.md). Cây module và quy tắc import ở [kiến trúc backend](../../docs/architecture/BACKEND.md). PWA và việc đổi tên frontend chưa thực hiện trong refactor backend này.

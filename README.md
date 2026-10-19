@@ -1,6 +1,6 @@
 # GoEase
 
-App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có Chuyến đi của tôi → Tạo chuyến → sinh lịch trình mẫu Đà Lạt và lưu trên máy; xem/chỉnh theo ngày với draft Hủy/Lưu, ngân sách nhóm và bản đồ pin theo catalog. Có API NestJS local cho health/catalog dùng chung; chưa có đăng nhập, DB hoặc AI online.
+App khách hàng React Native + TypeScript + Expo SDK 57, chạy thử bằng Expo Go trên Android/iOS. Đã có tạo/lưu/chỉnh chuyến khách, ngân sách nhóm và bản đồ theo ngày. Backend NestJS đã có catalog/quản trị, xác minh Supabase, chuyến riêng PostgreSQL và AI nội bộ theo cấu hình; web React/Vite hiện dành cho admin. Xem phạm vi nghiệm thu trong từng runbook bên dưới; có code không đồng nghĩa mọi luồng đã đạt trên thiết bị thật.
 
 Team bắt đầu tính năng từ [phạm vi MVP đã chốt](docs/MVP_EXPO_GO.md) và [wireframe cùng kịch bản demo](docs/DEMO_FLOW.md): P0 tại Đà Lạt, 1–5 ngày, 1–20 người, chế độ khách lưu trên máy. Nhận việc theo ưu tiên và **Blocked by** trên [GitHub Project](https://github.com/users/nyanduong/projects/10).
 
@@ -111,7 +111,7 @@ git switch -c feat/nam-trip-detail
 ## Cấu trúc hiện tại
 
 ```text
-apps/api/                   # NestJS v1 health/catalog, config và HTTP tests
+apps/api/                   # NestJS theo module: auth, catalog/admin, trips, AI
 apps/mobile/
   src/app/_layout.tsx       # Layout Stack, safe area và status bar
   src/app/index.tsx         # Route Chuyến đi của tôi
@@ -132,7 +132,7 @@ packages/trip-storage/     # Repository/store, revision và test lỗi/concurren
 packages/itinerary/        # Sinh mẫu 1–5 ngày từ catalog, nhãn và budget summary
 ```
 
-Chỉ thêm thư viện native có trong Expo Go cho mốc này. Dùng `pnpm --dir apps/mobile exec expo install <tên-package>` để Expo chọn phiên bản tương thích, rồi kiểm tra lockfile. API health/catalog đã có tại apps/api; DB/tài khoản/admin được làm ở các issue tiếp theo.
+Chỉ thêm thư viện native có trong Expo Go cho mốc này. Dùng `pnpm --dir apps/mobile exec expo install <tên-package>` để Expo chọn phiên bản tương thích, rồi kiểm tra lockfile. Backend đã chia module theo tính năng; xem [cây hiện tại](docs/FOLDER_STRUCTURE.md) và [ranh giới backend](docs/architecture/BACKEND.md). Phần chuyển sang PWA chưa thực hiện.
 
 ## Kiểm tra trước khi bàn giao
 
@@ -187,11 +187,11 @@ pnpm dev:api
 
 ## Gemini backend (#72)
 
-Đã có adapter server-side và POST /v1/ai/itineraries, mặc định tắt. Gemini live Free tier đạt ngày 14/10/2026; [runbook và bằng chứng redacted](apps/api/GEMINI.md) ghi SHA, kết quả và giới hạn của ca nghiệm thu. Không bật billing. Runbook mô tả strict output, canonical catalog/chi phí, bearer nội bộ, timeout/cancel, quota lưu bền và harness live có opt-in. Không đưa provider key hoặc backend access token vào mobile/EXPO_PUBLIC_*. Chưa nối nút AI trên app hoặc mở HTTPS có phí; luồng mẫu local tiếp tục như cũ.
+Đã có adapter server-side và POST /v1/ai/itineraries, mặc định tắt. Gemini live Free tier đạt ngày 14/10/2026; [runbook và bằng chứng redacted](apps/api/docs/GEMINI.md) ghi SHA, kết quả và giới hạn của ca nghiệm thu. Không bật billing. Runbook mô tả strict output, canonical catalog/chi phí, bearer nội bộ, timeout/cancel, quota lưu bền và harness live có opt-in. Không đưa provider key hoặc backend access token vào mobile/EXPO_PUBLIC_*. Chưa nối nút AI trên app hoặc mở HTTPS có phí; luồng mẫu local tiếp tục như cũ.
 
 ## HTTPS demo nội bộ (#73)
 
-`pnpm demo:api` chạy phiên API loopback 3100 có mã truy cập 30 phút, allowlist và guards AI. [Runbook HTTPS](apps/api/HTTPS_DEMO.md) hướng dẫn Cloudflare Quick Tunnel tạm, URL public mobile, cấp mã phiên riêng, kiểm tra Expo Go và cách dừng. Về GoEase → Kiểm tra HTTPS API (dev) để kiểm tra health/catalog/QA AI; code chỉ trong RAM, không phải bearer backend. Không bật billing. Code/test đã chuẩn bị nhưng nghiệm thu HTTPS native còn thiếu do thao tác tunnel bị kiểm duyệt tự động chặn; #73 giữ mở, không ghi pass giả.
+`pnpm demo:api` chạy phiên API loopback 3100 có mã truy cập 30 phút, allowlist và guards AI. [Runbook HTTPS](apps/api/docs/HTTPS_DEMO.md) hướng dẫn Cloudflare Quick Tunnel tạm, URL public mobile, cấp mã phiên riêng, kiểm tra Expo Go và cách dừng. Về GoEase → Kiểm tra HTTPS API (dev) để kiểm tra health/catalog/QA AI; code chỉ trong RAM, không phải bearer backend. Không bật billing. Code/test đã chuẩn bị nhưng nghiệm thu HTTPS native còn thiếu do thao tác tunnel bị kiểm duyệt tự động chặn; #73 giữ mở, không ghi pass giả.
 
 ## Tạo/chỉnh lịch trình AI trên Expo Go (#74)
 

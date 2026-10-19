@@ -85,7 +85,7 @@ api.ts export API_VERSION, catalogQuerySchema, healthResponseSchema, catalogResp
 
 ## Response AI v1
 
-ai.ts export GEMINI_MODEL, AI_LABEL, budgetSummarySchema và aiItineraryResponseSchema. DTO kind ai khác sample; budget phải khớp Trip tính lại. Server dùng tripSchemaWithCatalog trước khi trả; LLM không cấp giá/tọa độ/tên catalog. Health Gemini có configured-unverified, không là live/readiness. Contracts chỉ Zod/logic thuần, không key/Node/NestJS. [Quy tắc Gemini](../../apps/api/GEMINI.md).
+ai.ts export GEMINI_MODEL, AI_LABEL, budgetSummarySchema và aiItineraryResponseSchema. DTO kind ai khác sample; budget phải khớp Trip tính lại. Server dùng tripSchemaWithCatalog trước khi trả; LLM không cấp giá/tọa độ/tên catalog. Health Gemini có configured-unverified, không là live/readiness. Contracts chỉ Zod/logic thuần, không key/Node/NestJS. [Quy tắc Gemini](../../apps/api/docs/GEMINI.md).
 
 Server trip DTO, version và mutation receipts của #76 nằm ở `src/server-trips.ts`; xem [API/ownership runbook](../../docs/SERVER_TRIPS.md) trước khi tích hợp consumer mới.
 

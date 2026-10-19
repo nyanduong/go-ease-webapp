@@ -1,121 +1,73 @@
 # Cây thư mục GoEase
 
-Cấu trúc đích cho team khi tự tạo dự án mới. Chỉ tạo module khi có chức năng thực; đây là sơ đồ, chưa tạo scaffold rỗng.
-
-Nền mobile hiện có route tại `apps/mobile/src/app`, theo template Expo SDK 57. Phần `app/` trong sơ đồ dưới là nhóm route tương ứng; tiếp tục đặt route trong `src/app` của app hiện tại. [Contracts](../packages/contracts/README.md) đã có schema/type/logic và test; API/web vẫn là cấu trúc đích. Xem [cây hiện tại](../README.md#cấu-trúc-hiện-tại).
+Đây là cấu trúc hiện có sau refactor backend. Frontend chưa chuyển sang PWA: `apps/web` vẫn là admin React/Vite, `apps/mobile` vẫn là Expo. Không tạo thêm ứng dụng hoặc module rỗng trong lần này.
 
 ```text
 go-ease-webapp/
 ├── apps/
-│   ├── mobile/                       # Expo, React Native, TypeScript
-│   │   ├── app/                      # Expo Router; route chỉ ghép screen
-│   │   │   ├── _layout.tsx
-│   │   │   ├── index.tsx              # Trang đầu / danh sách chuyến
-│   │   │   └── trips/
-│   │   │       ├── new.tsx
-│   │   │       └── [id]/
-│   │   │           ├── index.tsx      # Lịch trình theo ngày
-│   │   │           ├── edit.tsx
-│   │   │           └── map.tsx
-│   │   ├── src/
-│   │   │   ├── features/
-│   │   │   │   ├── trips/
-│   │   │   │   │   ├── screens/
-│   │   │   │   │   ├── components/
-│   │   │   │   │   ├── hooks/
-│   │   │   │   │   ├── trip.repository.ts
-│   │   │   │   │   ├── local-trip.repository.ts
-│   │   │   │   │   └── api-trip.repository.ts
-│   │   │   │   ├── itinerary/         # Tạo đề xuất, sắp xếp hoạt động
-│   │   │   │   └── maps/              # Pin/ngày, quyền vị trí
-│   │   │   ├── components/ui/         # Button, Input, Loading, Error
-│   │   │   ├── theme/                 # Colors, spacing, typography
-│   │   │   ├── lib/                   # HTTP client, env validation
-│   │   │   └── data/                  # Danh mục mẫu có nguồn
-│   │   ├── assets/
-│   │   ├── tests/
-│   │   ├── app.json                   # Hoặc app.config.ts nếu cần dynamic
-│   │   ├── .env.example
-│   │   └── package.json
-│   ├── api/                          # Thêm khi nối backend
+│   ├── api/
 │   │   ├── src/
 │   │   │   ├── main.ts
+│   │   │   ├── bootstrap.ts
 │   │   │   ├── app.module.ts
+│   │   │   ├── config/
+│   │   │   ├── common/
+│   │   │   │   ├── errors/
+│   │   │   │   └── http/
+│   │   │   ├── database/
 │   │   │   ├── modules/
+│   │   │   │   ├── health/
 │   │   │   │   ├── auth/
-│   │   │   │   ├── trips/             # Controller, service, DTO
-│   │   │   │   ├── places/
-│   │   │   │   └── ai/                # Gemini adapter, validation
-│   │   │   ├── database/             # Prisma service
-│   │   │   └── common/               # Guards, filters, config
+│   │   │   │   ├── catalog/
+│   │   │   │   │   └── admin/
+│   │   │   │   ├── trips/
+│   │   │   │   └── ai/
+│   │   │   │       └── providers/
+│   │   │   └── generated/prisma/   # Sinh tự động, Git ignore
+│   │   ├── dev/demos/             # AI, auth, trips; build riêng
 │   │   ├── prisma/
 │   │   │   ├── schema.prisma
-│   │   │   ├── migrations/
-│   │   │   └── seed.ts
-│   │   ├── test/
-│   │   ├── .env.example
-│   │   └── package.json
-│   └── web/                          # Admin React/Vite, bổ sung sau
+│   │   │   └── migrations/
+│   │   ├── scripts/
+│   │   ├── tests/
+│   │   ├── tests-db/
+│   │   ├── docs/
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.demos.json
+│   ├── mobile/
+│   │   ├── src/app/               # Expo Router
+│   │   ├── src/features/trips/    # Screens, components, controllers
+│   │   ├── assets/
+│   │   └── tests/
+│   └── web/                      # Web admin hiện tại
 │       ├── src/
-│       │   ├── features/
-│       │   ├── components/
-│       │   └── lib/
-│       └── package.json
+│       └── tests/
 ├── packages/
-│   ├── itinerary/                    # Đã có: bộ sinh mẫu thuần, nhãn/budget/error
-│   │   ├── src/index.ts
-│   │   ├── tests/itinerary.test.mjs
-│   │   └── package.json
-│   ├── catalog/                      # Đã có: 15 điểm demo có nguồn, dùng chung
-│   │   ├── src/dalat.ts
-│   │   ├── src/index.ts
-│   │   ├── tests/catalog.test.mjs
-│   │   └── package.json
-│   └── contracts/                    # Type/schema/logic thuần dùng chung
-│       ├── src/
-│       │   ├── calendar.ts           # Lịch và múi giờ điểm đến
-│       │   ├── catalog.ts            # Schema metadata, vùng demo và giá tham khảo
-│       │   ├── schemas.ts            # Place, Activity, TripDay, Trip
-│       │   ├── itinerary.ts
-│       │   └── index.ts
-│       ├── tests/contracts.test.mjs
-│       ├── tsconfig.json
-│       └── package.json
+│   ├── contracts/                # Schema/type/logic thuần dùng chung
+│   ├── catalog/                  # Catalog Đà Lạt tĩnh có nguồn
+│   ├── itinerary/                # Bộ sinh lịch trình mẫu
+│   └── trip-storage/             # Local repository/store/revision
 ├── docs/
-├── .github/workflows/                # CI khi có source và scripts thật
-├── .gitignore
-├── package.json
+│   └── architecture/BACKEND.md
+├── tests/                        # Kiểm tra consumer/HTTP xuyên workspace
+├── .github/
 ├── pnpm-workspace.yaml
 ├── pnpm-lock.yaml
-└── README.md
+└── package.json
 ```
 
-## Quy tắc tổ chức
+## Backend
 
-Route gọi screen; screen dùng hook/service; repository xử lý lưu/đọc. Logic tính chi phí và kiểm tra chuyến tách khỏi UI để test được.
+Xem [kiến trúc và quy tắc phụ thuộc](architecture/BACKEND.md), [cách chạy API](../apps/api/README.md), [Gemini](../apps/api/docs/GEMINI.md) và [phiên HTTPS demo](../apps/api/docs/HTTPS_DEMO.md).
 
-Chế độ khách dùng local repository. Chế độ tài khoản dùng API repository sau khi có auth; không tự chuyển chuyến riêng từ API lỗi sang kho khách rồi báo đã đồng bộ. Chỉ triển khai một repository trước nếu mốc đầu chỉ có khách.
+Mỗi feature module sở hữu nghiệp vụ và truy vấn của mình. Controller xử lý HTTP; service điều phối; repository giữ query; mapper chuyển dữ liệu khi cần. Module khác dùng service được export, không truy cập repository nội bộ. Database giữ kết nối và transaction, không chứa nghiệp vụ catalog/trips.
 
-Mobile/web chỉ gọi API và import contracts. Prisma, secret và Gemini SDK server-side nằm trong API. Contracts không phụ thuộc UI/backend. API xác minh dữ liệu dù client đã validate.
+Trip mutation, catalog validation, RLS, quyền admin và revision giữ nguyên transaction. [Runbook chuyến server](SERVER_TRIPS.md) và [quản trị catalog](ADMIN_CATALOG.md) vẫn áp dụng. Không đổi migration, endpoint, contracts hoặc chính sách AI.
 
-Trong mốc đầu, team chỉ cần mobile và các phần contracts thực sự dùng. Web admin, migration và cấu hình triển khai bổ sung khi có nhu cầu cụ thể.
+## Frontend và packages
 
-## API đã triển khai ở #71
+Route mobile nằm tại `apps/mobile/src/app`, gọi screen/controller trong `src/features/trips`. Chuyến khách dùng [trip-storage](../packages/trip-storage/README.md); chuyến tài khoản có namespace riêng và gọi API, không tự ghi vào kho khách khi mạng lỗi. Xem [đồng bộ chuyến tài khoản](MOBILE_ACCOUNT_SYNC.md).
 
-apps/api hiện có app factory NestJS, controller/service catalog, config validation, error filter và HTTP tests thật. packages/contracts/src/api.ts là DTO runtime dùng chung; mobile có client thuần và route dev catalog-check. [Hướng dẫn API hiện tại](../apps/api/README.md) là cấu trúc đã chạy; các phần DB/admin trong cây đích vẫn thuộc issue tiếp theo.
+`apps/web` tiếp tục chạy bằng `pnpm dev:admin`. `pnpm dev:web` hiện mở Expo Web của mobile; chưa là PWA sản phẩm đã hoàn thiện. Cấu trúc PWA khách hàng và việc chuyển admin sang `apps/admin` là giai đoạn sau.
 
-## Adapter AI backend #72
-
-apps/api/src/ai gồm controller, service, Gemini transport, projection và quota filesystem private. request-signal.ts nối HTTP disconnect/deadline/shutdown với AbortSignal. packages/contracts/src/ai.ts có response DTO; helper giá catalogGroupCostVnd dùng chung với generator. apps/api/scripts/gemini-live.mjs chỉ chạy live có opt-in/config. [Chi tiết và bằng chứng live](../apps/api/GEMINI.md).
-
-## PostgreSQL và chuyến riêng #76
-
-`prisma/schema.prisma`, `prisma/migrations/` và `prisma.config.ts` mô tả schema/migration; `src/trips.ts` chứa CRUD theo identity, transaction, version và idempotency. `scripts/db-local.mjs`, `db-tools.mjs`, `test-db.mjs` vận hành cluster riêng và test DB thật. Generated Prisma client trong `src/generated/prisma` bị Git ignore và được build tạo lại. `packages/contracts/src/server-trips.ts` dùng chung với client/pilot trong `apps/mobile/src/features/trips`. [Runbook](SERVER_TRIPS.md).
-
-## Mobile account #77
-
-Route `apps/mobile/src/app/account.tsx` mở màn tài khoản; `account-session.ts` nối Auth/SecureStore với lifecycle. `account-trip-controller.ts` quản lý state và draft/pending owner-bound, màn account và các component editor/new-trip dùng lại activity/budget/map logic. Namespace dữ liệu riêng tách khỏi kho guest. [Hướng dẫn và checklist native còn chờ](MOBILE_ACCOUNT_SYNC.md).
-
-## Web admin #78
-
-`apps/web/src/main.tsx` là UI React, `controller.ts` giữ phiên RAM và API client, `vite.config.ts` cấu hình loopback. API `src/admin-catalog.ts`, Prisma CatalogAdmin/PlaceRevision và migration bổ sung quản lý catalog theo quyền. `scripts/catalog-role.mjs` chỉ cho operator DB local cấp/thu hồi quyền. Root CI chạy web build/tests/browser. [Runbook](ADMIN_CATALOG.md).
+[Contracts](../packages/contracts/README.md) không chứa Prisma, cấu hình server hoặc secret. [Catalog](../packages/catalog/README.md) giữ dataset tĩnh; catalog quản lý có database là trách nhiệm backend. [Itinerary](../packages/itinerary/README.md) giữ logic sinh mẫu dùng chung.
