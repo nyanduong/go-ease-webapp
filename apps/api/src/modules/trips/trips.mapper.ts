@@ -18,6 +18,7 @@ export function tripRecord(row: Stored) {
       ...(row.generationSource === null ? {} : { generationSource: row.generationSource }),
       name: row.name,
       destinationId: row.destinationId,
+      ...(row.destination === null ? {} : { destination: row.destination }),
       startDate: row.startDate,
       durationDays: row.durationDays,
       people: row.people,
@@ -31,9 +32,11 @@ export function tripRecord(row: Stored) {
           id: a.id,
           name: a.name,
           location:
-            a.locationKind === 'catalog'
-              ? { kind: 'catalog', placeId: a.placeId }
-              : { kind: 'custom' },
+            a.locationKind === 'discovered'
+              ? a.locationSnapshot
+              : a.locationKind === 'catalog'
+                ? { kind: 'catalog', placeId: a.placeId }
+                : { kind: 'custom' },
           startTime: a.startTime,
           endTime: a.endTime,
           costVnd: a.costVnd,

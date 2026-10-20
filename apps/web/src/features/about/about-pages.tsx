@@ -34,7 +34,7 @@ export function AboutPage() {
         </p>
         <p>Lưu chuyến đi vào tài khoản để mở lại trên các thiết bị của bạn.</p>
         <span className="inline-flex w-fit rounded-full bg-mint px-3 py-1 text-xs font-bold text-teal-dark">
-          Đà Lạt · 1–5 ngày · Tối đa 20 người
+          Nhiều thành phố · 1–5 ngày · Tối đa 20 người
         </span>
         <Link
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-mint px-5 py-3 text-center text-sm font-bold text-teal-dark hover:bg-teal/15"

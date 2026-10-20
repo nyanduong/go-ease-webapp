@@ -6,7 +6,8 @@ import { CatalogService } from './catalog.service.js';
 export class CatalogController {
   constructor(@Inject(CatalogService) private readonly catalog: CatalogService) {}
   @Get() list(@Query() query: unknown) {
-    if (!catalogQuerySchema.safeParse(query).success)
+    const parsed = catalogQuerySchema.safeParse(query);
+    if (!parsed.success || parsed.data.destinationId !== 'da-lat')
       throw new ApiFailure(
         400,
         'BAD_REQUEST',
@@ -15,7 +16,8 @@ export class CatalogController {
     return this.catalog.list();
   }
   @Get('places') places(@Query() query: unknown) {
-    if (!catalogQuerySchema.safeParse(query).success)
+    const parsed = catalogQuerySchema.safeParse(query);
+    if (!parsed.success || parsed.data.destinationId !== 'da-lat')
       throw new ApiFailure(400, 'BAD_REQUEST', 'Query catalog không hợp lệ.');
     return this.catalog.managedCatalog();
   }

@@ -48,13 +48,17 @@ export class TripsRepository {
     });
   }
   async save(tx: Transaction, owner: Owner, trip: Trip, create: boolean, timestamp: Date) {
-    const { days, id: tripId, ...fields } = trip;
+    const { days, id: tripId, destination, ...fields } = trip;
+    const destinationData = destination
+      ? (JSON.parse(JSON.stringify(destination)) as Prisma.InputJsonValue)
+      : Prisma.DbNull;
     if (create)
       await tx.trip.create({
         data: {
           ...owner,
           id: tripId,
           ...fields,
+          destination: destinationData,
           generationSource: fields.generationSource ?? null,
           updatedAt: timestamp,
         },
@@ -64,6 +68,7 @@ export class TripsRepository {
         where: { ownerIssuer_ownerSubject_id: { ...owner, id: tripId } },
         data: {
           ...fields,
+          destination: destinationData,
           generationSource: fields.generationSource ?? null,
           version: { increment: 1 },
           updatedAt: timestamp,
@@ -90,6 +95,10 @@ export class TripsRepository {
         name: a.name,
         locationKind: a.location.kind,
         placeId: a.location.kind === 'catalog' ? a.location.placeId : null,
+        locationSnapshot:
+          a.location.kind === 'discovered'
+            ? (JSON.parse(JSON.stringify(a.location)) as Prisma.InputJsonValue)
+            : Prisma.DbNull,
         startTime: a.startTime,
         endTime: a.endTime,
         costVnd: a.costVnd,

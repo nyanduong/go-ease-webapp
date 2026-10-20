@@ -1,8 +1,8 @@
 import { z } from 'zod';
+import { getDestination, type Destination } from './destinations.js';
 
-export const DESTINATION = Object.freeze({
-  id: 'da-lat', name: 'Đà Lạt', timeZone: 'Asia/Ho_Chi_Minh', currency: 'VND',
-} as const);
+/** Backward-compatible default for the original curated sample. */
+export const DESTINATION = Object.freeze(getDestination('da-lat')!);
 
 function daysInMonth(year: number, month: number): number {
   if (month === 2) return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28;
@@ -41,10 +41,10 @@ export function addCalendarDays(value: string, offset: number): CalendarDate {
 }
 
 /** Caller supplies an instant; no device-local or UTC date truncation. */
-export function todayAtDestination(instant: Date): CalendarDate {
+export function todayAtDestination(instant: Date, destination: Pick<Destination, 'timeZone'> = DESTINATION): CalendarDate {
   if (!Number.isFinite(instant.getTime())) throw new RangeError('Instant không hợp lệ');
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: DESTINATION.timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: destination.timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
   }).formatToParts(instant);
   const part = (type: string) => parts.find((item) => item.type === type)?.value;
   return calendarDateSchema.parse(`${part('year')}-${part('month')}-${part('day')}`);

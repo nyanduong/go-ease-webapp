@@ -1,6 +1,6 @@
 # GoEase
 
-GoEase giúp nhóm bạn lập lịch trình Đà Lạt, chỉnh hoạt động, theo dõi ngân sách và lưu chuyến. PWA khách hàng ở `apps/web` dùng React + Vite + **Tailwind CSS**. Trang quản trị catalog đã chuyển sang `apps/admin`; backend NestJS ở `apps/api`. Expo được giữ tại `apps/mobile` và dùng chung logic với PWA.
+GoEase giúp nhóm bạn chọn điểm đến tại Việt Nam, tìm địa điểm qua SerpApi, xem/chỉnh lịch trình, theo dõi ngân sách và lưu chuyến. PWA khách hàng ở `apps/web` dùng React + Vite + **Tailwind CSS**. Trang quản trị catalog ở `apps/admin`; backend NestJS ở `apps/api`. Expo được giữ tại `apps/mobile` và dùng chung logic với PWA.
 
 Phạm vi bản bàn giao được cập nhật: **bắt buộc đăng nhập Google, mọi chuyến gắn với tài khoản; bỏ chế độ khách trong sản phẩm đích**. Xem [kế hoạch MVP PWA và thứ tự triển khai](docs/MVP_PRODUCT_PLAN.md). PWA/admin đã chuyển sang Google OAuth; backend mặc định yêu cầu phiên OAuth với danh tính Google. Xem [cấu hình Google và demo HTTPS](docs/GOOGLE_LOGIN.md).
 
@@ -53,7 +53,8 @@ Tài khoản PWA cần Supabase, API bật Auth/Trips và **HTTPS API origin** t
 
 ## Chức năng hiện tại
 
-- Chuyến tài khoản: Google login bắt buộc; tạo lịch trình mẫu 1–5 ngày, 1–20 người; sửa tên, thêm/sửa/xóa/sắp xếp/chuyển ngày hoạt động rồi chủ động lưu lên server.
+- Chuyến tài khoản: Google login bắt buộc; chọn một trong 8 điểm đến, 1–5 ngày, 1–20 người. Tìm địa điểm thật qua backend SerpApi → xem đề xuất → thay điểm/chỉnh giờ/chi phí → chủ động lưu lên server. Có lịch trống và lịch mẫu Đà Lạt tách riêng.
+- Dữ liệu nhiều nơi: lọc vùng/tọa độ, loại trùng và văn phòng du lịch; cache và giới hạn lượt gọi bền vững. Giữ snapshot nguồn khi lưu chuyến; dữ liệu provider thay đổi không tự sửa chuyến cũ. Xem [thiết lập và nghiệm thu nhiều điểm đến](docs/MULTI_DESTINATION_HANDOFF.md).
 - Ngân sách: phân biệt chưa biết (`null`), miễn phí (`0`) và số đã nhập; chi phí tổng nhóm không nhân lại số người.
 - PWA: responsive bằng Tailwind; IndexedDB giữ nháp theo owner; manifest/icons và cache giao diện hỗ trợ cài ứng dụng. Chuyến cần mạng. Worker mới chờ người dùng chọn cập nhật.
 - Tài khoản: đăng nhập/khôi phục/đăng xuất, CRUD chuyến server, draft theo owner, expected version và retry đúng mutation ID. Access token ở RAM, refresh token lưu localStorage theo project; tự xoay vòng/gia hạn, giữ đăng nhập khi đóng/mở trình duyệt. Web Locks chống tranh chấp giữa tab; logout/đổi account được đồng bộ, lỗi mạng tạm thời không buộc Google login lại.

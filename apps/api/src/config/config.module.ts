@@ -3,12 +3,14 @@ import type { ApiConfig } from './env.js';
 import type { AuthOptions } from '../modules/auth/auth-verifier.service.js';
 import type { AiOptions } from '../modules/ai/ai.service.js';
 import type { CatalogLoader } from '../modules/catalog/catalog.service.js';
+import type { DiscoveryOptions } from '../modules/discovery/discovery.service.js';
 export const API_CONFIG = Symbol('API_CONFIG');
 export const API_OPTIONS = Symbol('API_OPTIONS');
 export interface ApiOptions {
   auth?: AuthOptions;
   ai?: AiOptions;
   catalogLoader?: CatalogLoader;
+  discovery?: DiscoveryOptions;
 }
 @Global()
 @Module({})

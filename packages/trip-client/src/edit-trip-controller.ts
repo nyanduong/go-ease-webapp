@@ -1,15 +1,18 @@
 import {
   activitySchema,
+  discoveryPlaceSchema,
   moveActivity,
   tripSchema,
   type Activity,
+  type DiscoveryPlace,
   type Place,
   type Trip,
 } from '@goease/contracts';
 import type { createTripStore, SavedTrip } from '@goease/trip-storage';
 
 export interface ActivityForm {
-  kind: 'catalog' | 'custom';
+  kind: 'catalog' | 'custom' | 'discovered';
+  placeSnapshot?: DiscoveryPlace;
   placeId: string;
   name: string;
   startTime: string;
@@ -18,10 +21,28 @@ export interface ActivityForm {
   notes: string;
 }
 export type ActivityErrors = Partial<Record<keyof ActivityForm, string>>;
+
+/** Remove only the planner's generated facts when their underlying place changes. */
+export function notesAfterPlaceChange(notes: string): string {
+  const generated =
+    /^Tham quan ước tính \d+ phút\. Di chuyển ước tính \d+ phút \(\d+(?:\.\d+)? km đường chim bay\)\. (?:Chưa xác minh giờ mở cửa\.|Xếp trong khung giờ nguồn cung cấp; cần kiểm tra lại trước khi đi\.) Chi phí chưa có giá\./u;
+  if (!generated.test(notes)) return notes;
+  const personalNotes = notes.replace(generated, '').trim();
+  const warning =
+    'Đã thay địa điểm. Giờ trong lịch được giữ nguyên; hãy kiểm tra lại thời lượng tham quan và thời gian di chuyển.';
+  return personalNotes ? `${warning}\n${personalNotes}` : warning;
+}
+
 export function activityForm(activity?: Activity): ActivityForm {
   return {
     kind: activity?.location.kind ?? 'custom',
-    placeId: activity?.location.kind === 'catalog' ? activity.location.placeId : '',
+    placeId:
+      activity?.location.kind === 'catalog' || activity?.location.kind === 'discovered'
+        ? activity.location.placeId
+        : '',
+    ...(activity?.location.kind === 'discovered'
+      ? { placeSnapshot: activity.location.placeSnapshot }
+      : {}),
     name: activity?.name ?? '',
     startTime: activity?.startTime ?? '',
     endTime: activity?.endTime ?? '',
@@ -39,12 +60,22 @@ export function parseActivityForm(
   const place = places.find((item) => item.id === form.placeId);
   if (form.kind === 'catalog' && !place)
     errors.placeId = 'Chọn một địa điểm trong danh sách gợi ý.';
+  if (
+    form.kind === 'discovered' &&
+    (!discoveryPlaceSchema.safeParse(form.placeSnapshot).success ||
+      form.placeSnapshot?.id !== form.placeId)
+  )
+    errors.placeId = 'Chọn một địa điểm đã tìm cho chuyến đi.';
   const cost = form.costVnd.trim();
   const result = activitySchema.safeParse({
     id,
     name: form.name,
     location:
-      form.kind === 'catalog' ? { kind: 'catalog', placeId: form.placeId } : { kind: 'custom' },
+      form.kind === 'discovered'
+        ? { kind: 'discovered', placeId: form.placeId, placeSnapshot: form.placeSnapshot }
+        : form.kind === 'catalog'
+          ? { kind: 'catalog', placeId: form.placeId }
+          : { kind: 'custom' },
     startTime: form.startTime.trim() || null,
     endTime: form.endTime.trim() || null,
     costVnd: cost === '' ? null : /^\d+$/.test(cost) ? Number(cost) : NaN,

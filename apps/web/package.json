@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests scripts vite.config.ts",
-    "test": "tsc -p tsconfig.logic-tests.json && node --test tests/service-worker.test.mjs tests/trip-edit.test.mjs tests/google-auth.test.mjs tests/account-profile.test.mjs tests/token-session.test.mjs",
+    "test": "tsc -p tsconfig.logic-tests.json && node --test tests/service-worker.test.mjs tests/trip-edit.test.mjs tests/google-auth.test.mjs tests/account-profile.test.mjs tests/token-session.test.mjs tests/discovery-client.test.mjs",
     "test:e2e": "node scripts/test-browser.mjs"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
     "@goease/itinerary": "workspace:*",
     "@goease/trip-client": "workspace:*",
     "@goease/trip-storage": "workspace:*",
+    "leaflet": "1.9.4",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -25,6 +26,7 @@
     "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
     "@types/google.maps": "3.58.1",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^24.0.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

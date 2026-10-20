@@ -56,7 +56,7 @@ test('deterministic category rotation works regardless of catalog ordering and l
   assert.equal(new Set(firstCategories).size, 5); // Market is evening-only in this dataset.
   a.trip.days[0].activities[0].name = 'Changed'; assert.deepEqual(generateSampleTrip(request, catalog, options), b);
 });
-for (const overrides of [{ durationDays: 0 }, { durationDays: 6 }, { durationDays: 1.5 }, { people: 0 }, { people: 21 }, { startDate: '2026-12-29' }, { startDate: '2026-02-30' }, { name: ' ' }, { budgetVnd: -1 }, { budgetVnd: '0' }, { destinationId: 'ha-noi' }]) {
+for (const overrides of [{ durationDays: 0 }, { durationDays: 6 }, { durationDays: 1.5 }, { people: 0 }, { people: 21 }, { startDate: '2026-12-29' }, { startDate: '2026-02-30' }, { name: ' ' }, { budgetVnd: -1 }, { budgetVnd: '0' }, { destinationId: 'unknown-city' }]) {
   test(`reject invalid needs ${JSON.stringify(overrides)} with a readable result`, () => {
     const result = generate(overrides); assert.equal(result.ok, false); assert.equal(result.code, 'INVALID_INPUT'); assert.ok(result.message);
   });

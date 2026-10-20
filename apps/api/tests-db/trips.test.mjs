@@ -6,12 +6,15 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { Pool } from 'pg';
 import { createApi } from '../dist/bootstrap.js';
-import { generateSampleTrip } from '@goease/itinerary';
+import { generateDiscoveredTrip, generateSampleTrip } from '@goease/itinerary';
 import { getDalatCatalog } from '@goease/catalog';
 import {
   tripMutationResponseSchema,
   serverTripResponseSchema,
   serverTripListResponseSchema,
+  DESTINATIONS,
+  getDestination,
+  tripSchema,
 } from '@goease/contracts';
 import { isolatedUrl, pgControl } from '../scripts/db-tools.mjs';
 import serverTripClient from '../../mobile/.logic-tests/server-trip-controller.js';
@@ -48,6 +51,45 @@ function trip(id = 'trip-' + randomUUID(), days = 1) {
   );
   assert.equal(r.ok, true);
   return r.trip;
+}
+function discoveryPlaces(destinationId = 'ha-noi') {
+  const destination = getDestination(destinationId);
+  return [0, 1].map((index) => ({
+    id: `discovery-fixture-${index}`,
+    provider: 'serpapi',
+    externalId: `external-fixture-${index}`,
+    name: `Địa điểm tìm được fixture ${index}`,
+    destinationId,
+    coordinates: {
+      latitude: destination.center.latitude + index * 0.001,
+      longitude: destination.center.longitude,
+    },
+    address: `Địa chỉ fixture ${index}`,
+    category: 'heritage',
+    rating: index === 0 ? null : 4.5,
+    priceLevel: index === 0 ? null : '$$',
+    durationMinutes: 60,
+    durationBasis: 'estimate',
+    openingHours: 'Giờ mở cửa fixture, chưa xác nhận trực tiếp',
+    sourceUrl: `https://example.test/place/${index}`,
+    fetchedAt: '2026-10-15T08:00:00Z',
+  }));
+}
+function discoveredTrip(id = 'discovery-' + randomUUID(), places = discoveryPlaces()) {
+  const result = generateDiscoveredTrip(
+    {
+      name: 'Chuyến khám phá fixture',
+      destinationId: places[0].destinationId,
+      startDate: '2026-10-15',
+      durationDays: 1,
+      people: 2,
+      budgetVnd: null,
+    },
+    places,
+    { tripId: id, today: '2026-10-15' },
+  );
+  assert.equal(result.ok, true);
+  return result.trip;
 }
 function token(subject) {
   const now = Math.floor(Date.now() / 1000),
@@ -152,6 +194,231 @@ async function error(response, status, code) {
   for (const secret of [runtimeUrl, adminUrl, 'offline_fixture_signature', 'DO_NOT_LEAK'])
     assert.equal(raw.includes(secret), false);
 }
+test('multi-destination discovered snapshots round-trip through PostgreSQL without Place rows and preserve null versus zero', () =>
+  fixture(async ({ request, A }) => {
+    const places = discoveryPlaces();
+    const t = discoveredTrip(undefined, places);
+    t.days[0].activities[0].costVnd = 0;
+    t.days[0].activities[1].costVnd = null;
+    const create = { mutationId: randomUUID(), trip: t };
+    const created = tripMutationResponseSchema.parse(
+      await ok(await request('A', 'POST', '', create), 201),
+    );
+    assert.equal(created.result.version, 1);
+    assert.deepEqual(created.result.trip, t);
+    const replay = await ok(await request('A', 'POST', '', create), 201);
+    assert.equal(replay.replayed, true);
+    assert.deepEqual(replay.result, created.result);
+    const read = serverTripResponseSchema.parse(await ok(await request('A', 'GET', '/' + t.id)));
+    assert.deepEqual(read.trip, t);
+    assert.equal(read.trip.destination.name, 'Hà Nội');
+    assert.equal(read.trip.generationSource, 'discovery');
+    assert.equal(read.trip.days[0].activities[0].costVnd, 0);
+    assert.equal(read.trip.days[0].activities[1].costVnd, null);
+    const rows = await admin.query(
+      'SELECT "locationKind","placeId","locationSnapshot","costVnd" FROM "TripActivity" WHERE "ownerSubject"=$1::uuid AND "tripId"=$2 ORDER BY position',
+      [A, t.id],
+    );
+    assert.equal(rows.rowCount, 2);
+    for (let index = 0; index < rows.rows.length; index++) {
+      const row = rows.rows[index];
+      assert.equal(row.locationKind, 'discovered');
+      assert.equal(row.placeId, null);
+      assert.deepEqual(row.locationSnapshot, t.days[0].activities[index].location);
+    }
+    assert.deepEqual(
+      rows.rows.map((row) => row.costVnd),
+      [0, null],
+    );
+    assert.equal(
+      (
+        await admin.query('SELECT id FROM "Place" WHERE id = ANY($1::varchar[])', [
+          places.map((place) => place.id),
+        ])
+      ).rowCount,
+      0,
+    );
+  }));
+
+test('provider refresh does not rewrite a saved discovery snapshot; edit/reopen/replay retain provenance and owner/version guards', () =>
+  fixture(async ({ request }) => {
+    const places = discoveryPlaces();
+    const t = discoveredTrip(undefined, places);
+    await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: t }), 201);
+    // A later provider response may change its current metadata. Persisted trips retain the user's earlier snapshot.
+    places[0].name = 'Tên hiện tại từ provider';
+    places[0].rating = 1;
+    places[0].address = 'Địa chỉ hiện tại từ provider';
+    places[0].fetchedAt = '2026-10-16T08:00:00Z';
+    const currentProviderPreview = discoveredTrip(undefined, places);
+    assert.equal(currentProviderPreview.days[0].activities[0].name, places[0].name);
+    const loaded = serverTripResponseSchema.parse(await ok(await request('A', 'GET', '/' + t.id)));
+    assert.deepEqual(loaded.trip, t);
+    const edited = structuredClone(loaded.trip);
+    edited.name = 'Đã chỉnh lịch của mình';
+    edited.days[0].activities[0].notes = 'Ghi chú của mình';
+    edited.days[0].activities[0].costVnd = 0;
+    const update = { mutationId: randomUUID(), expectedVersion: 1, trip: edited };
+    const saved = await ok(await request('A', 'PUT', '/' + t.id, update));
+    assert.equal(saved.result.version, 2);
+    const replay = await ok(await request('A', 'PUT', '/' + t.id, update));
+    assert.equal(replay.replayed, true);
+    assert.deepEqual(replay.result, saved.result);
+    const reopened = await ok(await request('A', 'GET', '/' + t.id));
+    assert.equal(reopened.version, 2);
+    assert.deepEqual(reopened.trip, edited);
+    assert.deepEqual(
+      reopened.trip.days[0].activities[0].location.placeSnapshot,
+      t.days[0].activities[0].location.placeSnapshot,
+    );
+    await error(await request('B', 'GET', '/' + t.id), 404, 'NOT_FOUND');
+    await error(
+      await request('B', 'PUT', '/' + t.id, { ...update, mutationId: randomUUID() }),
+      404,
+      'NOT_FOUND',
+    );
+    await error(
+      await request('B', 'DELETE', '/' + t.id, { mutationId: randomUUID(), expectedVersion: 2 }),
+      404,
+      'NOT_FOUND',
+    );
+    await error(
+      await request('A', 'PUT', '/' + t.id, { ...update, mutationId: randomUUID() }),
+      409,
+      'TRIP_CONFLICT',
+    );
+    await error(
+      await request('A', 'PUT', '/' + t.id, {
+        ...update,
+        trip: { ...edited, name: 'Đổi nội dung cùng mutation' },
+      }),
+      409,
+      'IDEMPOTENCY_CONFLICT',
+    );
+  }));
+
+test('destination/snapshot mismatches and cross-city catalogue references are rejected before any trip rows are written', () =>
+  fixture(async ({ request, A }) => {
+    const t = discoveredTrip();
+    const wrongPlaceDestination = structuredClone(t);
+    wrongPlaceDestination.days[0].activities[0].location.placeSnapshot.destinationId = 'da-lat';
+    const wrongPlaceName = structuredClone(t);
+    wrongPlaceName.days[0].activities[0].name = 'Tên không khớp snapshot';
+    const wrongPlaceId = structuredClone(t);
+    wrongPlaceId.days[0].activities[0].location.placeId = 'different-id';
+    const crossCityCatalog = trip();
+    crossCityCatalog.destinationId = 'ha-noi';
+    crossCityCatalog.destination = getDestination('ha-noi');
+    for (const invalid of [
+      { ...t, destination: getDestination('da-lat') },
+      { ...t, timeZone: 'UTC' },
+      { ...t, currency: 'USD' },
+      wrongPlaceDestination,
+      wrongPlaceName,
+      wrongPlaceId,
+      crossCityCatalog,
+    ]) {
+      await error(
+        await request('A', 'POST', '', { mutationId: randomUUID(), trip: invalid }),
+        400,
+        'BAD_REQUEST',
+      );
+    }
+    assert.equal(
+      (
+        await admin.query('SELECT count(*)::int AS n FROM "Trip" WHERE "ownerSubject"=$1::uuid', [
+          A,
+        ])
+      ).rows[0].n,
+      0,
+    );
+  }));
+
+test('all eight selectable destinations accept and reopen manual empty trips without fabricated catalogue places', () =>
+  fixture(async ({ request, A }) => {
+    for (const destination of DESTINATIONS) {
+      const t = tripSchema.parse({
+        schemaVersion: 1,
+        id: `manual-${destination.id}-${randomUUID()}`,
+        name: `Khám phá ${destination.name}`,
+        destinationId: destination.id,
+        destination,
+        startDate: '2026-10-15',
+        durationDays: 1,
+        people: 2,
+        budgetVnd: null,
+        timeZone: destination.timeZone,
+        currency: destination.currency,
+        days: [{ id: 'day-1', date: '2026-10-15', activities: [] }],
+      });
+      await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: t }), 201);
+      const read = serverTripResponseSchema.parse(await ok(await request('A', 'GET', '/' + t.id)));
+      assert.deepEqual(read.trip, t);
+      assert.equal(read.trip.days[0].activities.length, 0);
+      assert.equal('generationSource' in read.trip, false);
+    }
+    assert.equal(
+      (
+        await admin.query('SELECT count(*)::int AS n FROM "Trip" WHERE "ownerSubject"=$1::uuid', [
+          A,
+        ])
+      ).rows[0].n,
+      DESTINATIONS.length,
+    );
+    assert.equal(
+      (
+        await admin.query(
+          'SELECT count(*)::int AS n FROM "TripActivity" WHERE "ownerSubject"=$1::uuid',
+          [A],
+        )
+      ).rows[0].n,
+      0,
+    );
+  }));
+
+test('custom destination snapshots preserve their valid IANA time zone and SQL guards reject incomplete JSON snapshots', () =>
+  fixture(async ({ request, A }) => {
+    const t = discoveredTrip();
+    await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: t }), 201);
+    // SQL CHECK evaluates NULL as accepted unless required JSON fields are guarded explicitly.
+    await assert.rejects(
+      admin.query(
+        'UPDATE "Trip" SET destination=$3::jsonb WHERE "ownerSubject"=$1::uuid AND id=$2',
+        [A, t.id, JSON.stringify({ id: t.destinationId })],
+      ),
+    );
+    await assert.rejects(
+      admin.query('UPDATE "Trip" SET destination=NULL WHERE "ownerSubject"=$1::uuid AND id=$2', [
+        A,
+        t.id,
+      ]),
+    );
+    await assert.rejects(
+      admin.query(
+        'UPDATE "TripActivity" SET "locationSnapshot"=$3::jsonb WHERE "ownerSubject"=$1::uuid AND "tripId"=$2',
+        [A, t.id, JSON.stringify({ kind: 'discovered', placeSnapshot: {} })],
+      ),
+    );
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + t.id))).trip, t);
+    const destination = {
+      ...getDestination('ha-noi'),
+      id: 'fixture-custom-town',
+      name: 'Custom timezone fixture',
+      timeZone: 'UTC',
+    };
+    const manual = tripSchema.parse({
+      ...t,
+      id: 'custom-' + randomUUID(),
+      destinationId: destination.id,
+      destination,
+      timeZone: destination.timeZone,
+      days: t.days.map((day) => ({ ...day, activities: [] })),
+    });
+    delete manual.generationSource;
+    await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: manual }), 201);
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + manual.id))).trip, manual);
+  }));
+
 test('real PostgreSQL CRUD preserves normalized ordering/null/zero/legacy source and scopes every endpoint by verified user', () =>
   fixture(async ({ A, B, request }) => {
     const t = trip('same-client-id', 5);

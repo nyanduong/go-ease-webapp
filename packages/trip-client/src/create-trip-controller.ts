@@ -1,6 +1,7 @@
 import {
   createTripInputSchemaFor,
   DESTINATION,
+  getDestination,
   todayAtDestination,
   type CreateTripInput,
 } from '@goease/contracts';
@@ -8,6 +9,7 @@ import { generateSampleTrip } from '@goease/itinerary';
 import type { createTripStore } from '@goease/trip-storage';
 
 export interface TripFormValues {
+  destinationId?: string;
   name: string;
   startDate: string;
   durationDays: string;
@@ -17,6 +19,7 @@ export interface TripFormValues {
 export type FormErrors = Partial<Record<keyof TripFormValues, string>>;
 export function initialTripForm(now: Date): TripFormValues {
   return {
+    destinationId: DESTINATION.id,
     name: '',
     startDate: todayAtDestination(now),
     durationDays: '1',
@@ -29,9 +32,11 @@ export function validateTripForm(
   form: TripFormValues,
   today: string,
 ): { ok: true; input: CreateTripInput } | { ok: false; errors: FormErrors } {
+  if (!getDestination(form.destinationId ?? DESTINATION.id))
+    return { ok: false, errors: { destinationId: 'Chọn điểm đến trong danh sách.' } };
   const result = createTripInputSchemaFor(today).safeParse({
     name: form.name,
-    destinationId: DESTINATION.id,
+    destinationId: form.destinationId ?? DESTINATION.id,
     startDate: form.startDate.trim(),
     durationDays: number(form.durationDays),
     people: number(form.people),
@@ -39,6 +44,7 @@ export function validateTripForm(
   });
   if (result.success) return { ok: true, input: result.data };
   const messages: Record<keyof TripFormValues, string> = {
+    destinationId: 'Chọn điểm đến trong danh sách.',
     name: 'Nhập tên chuyến từ 1 đến 80 ký tự.',
     startDate: 'Chọn ngày từ hôm nay trở đi; chuyến đi cần kết thúc trước năm 2101.',
     durationDays: 'Chọn từ 1 đến 5 ngày, không nhập số lẻ.',

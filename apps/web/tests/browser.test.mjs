@@ -268,6 +268,16 @@ async function setup(options = {}) {
     }
     return reply(route, receipt, method === 'POST' ? 201 : 200);
   });
+  await context.route('https://tile.openstreetmap.org/**', (route) =>
+    route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+      headers: { 'cache-control': 'public, max-age=604800' },
+    }),
+  );
   await context.route('https://maps.googleapis.com/maps/api/js?*', (route) =>
     state.mapFail
       ? route.abort('failed')
@@ -289,7 +299,8 @@ async function create(page, name = 'Đà Lạt cùng bạn', days = '2') {
   await page.getByLabel('Số ngày', { exact: true }).fill(days);
   await page.getByLabel('Số người', { exact: true }).fill('5');
   await page.getByLabel('Ngân sách nhóm (VND)', { exact: true }).fill('10000000');
-  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await page.getByText('Dùng lịch mẫu Đà Lạt', { exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch mẫu Đà Lạt', exact: true }).click();
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
   await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
@@ -470,7 +481,9 @@ test('PKCE roundtrip verifies provider/backend, strips callback and never persis
   const f = await setup(),
     { page, state } = f;
   await login(page, '/trips/new');
-  await page.getByRole('heading', { name: 'Lên lịch trình Đà Lạt', exact: true }).waitFor();
+  await page
+    .getByRole('heading', { name: 'Một nơi mới, một hành trình mới.', exact: true })
+    .waitFor();
   assert.equal(state.exchange.length, 1);
   assert(!page.url().includes('code='));
   assert(!page.url().includes('flow='));
@@ -609,7 +622,8 @@ test('lost response uses the exact durable mutation on explicit retry without du
   state.lose = true;
   await page.goto(base + '/trips/new');
   await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Một chuyến duy nhất');
-  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await page.getByText('Dùng lịch mẫu Đà Lạt', { exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch mẫu Đà Lạt', exact: true }).click();
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
   await page.getByRole('button', { name: 'Thử lưu lại', exact: true }).waitFor();
@@ -1044,7 +1058,7 @@ test('customer pages use plain language and map failures keep a useful next acti
   for (const [path, heading] of [
     ['/', 'Chuyến đi của bạn'],
     ['/trips', 'Chuyến đi của bạn'],
-    ['/trips/new', 'Lên lịch trình Đà Lạt'],
+    ['/trips/new', 'Một nơi mới, một hành trình mới.'],
     ['/account', 'Bạn A'],
     ['/about', 'Just go. We’ll plan.'],
     ['/travel-services', 'Một chuyến đi trọn vẹn'],

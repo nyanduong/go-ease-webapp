@@ -1,4 +1,4 @@
-// Temporary QA gateway, never a production ingress. It exposes no filesystem, DB, AI or demo endpoints.
+// Dev gateway. Only the explicit public and authenticated account/discovery routes below are exposed.
 import { createServer, request as upstreamRequest } from 'node:http';
 const origins = new Set([
   'http://127.0.0.1:5174',
@@ -24,9 +24,12 @@ const server = createServer((req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1:' + port),
     method = req.method;
   const publicRoute =
-    method === 'GET' && ['/v1/health', '/v1/catalog/places'].includes(url.pathname);
+    method === 'GET' &&
+    ['/v1/health', '/v1/catalog/places', '/v1/destinations'].includes(url.pathname);
   const privateRoute =
     (method === 'GET' && url.pathname === '/v1/auth/me') ||
+    (method === 'POST' &&
+      ['/v1/discovery/places', '/v1/discovery/preview'].includes(url.pathname)) ||
     (['GET', 'POST'].includes(method) && url.pathname === '/v1/trips') ||
     (['GET', 'PUT', 'DELETE'].includes(method) &&
       /^\/v1\/trips\/[A-Za-z0-9_-]{1,80}$/.test(url.pathname)) ||
@@ -52,10 +55,10 @@ const server = createServer((req, res) => {
   const chunks = [];
   req.on('data', (chunk) => {
     size += chunk.length;
-    if (size <= 65536) chunks.push(chunk);
+    if (size <= 262144) chunks.push(chunk);
   });
   req.on('end', () => {
-    if (size > 65536) return reply(413);
+    if (size > 262144) return reply(413);
     const headers = {
       accept: 'application/json',
       ...(origin ? { origin } : {}),
@@ -69,7 +72,7 @@ const server = createServer((req, res) => {
         path: url.pathname + url.search,
         method,
         headers,
-        timeout: 20000,
+        timeout: 30000,
       },
       (upstream) => {
         res.writeHead(upstream.statusCode, { ...upstream.headers, 'cache-control': 'no-store' });

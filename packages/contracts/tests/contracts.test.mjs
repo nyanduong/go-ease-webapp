@@ -178,7 +178,7 @@ test('overlap warns without rejecting; touching intervals and no hours ignored',
 });
 
 test('strict schema/version/IDs reject corrupted and future data', () => {
-  for (const override of [{ schemaVersion: 2 }, { schemaVersion: '1' }, { currency: 'USD' }, { timeZone: 'UTC' }, { destinationId: 'ha-noi' }, { id: '' }, { id: ' bad' }, { serverOwner: 'someone' }]) {
+  for (const override of [{ schemaVersion: 2 }, { schemaVersion: '1' }, { currency: 'USD' }, { timeZone: 'UTC' }, { destinationId: 'unknown-city' }, { id: '' }, { id: ' bad' }, { serverOwner: 'someone' }]) {
     assert.equal(tripSchema.safeParse(trip(1, override)).success, false);
   }
   assert.equal(tripSchema.safeParse(JSON.parse(JSON.stringify(trip()))).success, true);

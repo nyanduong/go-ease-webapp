@@ -30,7 +30,7 @@ export function HomeOverview({
           </span>
           <Icon name="trips" />
         </div>
-        <h2 className="text-xl">{latest ? latest.name : 'Đà Lạt đang chờ bạn'}</h2>
+        <h2 className="text-xl">{latest ? latest.name : 'Điểm đến mới đang chờ bạn'}</h2>
         <p className="text-sm leading-relaxed text-muted">
           {latest
             ? `${dateLabel(latest.startDate)} · ${latest.durationDays} ngày · ${latest.people} người`
