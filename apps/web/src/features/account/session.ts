@@ -179,6 +179,7 @@ async function maintainSession(force = false) {
 }
 let restoring: Promise<void> | null = null,
   initialized: Promise<void> | null = null;
+let googleRedirectPending = false;
 async function profileRequest(input?: ProfileInput) {
   if (profileState.busy) return false;
   const owner = session.userId,
@@ -282,8 +283,11 @@ export const accountSession = {
     session = { ...session, busy: true, message: 'Đang mở Google…' };
     publish();
     try {
-      location.assign(await google.begin(safeReturnPath(location.pathname)));
+      const target = await google.begin(safeReturnPath(location.pathname));
+      googleRedirectPending = true;
+      location.assign(target);
     } catch (error) {
+      googleRedirectPending = false;
       session = {
         ...session,
         busy: false,
@@ -295,7 +299,10 @@ export const accountSession = {
   initialize() {
     initialized ??= (async () => {
       if (location.pathname !== '/auth/callback') {
-        if (!refreshStorage.exists()) return;
+        if (!refreshStorage.exists()) {
+          google.clear();
+          return;
+        }
         if (!navigator.onLine && refreshStorage.exists()) {
           session = {
             ...session,
@@ -397,6 +404,21 @@ export function useAccount() {
 }
 export function startAccountLifecycle() {
   let ready = false;
+  const returnedFromGoogle = () => {
+    if (!googleRedirectPending || location.pathname === '/auth/callback') return;
+    googleRedirectPending = false;
+    google.clear();
+    session = {
+      ...session,
+      busy: false,
+      phase: 'signed-out',
+      userId: null,
+      message: 'Đăng nhập Google để bắt đầu chuyến đi của bạn.',
+    };
+    publish();
+  };
+  // Back can restore the pre-redirect document, including its busy state, from BFCache.
+  window.addEventListener('pageshow', returnedFromGoogle);
   void accountSession.initialize().finally(() => {
     ready = true;
     void maintainSession().catch(() => {});
@@ -424,6 +446,7 @@ export function startAccountLifecycle() {
   }, 5000);
   return () => {
     clearInterval(timer);
+    window.removeEventListener('pageshow', returnedFromGoogle);
     document.removeEventListener('visibilitychange', resume);
     window.removeEventListener('online', resume);
     window.removeEventListener('storage', changed);

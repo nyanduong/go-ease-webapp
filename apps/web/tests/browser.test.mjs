@@ -387,6 +387,61 @@ test('all private deep links require Google; legacy local/IndexedDB bytes remain
   await finish(f, 'google-gate');
 });
 
+test('phone login fits narrow and short screens with a visible touch-sized Google button', async () => {
+  const f = await setup(),
+    { page } = f;
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const [width, height] of [
+    [320, 568],
+    [390, 844],
+    [430, 932],
+    [768, 1024],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto(base + '/login');
+    const button = page.getByRole('button', { name: 'Tiếp tục với Google', exact: true });
+    await button.waitFor();
+    const bounds = await button.boundingBox();
+    assert(bounds && bounds.height >= 48 && bounds.y + bounds.height <= height);
+    assert(bounds.x >= 0 && bounds.x + bounds.width <= width);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    const picture = await page.locator('.dalat-postcard').boundingBox();
+    assert(picture && picture.y + picture.height < bounds.y);
+  }
+  await finish(f, 'phone-login');
+});
+
+test('Back from Google without login restores an idle login page and permits another attempt', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  await page.route(authOrigin + '/auth/v1/authorize?**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<h1>Google account selection</h1>' }),
+  );
+  await page.goto(base + '/login');
+  await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).click();
+  await page.getByRole('heading', { name: 'Google account selection' }).waitFor();
+  await page.goBack();
+  const button = page.getByRole('button', { name: 'Tiếp tục với Google', exact: true });
+  await button.waitFor();
+  assert.equal(await button.isEnabled(), true);
+  assert.equal(await page.locator('.postcard-signin [role="status"]').count(), 0);
+  assert.equal(await page.getByText('Chưa đăng nhập được. Vui lòng thử lại.').count(), 0);
+  assert.equal(
+    await page.evaluate(() =>
+      Object.keys(sessionStorage).some((key) => /google-flow|code-verifier/.test(key)),
+    ),
+    false,
+  );
+  await page.unroute(authOrigin + '/auth/v1/authorize?**');
+  await button.click();
+  await page.getByRole('navigation', { name: 'Điều hướng chính' }).waitFor();
+  assert.equal(state.exchange.length, 1);
+  await finish(f, 'google-back');
+});
+
 test('PKCE roundtrip verifies provider/backend, strips callback and never persists access/provider tokens', async () => {
   const f = await setup(),
     { page, state } = f;

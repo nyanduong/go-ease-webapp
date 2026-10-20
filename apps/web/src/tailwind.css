@@ -246,38 +246,99 @@
     transform: translateY(0);
   }
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .postcard-login {
-    padding: 24px 24px 20px;
+    padding: max(20px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   }
   .postcard-login-header > p {
     display: none;
   }
   .postcard-login-content {
     grid-template-columns: minmax(0, 1fr);
-    gap: 52px;
+    gap: 30px;
+    flex: initial;
     max-width: 440px;
-    margin: 42px auto 60px;
+    margin: 28px auto 32px;
+  }
+  .postcard-story {
+    padding-inline: 6px;
+  }
+  .postcard-kicker,
+  .postcard-journal {
+    display: none;
+  }
+  .postcard-arrival {
+    margin-top: 0;
+  }
+  .dalat-postcard {
+    padding: 8px 8px 0;
+  }
+  .dalat-postcard > img {
+    height: clamp(130px, 42vw, 190px);
+    aspect-ratio: auto;
+  }
+  .dalat-postcard figcaption {
+    min-height: 36px;
+    font-size: 11px;
   }
   .postcard-signin {
-    grid-row: 1;
-    padding-block: 12px;
+    min-width: 0;
+    max-width: none;
+    padding-block: 0;
   }
   .postcard-signin::before {
     display: none;
   }
   .postcard-signin h1 {
+    margin-top: 14px;
     font-size: clamp(32px, 7.6vw, 40px);
   }
-  .postcard-kicker {
+  .postcard-signin-eyebrow {
     font-size: 10px;
+    letter-spacing: 0.1em;
   }
-  .postcard-journal {
-    font-size: 18px;
+  .postcard-signin-description {
+    margin-top: 22px;
+    line-height: 1.65;
+  }
+  .postcard-google-button {
+    min-height: 52px;
+    margin-top: 24px;
+    font-size: 15px;
+  }
+  .postcard-signin-note {
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 11px;
+  }
+  .postcard-signin-note svg {
+    flex-shrink: 0;
   }
   .postcard-login-footer {
+    margin-top: auto;
+    max-width: 440px;
     flex-wrap: wrap;
     gap: 6px 16px;
+    padding-top: 16px;
+  }
+}
+@media (max-width: 1023px) and (max-height: 700px) {
+  .postcard-login-content {
+    gap: 22px;
+    margin-block: 20px 24px;
+  }
+  .dalat-postcard > img {
+    height: 100px;
+  }
+  .postcard-signin h1 {
+    font-size: 30px;
+  }
+  .postcard-signin-description {
+    margin-top: 18px;
+  }
+  .postcard-google-button {
+    margin-top: 18px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
