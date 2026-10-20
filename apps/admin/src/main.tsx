@@ -3,6 +3,7 @@ import { createBrowserGoogleAuth } from '@goease/trip-client/browser-google-auth
 import { createRoot } from 'react-dom/client';
 import { catalogEntrySchema, type ManagedPlace } from '@goease/contracts';
 import { createAdminClient } from './controller';
+import { ConfirmDialog } from './ConfirmDialog';
 import './style.css';
 function App() {
   const client = useMemo(
@@ -250,6 +251,16 @@ function Editor({
     [costSource, setCostSource] = useState(initial?.referenceCost.sourceUrl ?? ''),
     [costDate, setCostDate] = useState(initial?.referenceCost.checkedOn ?? ''),
     [error, setError] = useState('');
+  const [confirmation, setConfirmation] = useState<
+    { kind: 'save'; entry: ManagedPlace['entry']; enabled: boolean } | { kind: 'discard' } | null
+  >(null);
+  const disabled = busy || confirmation !== null;
+  const openingConfirmation = useRef(false);
+  const confirmationTrigger = useRef<HTMLElement | null>(null);
+  function dismissConfirmation() {
+    openingConfirmation.current = false;
+    setConfirmation(null);
+  }
   const field = (label: string, value: string, set: (v: string) => void, readOnly = false) => (
     <label>
       {label}
@@ -258,7 +269,7 @@ function Editor({
         onChange={(e) => set(e.target.value)}
         maxLength={label.includes('URL') ? 2000 : 120}
         readOnly={readOnly}
-        disabled={busy}
+        disabled={disabled}
       />
     </label>
   );
@@ -272,6 +283,7 @@ function Editor({
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          if (busy || openingConfirmation.current) return;
           setError('');
           const entry = {
             id,
@@ -315,12 +327,10 @@ function Editor({
             );
             return;
           }
-          if (
-            window.confirm(
-              `Lưu ${parsed.data.name} vào catalog ${enabled ? 'đang hoạt động' : 'đã tắt'}?`,
-            )
-          )
-            onSave(parsed.data, enabled);
+          confirmationTrigger.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          openingConfirmation.current = true;
+          setConfirmation({ kind: 'save', entry: parsed.data, enabled });
         }}
       >
         <div className="fields">
@@ -336,7 +346,7 @@ function Editor({
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as typeof category)}
-              disabled={busy}
+              disabled={disabled}
             >
               {['heritage', 'religious', 'nature', 'garden', 'market', 'public-space'].map((c) => (
                 <option key={c}>{c}</option>
@@ -348,7 +358,7 @@ function Editor({
             <select
               value={time}
               onChange={(e) => setTime(e.target.value as typeof time)}
-              disabled={busy}
+              disabled={disabled}
             >
               {['daytime', 'evening', 'flexible'].map((t) => (
                 <option key={t}>{t}</option>
@@ -363,7 +373,7 @@ function Editor({
           <input
             type="checkbox"
             checked={enabled}
-            disabled={busy || !saved}
+            disabled={disabled || !saved}
             onChange={(e) => setEnabled(e.target.checked)}
           />
           Địa điểm đang hoạt động
@@ -373,17 +383,42 @@ function Editor({
             {error}
           </p>
         )}
-        <button disabled={busy}>Lưu địa điểm</button>
+        <button disabled={disabled}>Lưu địa điểm</button>
         <button
           type="button"
-          disabled={busy}
+          disabled={disabled}
           onClick={() => {
-            if (window.confirm('Bỏ form chưa lưu?')) onCancel();
+            if (busy || openingConfirmation.current) return;
+            confirmationTrigger.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            openingConfirmation.current = true;
+            setConfirmation({ kind: 'discard' });
           }}
         >
           Bỏ form
         </button>
       </form>
+      {confirmation && (
+        <ConfirmDialog
+          title={confirmation.kind === 'save' ? 'Lưu địa điểm?' : 'Bỏ thay đổi chưa lưu?'}
+          message={
+            confirmation.kind === 'save'
+              ? `Lưu ${confirmation.entry.name} vào catalog ${confirmation.enabled ? 'đang hoạt động' : 'đã tắt'}?`
+              : 'Các thay đổi trong form này sẽ mất. Bạn có thể tiếp tục chỉnh sửa để giữ lại nội dung.'
+          }
+          confirmLabel={confirmation.kind === 'save' ? 'Xác nhận lưu' : 'Bỏ thay đổi'}
+          destructive={confirmation.kind === 'discard'}
+          returnFocus={confirmationTrigger.current}
+          onCancel={dismissConfirmation}
+          onConfirm={() => {
+            // A session change unmounts the editor and its confirmation together.
+            const action = confirmation;
+            dismissConfirmation();
+            if (action.kind === 'save') onSave(action.entry, action.enabled);
+            else onCancel();
+          }}
+        />
+      )}
     </section>
   );
 }

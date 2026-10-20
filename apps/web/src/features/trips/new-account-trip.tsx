@@ -18,8 +18,9 @@ import {
 } from '@goease/trip-client/create-trip-controller';
 import { Button, Notice, dateLabel } from '../../components/ui';
 import { useLeaveGuard } from '../../app/router';
-import { accountSession, useAccount } from '../account/session';
+import { accountSession, accountTrips, useAccount } from '../account/session';
 import { TripForm } from './trip-form';
+import { confirmAction } from '../../platform/confirmation';
 
 const interests = [
   ['heritage', 'Di sản'],
@@ -53,9 +54,57 @@ export function NewAccountTrip({
     [message, setMessage] = useState('');
   const [destinationBusy, setDestinationBusy] = useState(false);
   const controller = useRef<AbortController | null>(null);
+  const confirming = useRef(false),
+    mounted = useRef(true),
+    current = useRef({ form, selectedInterests, disabled, busy, destinationBusy });
+  current.current = { form, selectedInterests, disabled, busy, destinationBusy };
   const changed = JSON.stringify(form) !== JSON.stringify(initial) || selectedInterests.length > 0;
   useLeaveGuard(changed, disabled || busy || destinationBusy);
-  useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      controller.current?.abort();
+    };
+  }, []);
+  async function cancel() {
+    if (confirming.current || disabled || busy || destinationBusy) return;
+    const snapshot = current.current,
+      owner = accountTrips.getSnapshot().owner;
+    confirming.current = true;
+    try {
+      if (
+        changed &&
+        !(await confirmAction({
+          title: 'Hủy tạo chuyến đi?',
+          message: 'Thông tin chuyến đi bạn đang nhập sẽ không được lưu.',
+          confirmLabel: 'Bỏ thông tin',
+          cancelLabel: 'Tiếp tục nhập',
+          danger: true,
+        }))
+      )
+        return;
+      const latest = current.current,
+        account = accountTrips.getSnapshot();
+      if (
+        !mounted.current ||
+        latest.disabled ||
+        latest.busy ||
+        latest.destinationBusy ||
+        latest.form !== snapshot.form ||
+        latest.selectedInterests !== snapshot.selectedInterests ||
+        !account.ready ||
+        account.busy ||
+        account.pending ||
+        account.draft ||
+        account.owner !== owner
+      )
+        return;
+      onCancel();
+    } finally {
+      confirming.current = false;
+    }
+  }
   const validate = () => {
     const destination = form.destination ?? getDestination(form.destinationId ?? 'da-lat');
     const result = validateTripForm(form, todayAtDestination(new Date(), destination));
@@ -265,7 +314,7 @@ export function NewAccountTrip({
             secondary
             disabled={disabled || busy || destinationBusy}
             onClick={() => {
-              if (!changed || window.confirm('Bỏ thông tin chuyến đi đang nhập?')) onCancel();
+              void cancel();
             }}
           >
             Hủy tạo chuyến
