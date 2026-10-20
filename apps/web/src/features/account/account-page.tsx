@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AccountGate, Button, Brand, Notice, PageTitle } from '../../components/ui';
 import { accountSession, accountTrips, useAccount } from './session';
 import { JourneySketch, LoginArtwork } from './login-artwork';
+import { confirmAction } from '../../platform/confirmation';
 
 export function LoginPage() {
   const { session, hasSavedSession } = useAccount();
@@ -140,15 +141,44 @@ export function AccountPage() {
   const [migrating, setMigrating] = useState(false),
     [migrationMessage, setMigrationMessage] = useState('');
   const migration = useRef<AbortController | null>(null);
-  useEffect(() => () => migration.current?.abort(), []);
+  const confirming = useRef(false),
+    mounted = useRef(true),
+    current = useRef({ session, profile, migrating });
+  current.current = { session, profile, migrating };
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      migration.current?.abort();
+    };
+  }, []);
   async function importLegacy() {
-    if (
-      migrating ||
-      !window.confirm(
+    if (confirming.current || migrating) return;
+    const owner = accountTrips.getSnapshot().owner;
+    confirming.current = true;
+    const accepted = await confirmAction({
+      title: 'Chuyển chuyến đi cũ?',
+      message:
         'Chuyển tất cả chuyến cũ trên trình duyệt này vào tài khoản Google đang đăng nhập? Bản gốc được giữ nguyên.',
-      )
+      confirmLabel: 'Chuyển chuyến cũ',
+    });
+    confirming.current = false;
+    const active = accountTrips.getSnapshot();
+    if (
+      !accepted ||
+      !mounted.current ||
+      current.current.migrating ||
+      current.current.session.busy ||
+      current.current.profile.busy ||
+      !owner ||
+      active.owner !== owner ||
+      !active.ready ||
+      active.busy ||
+      active.draft ||
+      active.pending
     )
       return;
+    confirming.current = true;
     const controller = new AbortController();
     migration.current = controller;
     setMigrating(true);
@@ -164,6 +194,7 @@ export function AccountPage() {
             : 'Chưa thêm được chuyến đi cũ. Các chuyến ban đầu vẫn được giữ; hãy thử lại.',
         );
     } finally {
+      confirming.current = false;
       if (!controller.signal.aborted) setMigrating(false);
     }
   }

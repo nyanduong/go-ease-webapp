@@ -10,6 +10,7 @@ import { ServerTripError } from '@goease/trip-client/server-trip-controller';
 import type { DiscoveryRequest } from '@goease/trip-client/discovery-api-controller';
 import { readLegacyTrips, browserStorage } from '../../platform/browser-storage';
 import { navigate } from '../../app/router';
+import { cancelConfirmations } from '../../platform/confirmation';
 
 const project = import.meta.env.VITE_SUPABASE_URL?.match(
   /^https:\/\/([a-z0-9]{20})\.supabase\.co$/,
@@ -88,6 +89,11 @@ const auth = createAuthPilot({
   storage: refreshStorage,
   sessionLock,
   onChange(next) {
+    if (
+      next.userId !== session.userId ||
+      (session.phase === 'backend-verified' && next.phase !== 'backend-verified')
+    )
+      cancelConfirmations();
     session = next;
     if (next.phase !== 'backend-verified' || !next.userId) {
       profileState = { value: null, busy: false, error: '' };
@@ -345,7 +351,7 @@ export const accountSession = {
       }
       const callback = location.href,
         epoch = lifecycle;
-      history.replaceState(history.state, '', '/login'); // Do not leave code/error data in browser history.
+      await navigate('/login', true); // Do not leave code/error data in browser history.
       session = { ...session, busy: true, message: 'Đang xác minh đăng nhập Google…' };
       publish();
       try {
@@ -381,12 +387,14 @@ export const accountSession = {
     return restoring;
   },
   async logout() {
+    cancelConfirmations();
     lifecycle++;
     google.clear();
     await auth.logout();
     navigate('/login', true);
   },
   cancel() {
+    cancelConfirmations();
     lifecycle++;
     auth.cancel();
   },

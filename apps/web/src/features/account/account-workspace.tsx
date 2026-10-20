@@ -5,6 +5,7 @@ import { Link, navigate } from '../../app/router';
 import { NewAccountTrip } from '../trips/new-account-trip';
 import { TripView } from '../trips/trip-view';
 import { accountTrips, useAccount } from './session';
+import { confirmAction } from '../../platform/confirmation';
 
 export function AccountWorkspace({
   mode = 'list',
@@ -22,6 +23,16 @@ export function AccountWorkspace({
     [cancelled, setCancelled] = useState(false),
     [message, setMessage] = useState('');
   const listRequested = useRef<string | null>(null);
+  const confirming = useRef(false),
+    mounted = useRef(true),
+    currentView = useRef({ mode, id, saving });
+  currentView.current = { mode, id, saving };
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [listLoadedOwner, setListLoadedOwner] = useState<string | null>(null);
   const listReady = listLoadedOwner !== null && listLoadedOwner === trips.owner;
   useEffect(() => {
@@ -90,6 +101,37 @@ export function AccountWorkspace({
       setMessage(
         'Chưa thực hiện được. Hãy kiểm tra nội dung và thử lại; thay đổi của bạn vẫn được giữ.',
       );
+    }
+  }
+  async function confirmWork(
+    options: Parameters<typeof confirmAction>[0],
+    action: () => Promise<unknown>,
+  ) {
+    if (confirming.current || blocked) return;
+    const snapshot = accountTrips.getSnapshot(),
+      view = currentView.current;
+    confirming.current = true;
+    try {
+      if (!(await confirmAction(options))) return;
+      const current = accountTrips.getSnapshot();
+      // A popup stays open while another tab can change the account or draft.
+      if (
+        !mounted.current ||
+        currentView.current.mode !== view.mode ||
+        currentView.current.id !== view.id ||
+        currentView.current.saving ||
+        !current.ready ||
+        current.busy ||
+        current.pending ||
+        current.owner !== snapshot.owner ||
+        current.selected !== snapshot.selected ||
+        current.draft !== snapshot.draft ||
+        current.latest !== snapshot.latest
+      )
+        return;
+      await work(action);
+    } finally {
+      confirming.current = false;
     }
   }
   const selectedId =
@@ -177,8 +219,15 @@ export function AccountWorkspace({
             secondary
             disabled={blocked || !!trips.pending}
             onClick={() => {
-              if (window.confirm('Bỏ thay đổi chưa lưu của bạn và dùng lịch trình mới nhất?'))
-                void work(() => accountTrips.useLatest());
+              void confirmWork(
+                {
+                  title: 'Dùng lịch trình mới nhất?',
+                  message: 'Bỏ thay đổi chưa lưu của bạn và dùng lịch trình mới nhất?',
+                  confirmLabel: 'Dùng lịch mới nhất',
+                  danger: true,
+                },
+                () => accountTrips.useLatest(),
+              );
             }}
           >
             Dùng lịch trình mới nhất
@@ -190,12 +239,15 @@ export function AccountWorkspace({
                 secondary
                 disabled={blocked || !!trips.pending}
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      'Dùng toàn bộ thay đổi của bạn? Khi lưu, nội dung này sẽ thay thế những chỉnh sửa từ thiết bị khác.',
-                    )
-                  )
-                    void work(() => accountTrips.rebase());
+                  void confirmWork(
+                    {
+                      title: 'Giữ thay đổi của bạn?',
+                      message:
+                        'Dùng toàn bộ thay đổi của bạn? Khi lưu, nội dung này sẽ thay thế những chỉnh sửa từ thiết bị khác.',
+                      confirmLabel: 'Giữ thay đổi của tôi',
+                    },
+                    () => accountTrips.rebase(),
+                  );
                 }}
               >
                 Giữ thay đổi của tôi
@@ -343,10 +395,19 @@ export function AccountWorkspace({
             });
           }}
           onDelete={() => {
-            if (trips.selected && window.confirm('Xóa chuyến này khỏi tài khoản của bạn?'))
-              void work(async () => {
-                setDeleted(await accountTrips.remove(trips.selected!));
-              });
+            const selected = trips.selected;
+            if (selected)
+              void confirmWork(
+                {
+                  title: 'Xóa chuyến đi?',
+                  message: `Xóa chuyến “${selected.trip.name}” khỏi tài khoản của bạn? Bạn không thể hoàn tác thao tác này.`,
+                  confirmLabel: 'Xóa chuyến',
+                  danger: true,
+                },
+                async () => {
+                  setDeleted(await accountTrips.remove(selected));
+                },
+              );
           }}
         />
       )}

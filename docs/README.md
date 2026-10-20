@@ -11,6 +11,7 @@
 - [Cấu trúc thư mục](FOLDER_STRUCTURE.md)
 - [Kiến trúc backend](architecture/BACKEND.md)
 - [Admin catalog và quyền vận hành](ADMIN_CATALOG.md)
+- [Nghiệm thu popup xác nhận desktop/mobile và audit native dialog](qa/confirmation-popups/README.md)
 
 Kế hoạch MVP cập nhật ngày 20/10/2026: bắt buộc đăng nhập Google, chỉ chuyến tài khoản, không có khách vãng lai. PWA/admin đã chuyển Google OAuth và account-only; xem [setup Google](GOOGLE_LOGIN.md). Nghiệm thu production/thiết bị vẫn là bước riêng. Dùng kế hoạch này cho phạm vi PWA; đối chiếu README/code và runbook tương ứng cho cách chạy hiện tại.
 

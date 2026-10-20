@@ -112,7 +112,13 @@ async function setup(viewport = { width: 390, height: 844 }) {
       writeDelay: null,
     };
   page.on('pageerror', (error) => errors.push(error.message));
-  page.on('dialog', (dialog) => dialog.accept());
+  page.on('dialog', (dialog) => {
+    if (dialog.type() === 'beforeunload') void dialog.accept();
+    else {
+      errors.push(`Unexpected native ${dialog.type()}: ${dialog.message()}`);
+      void dialog.dismiss();
+    }
+  });
   await context.addInitScript(
     ({ owner }) => {
       localStorage.setItem(

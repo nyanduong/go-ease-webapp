@@ -27,6 +27,8 @@ import {
 } from './edit-buffer';
 import { Budget, BudgetSummary } from './budget';
 import { TripOverview } from './trip-overview';
+import { confirmAction } from '../../platform/confirmation';
+import { accountTrips } from '../account/session';
 
 export type SaveStatus = 'idle' | 'error' | 'unconfirmed' | 'conflict';
 interface TripViewProps {
@@ -146,6 +148,46 @@ function TripSession({
   const dirty =
     editing && (initialDirty || !projection.ok || !sameTrip(projection.trip, initial.current));
   const blocked = busy || locked || replacing;
+  const confirming = useRef(false),
+    mounted = useRef(true),
+    current = useRef({ buffer, blocked, editing });
+  current.current = { buffer, blocked, editing };
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  async function confirmEdit(options: Parameters<typeof confirmAction>[0], action: () => void) {
+    if (confirming.current || blocked || !editing) return;
+    const snapshot = current.current,
+      accountSnapshot = storage === 'account' ? accountTrips.getSnapshot() : null;
+    confirming.current = true;
+    try {
+      if (!(await confirmAction(options))) return;
+      const latest = current.current,
+        account = storage === 'account' ? accountTrips.getSnapshot() : null;
+      if (
+        !mounted.current ||
+        latest.blocked ||
+        !latest.editing ||
+        latest.buffer !== snapshot.buffer ||
+        (account &&
+          (!account.ready ||
+            account.busy ||
+            account.pending ||
+            account.owner !== accountSnapshot?.owner ||
+            account.draft !== accountSnapshot?.draft ||
+            account.selected !== accountSnapshot?.selected ||
+            account.latest !== accountSnapshot?.latest ||
+            account.draft?.trip.id !== source.id))
+      )
+        return;
+      action();
+    } finally {
+      confirming.current = false;
+    }
+  }
   const { tab, dayId } = selection;
   const day = trip.days.find((day) => day.id === dayId) ?? trip.days[0];
   const map = useMemo(() => projectDayMap(trip, day.id, places), [trip, day.id, places]);
@@ -499,11 +541,19 @@ function TripSession({
                                 aria-label={`Xóa hoạt động ${activity.name}`}
                                 disabled={blocked}
                                 onClick={() => {
-                                  if (confirm(`Xóa hoạt động “${activity.name}” khỏi lịch trình?`))
-                                    mutate((value) => ({
-                                      ...value,
-                                      layout: removeActivity(value.layout, activity.id),
-                                    }));
+                                  void confirmEdit(
+                                    {
+                                      title: 'Xóa hoạt động?',
+                                      message: `Xóa hoạt động “${activity.name}” khỏi lịch trình?`,
+                                      confirmLabel: 'Xóa hoạt động',
+                                      danger: true,
+                                    },
+                                    () =>
+                                      mutate((value) => ({
+                                        ...value,
+                                        layout: removeActivity(value.layout, activity.id),
+                                      })),
+                                  );
                                 }}
                               >
                                 Xóa
@@ -630,7 +680,18 @@ function TripSession({
               secondary
               disabled={blocked}
               onClick={() => {
-                if (!dirty || confirm('Bỏ các thay đổi chưa lưu?')) onCancel();
+                if (!dirty) onCancel();
+                else
+                  void confirmEdit(
+                    {
+                      title: 'Bỏ thay đổi chưa lưu?',
+                      message: 'Các chỉnh sửa từ lần lưu gần nhất sẽ bị bỏ.',
+                      confirmLabel: 'Bỏ thay đổi',
+                      cancelLabel: 'Tiếp tục chỉnh sửa',
+                      danger: true,
+                    },
+                    onCancel,
+                  );
               }}
             >
               Hủy

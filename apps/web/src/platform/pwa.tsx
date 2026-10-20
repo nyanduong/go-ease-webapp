@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/ui';
+import { confirmAction } from './confirmation';
 
 interface InstallPrompt extends Event {
   prompt(): Promise<void>;
@@ -10,7 +11,12 @@ export function PwaStatus() {
     [waiting, setWaiting] = useState<ServiceWorker | null>(null),
     [install, setInstall] = useState<InstallPrompt | null>(null),
     [message, setMessage] = useState('');
+  const activeWorker = useRef(waiting),
+    mountedRef = useRef(true),
+    updating = useRef(false);
+  activeWorker.current = waiting;
   useEffect(() => {
+    mountedRef.current = true;
     const network = () => setOffline(!navigator.onLine);
     const beforeInstall = (event: Event) => {
       event.preventDefault();
@@ -43,12 +49,39 @@ export function PwaStatus() {
     }
     return () => {
       mounted = false;
+      mountedRef.current = false;
       window.removeEventListener('online', network);
       window.removeEventListener('offline', network);
       window.removeEventListener('beforeinstallprompt', beforeInstall);
       window.removeEventListener('appinstalled', installed);
     };
   }, []);
+  async function update() {
+    if (updating.current || !waiting) return;
+    const worker = waiting;
+    updating.current = true;
+    try {
+      if (
+        !(await confirmAction({
+          title: 'Cập nhật GoEase?',
+          message: 'Hãy lưu thay đổi trước khi cập nhật. GoEase sẽ tải lại trang để dùng bản mới.',
+          confirmLabel: 'Cập nhật và tải lại',
+          cancelLabel: 'Để sau',
+        })) ||
+        !mountedRef.current ||
+        activeWorker.current !== worker ||
+        worker.state !== 'installed'
+      )
+        return;
+      navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
+        once: true,
+      });
+      worker.postMessage('ACTIVATE_UPDATE');
+      setWaiting(null);
+    } finally {
+      updating.current = false;
+    }
+  }
   return (
     <div
       className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-9 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
@@ -72,14 +105,7 @@ export function PwaStatus() {
         <Button
           secondary
           onClick={() => {
-            if (
-              !window.confirm('Cập nhật GoEase? Hãy lưu thay đổi trước vì trang sẽ được tải lại.')
-            )
-              return;
-            navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
-              once: true,
-            });
-            waiting.postMessage('ACTIVATE_UPDATE');
+            void update();
           }}
         >
           Cập nhật GoEase
