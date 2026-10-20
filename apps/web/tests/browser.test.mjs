@@ -349,6 +349,12 @@ test('all private deep links require Google; legacy local/IndexedDB bytes remain
   ]) {
     await page.goto(base + path);
     await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).isEnabled(),
+      true,
+    );
+    assert.equal(await page.locator('.postcard-signin [role="status"]').count(), 0);
+    assert.equal(await page.getByText('Chưa đăng nhập được. Vui lòng thử lại.').count(), 0);
     assert.equal(await page.getByRole('navigation', { name: 'Điều hướng chính' }).count(), 0);
     assert.equal(await page.locator('input[type=password]').count(), 0);
   }

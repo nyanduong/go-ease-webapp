@@ -61,7 +61,7 @@
 }
 .postcard-journal em {
   color: var(--color-ink);
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Times New Roman', serif;
   font-size: clamp(26px, 2.6vw, 34px);
   line-height: 1.5;
 }

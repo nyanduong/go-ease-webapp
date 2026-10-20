@@ -295,6 +295,7 @@ export const accountSession = {
   initialize() {
     initialized ??= (async () => {
       if (location.pathname !== '/auth/callback') {
+        if (!refreshStorage.exists()) return;
         if (!navigator.onLine && refreshStorage.exists()) {
           session = {
             ...session,

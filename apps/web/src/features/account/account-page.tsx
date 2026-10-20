@@ -109,7 +109,7 @@ export function LoginPage() {
             </svg>
             Lịch trình của bạn, luôn có thể mở lại.
           </p>
-          {session.busy && <p role="status">Đang đăng nhập…</p>}
+          {session.busy && <p role="status">{session.message}</p>}
           {!session.busy &&
             session.message &&
             session.message !== 'Thiết bị không có refresh credential.' &&
