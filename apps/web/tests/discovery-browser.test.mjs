@@ -22,7 +22,6 @@ const dynamicNinhBinh = {
   currency: 'VND',
   center: { latitude: 20.2506, longitude: 105.9745 },
   radiusKm: 25,
-  address: 'Ninh Bình, Việt Nam',
   selectionToken: 'a'.repeat(43),
   source: {
     provider: 'serpapi',
@@ -42,6 +41,18 @@ const dynamicCanTho = {
     ...dynamicNinhBinh.source,
     externalId: 'can-tho-fixture',
     sourceUrl: 'https://www.google.com/maps?cid=cantho',
+  },
+};
+const dynamicHoaLu = {
+  ...dynamicNinhBinh,
+  id: 'dest-hoa-lu-fixture',
+  name: 'Hoa Lư',
+  address: 'Ninh Bình, Việt Nam',
+  center: { latitude: 20.251, longitude: 105.975 },
+  source: {
+    ...dynamicNinhBinh.source,
+    externalId: 'hoa-lu-fixture',
+    sourceUrl: 'https://www.google.com/maps?cid=hoa-lu',
   },
 };
 let server, browser;
@@ -174,7 +185,7 @@ async function setup(viewport = { width: 390, height: 844 }) {
         apiVersion: '1',
         source: 'serpapi',
         destinations: query.includes('Ninh Bình')
-          ? [dynamicNinhBinh]
+          ? [dynamicNinhBinh, dynamicHoaLu]
           : query.includes('Cần Thơ')
             ? [dynamicCanTho]
             : [],
@@ -387,6 +398,7 @@ for (const [mode, viewport] of [
 for (const [mode, destination, viewport] of [
   ['desktop', dynamicNinhBinh, { width: 1440, height: 1000 }],
   ['mobile', dynamicCanTho, { width: 390, height: 844 }],
+  ['mobile-ninh-binh', dynamicNinhBinh, { width: 390, height: 844 }],
 ]) {
   test(`arbitrary destination ${mode}: explicit search outside popular list, snapshot save and reopen`, async () => {
     const f = await setup(viewport),
@@ -400,6 +412,20 @@ for (const [mode, destination, viewport] of [
       0,
     );
     await query.press('Enter');
+    await page
+      .getByRole('heading', { name: `Kết quả cho “${destination.name}”`, exact: true })
+      .waitFor();
+    assert.equal(
+      await page.locator('[aria-label="Chọn điểm đến"] button[aria-pressed="true"]').count(),
+      0,
+      'results are not automatically selected',
+    );
+    if (destination.id === dynamicNinhBinh.id) {
+      const resultButtons = page.locator('[aria-label="Chọn điểm đến"] button');
+      assert.match(await resultButtons.nth(0).innerText(), /^Ninh Bình/);
+      assert.match(await resultButtons.nth(1).innerText(), /^Hoa Lư/);
+      assert.equal(await page.getByRole('button', { name: /^Hoa Lư/ }).count(), 1);
+    }
     await page.getByRole('button', { name: new RegExp('^' + destination.name) }).click();
     assert.deepEqual(state.searches, [destination.name]);
     assert.equal(
@@ -417,6 +443,11 @@ for (const [mode, destination, viewport] of [
       .getByRole('heading', { name: 'Gợi ý cho ' + destination.name, exact: true })
       .waitFor();
     assert.deepEqual(state.requests[0].input.destination, destination);
+    assert.equal(
+      state.requests[0].input.destination.name,
+      destination.name,
+      'selection keeps the provider name instead of substituting the search query',
+    );
     await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
     await page.waitForURL(/\/trips\/[a-f0-9-]{36}$/);
     await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
@@ -451,6 +482,7 @@ test('editing a destination query cancels stale results and requires a new selec
   await page.getByText('Đang tìm điểm đến…', { exact: true }).waitFor();
   await query.fill('Cần Thơ');
   await page.getByText(/Chưa chọn điểm đến\./).waitFor();
+  assert.equal(await page.getByRole('heading', { name: /^Kết quả cho/ }).count(), 0);
   state.searchDelay = null;
   release();
   await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Chưa chọn nơi');

@@ -14,6 +14,14 @@ const object = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined;
+const fold = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /** Sign the complete canonical snapshot, including coordinates, source and timezone. */
 function canonical(destination: Destination) {
@@ -64,37 +72,37 @@ export function verifyDestination(destination: Destination, secret: string) {
 export const sameDestination = (a: Destination, b: Destination) => canonical(a) === canonical(b);
 
 /** Only GPS candidates inside the independently checked Vietnam boundary become selectable. */
-export function normalizeDestinations(raw: unknown, fetchedAt: string) {
+export function normalizeDestinations(raw: unknown, fetchedAt: string, query = '') {
   const body = object(raw);
-  if (!body) return { valid: false as const, destinations: [] };
-  const single = object(body.place_results);
-  const entries = single
-    ? [single]
-    : Array.isArray(body.local_results)
-      ? body.local_results
-      : undefined;
-  if (!entries) return { valid: false as const, destinations: [] };
+  if (!body || !Array.isArray(body.suggestions)) return { valid: false as const, destinations: [] };
+  const needle = fold(query);
+  const rank = (entry: unknown) => {
+    const name = fold(text(object(entry)?.value, 120));
+    return needle && name === needle ? 0 : 1;
+  };
+  // A provider may rank a nearby city above the searched province. Preserve distinct
+  // candidates and source names, surfacing an exact name before the remaining provider order.
+  const entries = body.suggestions.slice(0, 100).sort((a, b) => rank(a) - rank(b));
   const destinations: Destination[] = [];
   const ids = new Set<string>();
   for (const item of entries.slice(0, 100)) {
-    const entry = object(item),
-      gps = object(entry?.gps_coordinates);
+    const entry = object(item);
     if (
       !entry ||
-      !gps ||
-      typeof gps.latitude !== 'number' ||
-      typeof gps.longitude !== 'number' ||
-      !Number.isFinite(gps.latitude) ||
-      !Number.isFinite(gps.longitude) ||
-      Math.abs(gps.latitude) > 90 ||
-      Math.abs(gps.longitude) > 180 ||
+      entry.type !== 'place' ||
+      typeof entry.latitude !== 'number' ||
+      typeof entry.longitude !== 'number' ||
+      !Number.isFinite(entry.latitude) ||
+      !Number.isFinite(entry.longitude) ||
+      Math.abs(entry.latitude) > 90 ||
+      Math.abs(entry.longitude) > 180 ||
       entry.permanently_closed === true
     )
       continue;
-    const name = text(entry.title, 120),
+    const name = text(entry.value, 120),
       externalId = text(entry.place_id, 300) || text(entry.data_id, 300);
     if (!name || !externalId) continue;
-    const center = { latitude: gps.latitude, longitude: gps.longitude };
+    const center = { latitude: entry.latitude, longitude: entry.longitude };
     if (!isVietnamCoordinate(center)) continue;
     const id = `serp-dest-${createHash('sha256')
       .update(JSON.stringify([externalId, center.latitude, center.longitude]))
@@ -104,7 +112,7 @@ export function normalizeDestinations(raw: unknown, fetchedAt: string) {
     const sourceUrl = new URL('https://www.google.com/maps/search/');
     sourceUrl.searchParams.set('api', '1');
     sourceUrl.searchParams.set('query', `${center.latitude},${center.longitude}`);
-    const address = text(entry.address ?? entry.formatted_address, 500);
+    const address = text(entry.subtext, 500);
     const parsed = destinationSchema.safeParse({
       id,
       name,

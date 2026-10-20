@@ -1,5 +1,7 @@
 # Nghiệm thu tìm điểm đến động trong Việt Nam — 20/10/2026
 
+Biên bản này ghi lại kết quả lần triển khai ban đầu. Trường hợp tìm “Ninh Bình” nhưng chỉ nhận “Hoa Lư” dưới đây là thiếu sót về nhận diện điểm đến, dù luồng lưu/mở lại đã chạy được; không được xem là xác nhận tìm đúng Ninh Bình. Luồng tìm điểm đến hiện được sửa sang Maps Autocomplete, xem [nghiệm thu sửa tìm điểm đến](../destination-search-intent/README.md).
+
 Phạm vi chủ sản phẩm xác nhận: tìm địa phương/địa danh bất kỳ tại Việt Nam qua SerpApi. Tám thành phố ban đầu chỉ là gợi ý phổ biến. Không mở rộng sản phẩm sang các nước khác.
 
 Môi trường dev và tài khoản Google giữ như [nghiệm thu trước](../multi-destination/README.md). Kiểm thử mobile dùng Chrome viewport 390×844, không phải điện thoại vật lý. API, PostgreSQL, PWA và HTTPS gateway được giữ chạy khi bàn giao.

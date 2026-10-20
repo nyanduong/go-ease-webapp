@@ -124,7 +124,7 @@ export class DiscoveryService {
     const now = (this.options.now ?? (() => new Date()))(),
       started = Date.now();
     // Free text remains open across Vietnam; the independent polygon check enforces coverage.
-    const key = q.normalize('NFC').toLocaleLowerCase('vi');
+    const key = `autocomplete-v2:${q.normalize('NFC').toLocaleLowerCase('vi')}`;
     const cached = this.destinationCache.get(key);
     if (cached && cached.expires > now.getTime()) {
       this.logSearchMetrics(true, 0, Date.now() - started, cached.destinations.length);
@@ -142,10 +142,11 @@ export class DiscoveryService {
         },
       });
     }
-    const url = this.providerUrl();
-    url.searchParams.set('q', `${q} Việt Nam`);
+    const url = this.providerUrl('google_maps_autocomplete');
+    url.searchParams.set('q', q);
+    url.searchParams.set('ll', '@16.0471,108.2062,5z');
     const raw = await this.requestProvider(url, userId, signal, now);
-    const normalized = normalizeDestinations(raw, now.toISOString());
+    const normalized = normalizeDestinations(raw, now.toISOString(), q);
     if (!normalized.valid)
       throw new ApiFailure(
         502,
@@ -383,10 +384,10 @@ export class DiscoveryService {
         'Chưa cấu hình nguồn địa điểm SerpApi trên máy chủ. Bạn vẫn có thể tự lập lịch.',
       );
   }
-  private providerUrl() {
+  private providerUrl(engine: 'google_maps' | 'google_maps_autocomplete' = 'google_maps') {
     const url = new URL('https://serpapi.com/search.json');
-    url.searchParams.set('engine', 'google_maps');
-    url.searchParams.set('type', 'search');
+    url.searchParams.set('engine', engine);
+    if (engine === 'google_maps') url.searchParams.set('type', 'search');
     url.searchParams.set('hl', 'vi');
     url.searchParams.set('gl', 'vn');
     url.searchParams.set('api_key', this.config.SERPAPI_API_KEY);

@@ -28,6 +28,7 @@ export function TripForm({
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Destination[] | null>(null);
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [searching, setSearching] = useState(false),
     [searchMessage, setSearchMessage] = useState('');
   const request = useRef<AbortController | null>(null);
@@ -63,6 +64,7 @@ export function TripForm({
       const response = await searchDestinations(q, current.signal);
       if (!current.signal.aborted && request.current === current) {
         setResults(response.destinations);
+        setSubmittedQuery(q);
         setSearchMessage(
           response.destinations.length
             ? 'Chọn đúng điểm đến bên dưới. Địa chỉ giúp phân biệt những nơi trùng tên.'
@@ -122,6 +124,7 @@ export function TripForm({
               stopSearch();
               setQuery(event.target.value);
               setResults(null);
+              setSubmittedQuery('');
               setSearchMessage('');
               onChange({ ...values, destinationId: '', destination: undefined });
             }}
@@ -173,6 +176,15 @@ export function TripForm({
           <p className="w-full text-xs text-muted">
             Gợi ý phổ biến · Bạn có thể tìm nơi khác ở trên
           </p>
+        )}
+        {results && (
+          <div className="mb-1">
+            <h4 className="text-sm font-semibold text-teal-dark">Kết quả cho “{submittedQuery}”</h4>
+            <p className="mt-1 text-xs text-muted">
+              Tên và địa chỉ do nguồn bản đồ cung cấp. Chọn đúng nơi bạn muốn đến bên dưới; chưa có
+              kết quả nào được tự động chọn.
+            </p>
+          </div>
         )}
         {destinations.map((destination) => (
           <button
