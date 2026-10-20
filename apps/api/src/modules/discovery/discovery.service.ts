@@ -19,6 +19,13 @@ import type { ApiConfig } from '../../config/env.js';
 import { ApiFailure } from '../../common/errors/api-failure.js';
 import { DiscoveryQuota } from './discovery-quota.js';
 import { normalizePlaces } from './normalize-places.js';
+import { isVietnamCoordinate } from './vietnam-coverage.js';
+import {
+  normalizeDestinations,
+  sameDestination,
+  signDestination,
+  verifyDestination,
+} from './dynamic-destinations.js';
 
 export interface DiscoveryOptions {
   fetcher?: typeof fetch;
@@ -30,12 +37,6 @@ type CacheEntry = {
   warnings: string[];
   expires: number;
 };
-const fold = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .toLowerCase();
 const interestQueries: Record<string, string> = {
   food: 'ẩm thực nhà hàng',
   cafe: 'quán cà phê',
@@ -86,6 +87,10 @@ async function boundedJson(response: Response): Promise<unknown> {
 export class DiscoveryService {
   private readonly quota: DiscoveryQuota;
   private readonly cache = new Map<string, CacheEntry>();
+  private readonly destinationCache = new Map<
+    string,
+    { destinations: Destination[]; fetchedAt: string; expires: number }
+  >();
   private pending: Promise<unknown> | undefined;
   private controller: AbortController | undefined;
   private closed = false;
@@ -95,16 +100,85 @@ export class DiscoveryService {
   ) {
     this.quota = new DiscoveryQuota(config);
   }
-  searchDestinations(query: unknown) {
+  async searchDestinations(
+    query: unknown,
+    userId?: string,
+    signal: AbortSignal = new AbortController().signal,
+  ) {
     const parsed = destinationSearchQuerySchema.safeParse(query);
     if (!parsed.success)
       throw new ApiFailure(400, 'BAD_REQUEST', 'Chỉ nhận từ khóa điểm đến tối đa 120 ký tự.');
-    const q = fold(parsed.data.q ?? '');
+    const q = parsed.data.q ?? '';
+    if (!q)
+      return destinationSearchResponseSchema.parse({
+        apiVersion: '1',
+        destinations: DESTINATIONS,
+        source: 'suggestions',
+      });
+    if (q.length < 2)
+      throw new ApiFailure(400, 'BAD_REQUEST', 'Nhập ít nhất 2 ký tự để tìm điểm đến.');
+    if (!userId) throw new ApiFailure(401, 'AUTH_INVALID', 'Đăng nhập để tìm điểm đến.');
+    this.requireProvider();
+    if (this.closed || signal.aborted)
+      throw new ApiFailure(499, 'DISCOVERY_CANCELLED', 'Đã hủy tìm điểm đến.');
+    const now = (this.options.now ?? (() => new Date()))(),
+      started = Date.now();
+    // Free text remains open across Vietnam; the independent polygon check enforces coverage.
+    const key = q.normalize('NFC').toLocaleLowerCase('vi');
+    const cached = this.destinationCache.get(key);
+    if (cached && cached.expires > now.getTime()) {
+      this.logSearchMetrics(true, 0, Date.now() - started, cached.destinations.length);
+      return destinationSearchResponseSchema.parse({
+        apiVersion: '1',
+        destinations: cached.destinations.map((destination) =>
+          signDestination(destination, this.config.SERPAPI_API_KEY),
+        ),
+        source: 'cache',
+        metadata: {
+          cacheHit: true,
+          providerRequests: 0,
+          durationMs: Date.now() - started,
+          fetchedAt: cached.fetchedAt,
+        },
+      });
+    }
+    const url = this.providerUrl();
+    url.searchParams.set('q', `${q} Việt Nam`);
+    const raw = await this.requestProvider(url, userId, signal, now);
+    const normalized = normalizeDestinations(raw, now.toISOString());
+    if (!normalized.valid)
+      throw new ApiFailure(
+        502,
+        'DISCOVERY_OUTPUT_INVALID',
+        'Nguồn tìm điểm đến trả cấu trúc không hợp lệ.',
+      );
+    if (!normalized.destinations.length)
+      throw new ApiFailure(
+        422,
+        'DISCOVERY_NO_RESULTS',
+        'Chưa tìm thấy điểm đến có tọa độ được xác nhận tại Việt Nam. Hãy nhập thêm tỉnh, vùng hoặc tên địa danh ở Việt Nam.',
+      );
+    this.destinationCache.delete(key);
+    while (this.destinationCache.size >= 50)
+      this.destinationCache.delete(this.destinationCache.keys().next().value!);
+    this.destinationCache.set(key, {
+      destinations: normalized.destinations,
+      fetchedAt: now.toISOString(),
+      expires: now.getTime() + this.config.SERPAPI_CACHE_TTL_MS,
+    });
+    this.logSearchMetrics(false, 1, Date.now() - started, normalized.destinations.length);
     return destinationSearchResponseSchema.parse({
       apiVersion: '1',
-      destinations: DESTINATIONS.filter((destination) =>
-        fold(`${destination.name} ${destination.id}`).includes(q),
+      destinations: normalized.destinations.map((destination) =>
+        signDestination(destination, this.config.SERPAPI_API_KEY),
       ),
+      source: 'serpapi',
+      metadata: {
+        cacheHit: false,
+        providerRequests: 1,
+        durationMs: Date.now() - started,
+        fetchedAt: now.toISOString(),
+      },
     });
   }
   async places(body: unknown, userId: string, signal: AbortSignal) {
@@ -117,7 +191,10 @@ export class DiscoveryService {
     const parsed = discoveryPreviewRequestSchema.safeParse(body);
     if (!parsed.success)
       throw new ApiFailure(400, 'BAD_REQUEST', 'Nhu cầu chuyến đi không hợp lệ.');
-    const destination = this.requireDestination(parsed.data.input.destinationId);
+    const destination = this.requireDestination(
+      parsed.data.input.destinationId,
+      parsed.data.input.destination,
+    );
     const now = (this.options.now ?? (() => new Date()))();
     const input = createTripInputSchemaFor(todayAtDestination(now, destination)).safeParse(
       parsed.data.input,
@@ -127,6 +204,7 @@ export class DiscoveryService {
     const found = await this.discover(
       {
         destinationId: destination.id,
+        destination,
         ...(parsed.data.interests ? { interests: parsed.data.interests } : {}),
       },
       userId,
@@ -150,15 +228,26 @@ export class DiscoveryService {
       },
     });
   }
-  private requireDestination(id: string): Destination {
+  private requireDestination(id: string, snapshot?: Destination): Destination {
     const destination = getDestination(id);
-    if (!destination)
+    if (destination) {
+      if (snapshot && !sameDestination(destination, snapshot))
+        throw new ApiFailure(400, 'BAD_REQUEST', 'Thông tin điểm đến không khớp vùng đã xác nhận.');
+      return destination;
+    }
+    if (
+      !snapshot ||
+      snapshot.id !== id ||
+      snapshot.countryCode !== 'VN' ||
+      !isVietnamCoordinate(snapshot.center) ||
+      !verifyDestination(snapshot, this.config.SERPAPI_API_KEY)
+    )
       throw new ApiFailure(
         400,
         'BAD_REQUEST',
-        'Điểm đến chưa có vùng tìm kiếm được xác nhận. Hãy chọn trong danh sách.',
+        'Thông tin điểm đến chưa được xác nhận. Hãy tìm và chọn lại điểm đến.',
       );
-    return destination;
+    return snapshot;
   }
   private logMetrics(
     destinationId: string,
@@ -179,20 +268,26 @@ export class DiscoveryService {
         }),
       );
   }
+  private logSearchMetrics(
+    cacheHit: boolean,
+    providerRequests: number,
+    durationMs: number,
+    resultCount: number,
+  ) {
+    if (this.config.SERPAPI_LOG_METRICS)
+      console.info(
+        JSON.stringify({
+          event: 'goease.destination_search',
+          cacheHit,
+          providerRequests,
+          durationMs,
+          resultCount,
+        }),
+      );
+  }
   private async discover(request: DiscoveryPlacesRequest, userId: string, signal: AbortSignal) {
-    if (!this.config.SERPAPI_ENABLED)
-      throw new ApiFailure(
-        503,
-        'DISCOVERY_DISABLED',
-        'Tìm địa điểm trực tuyến đang tắt trên máy chủ. Bạn vẫn có thể tự lập lịch.',
-      );
-    if (!this.config.SERPAPI_API_KEY)
-      throw new ApiFailure(
-        503,
-        'DISCOVERY_NOT_CONFIGURED',
-        'Chưa cấu hình nguồn địa điểm SerpApi trên máy chủ. Bạn vẫn có thể tự lập lịch.',
-      );
-    const destination = this.requireDestination(request.destinationId);
+    this.requireProvider();
+    const destination = this.requireDestination(request.destinationId, request.destination);
     if (this.closed || signal.aborted)
       throw new ApiFailure(499, 'DISCOVERY_CANCELLED', 'Đã hủy tìm địa điểm.');
     const now = (this.options.now ?? (() => new Date()))();
@@ -217,6 +312,90 @@ export class DiscoveryService {
         },
       };
     }
+    const url = this.providerUrl();
+    url.searchParams.set(
+      'q',
+      `${interests.length ? interests.map((interest) => interestQueries[interest]).join(' ') : 'điểm tham quan du lịch'} ${destination.name}${destination.address ? ` ${destination.address}` : ''}`,
+    );
+    url.searchParams.set(
+      'll',
+      `@${destination.center.latitude},${destination.center.longitude},12z`,
+    );
+    const raw = await this.requestProvider(url, userId, signal, now);
+    const normalized = normalizePlaces(raw, destination, now.toISOString());
+    if (!normalized.valid)
+      throw new ApiFailure(
+        502,
+        'DISCOVERY_OUTPUT_INVALID',
+        'Nguồn địa điểm trả cấu trúc không hợp lệ.',
+      );
+    if (!normalized.places.length)
+      throw new ApiFailure(
+        422,
+        'DISCOVERY_NO_RESULTS',
+        'Chưa tìm thấy địa điểm có tọa độ hợp lệ trong vùng đã chọn. Hãy tự thêm địa điểm hoặc thử lại sau.',
+      );
+    const warnings = [
+      'Giá vé và chi phí chưa được xác minh; mức giá từ nguồn tìm kiếm không phải số tiền của chuyến đi.',
+      'Thời lượng tham quan và di chuyển là ước tính; hãy kiểm tra giờ mở cửa trước khi đi.',
+      ...normalized.warnings,
+    ];
+    if (normalized.rejected)
+      warnings.push(
+        `Đã bỏ ${normalized.rejected} kết quả trùng, thiếu dữ liệu, đóng cửa hoặc ngoài vùng điểm đến.`,
+      );
+    const value: CacheEntry = {
+      places: normalized.places,
+      fetchedAt: now.toISOString(),
+      warnings,
+      expires: now.getTime() + this.config.SERPAPI_CACHE_TTL_MS,
+    };
+    this.cache.delete(key);
+    while (this.cache.size >= 50) this.cache.delete(this.cache.keys().next().value!);
+    this.cache.set(key, value);
+    this.logMetrics(destination.id, false, 1, Date.now() - started, value.places.length);
+    return {
+      apiVersion: '1' as const,
+      destination,
+      places: value.places,
+      source: 'serpapi' as const,
+      warnings,
+      metadata: {
+        cacheHit: false,
+        providerRequests: 1,
+        durationMs: Date.now() - started,
+        fetchedAt: value.fetchedAt,
+        missingPrices: value.places.length,
+      },
+    };
+  }
+  private requireProvider() {
+    if (!this.config.SERPAPI_ENABLED)
+      throw new ApiFailure(
+        503,
+        'DISCOVERY_DISABLED',
+        'Tìm địa điểm trực tuyến đang tắt trên máy chủ. Bạn vẫn có thể tự lập lịch.',
+      );
+    if (!this.config.SERPAPI_API_KEY)
+      throw new ApiFailure(
+        503,
+        'DISCOVERY_NOT_CONFIGURED',
+        'Chưa cấu hình nguồn địa điểm SerpApi trên máy chủ. Bạn vẫn có thể tự lập lịch.',
+      );
+  }
+  private providerUrl() {
+    const url = new URL('https://serpapi.com/search.json');
+    url.searchParams.set('engine', 'google_maps');
+    url.searchParams.set('type', 'search');
+    url.searchParams.set('hl', 'vi');
+    url.searchParams.set('gl', 'vn');
+    url.searchParams.set('api_key', this.config.SERPAPI_API_KEY);
+    return url;
+  }
+  /** Both search actions spend through one persistent reservation and concurrency guard. */
+  private async requestProvider(url: URL, userId: string, signal: AbortSignal, now: Date) {
+    if (this.closed || signal.aborted)
+      throw new ApiFailure(499, 'DISCOVERY_CANCELLED', 'Đã hủy tìm địa điểm.');
     if (this.pending)
       throw new ApiFailure(
         409,
@@ -250,20 +429,6 @@ export class DiscoveryService {
       await this.quota.reserve(userId, now);
       if (controller.signal.aborted)
         throw new ApiFailure(499, 'DISCOVERY_CANCELLED', 'Đã hủy tìm địa điểm.');
-      const url = new URL('https://serpapi.com/search.json');
-      url.searchParams.set('engine', 'google_maps');
-      url.searchParams.set('type', 'search');
-      url.searchParams.set(
-        'q',
-        `${interests.length ? interests.map((interest) => interestQueries[interest]).join(' ') : 'điểm tham quan du lịch'} ${destination.name} Việt Nam`,
-      );
-      url.searchParams.set(
-        'll',
-        `@${destination.center.latitude},${destination.center.longitude},12z`,
-      );
-      url.searchParams.set('hl', 'vi');
-      url.searchParams.set('gl', 'vn');
-      url.searchParams.set('api_key', this.config.SERPAPI_API_KEY);
       const fetchAndRead = async () => {
         const response = await (this.options.fetcher ?? fetch)(url.toString(), {
           method: 'GET',
@@ -302,52 +467,7 @@ export class DiscoveryService {
           'DISCOVERY_UPSTREAM_UNAVAILABLE',
           'Nguồn địa điểm chưa trả kết quả. Hãy thử lại sau.',
         );
-      const normalized = normalizePlaces(raw, destination, now.toISOString());
-      if (!normalized.valid)
-        throw new ApiFailure(
-          502,
-          'DISCOVERY_OUTPUT_INVALID',
-          'Nguồn địa điểm trả cấu trúc không hợp lệ.',
-        );
-      if (!normalized.places.length)
-        throw new ApiFailure(
-          422,
-          'DISCOVERY_NO_RESULTS',
-          'Chưa tìm thấy địa điểm có tọa độ hợp lệ trong vùng đã chọn. Hãy tự thêm địa điểm hoặc thử lại sau.',
-        );
-      const warnings = [
-        'Giá vé và chi phí chưa được xác minh; mức giá từ nguồn tìm kiếm không phải số tiền của chuyến đi.',
-        'Thời lượng tham quan và di chuyển là ước tính; hãy kiểm tra giờ mở cửa trước khi đi.',
-        ...normalized.warnings,
-      ];
-      if (normalized.rejected)
-        warnings.push(
-          `Đã bỏ ${normalized.rejected} kết quả trùng, thiếu dữ liệu, đóng cửa hoặc ngoài vùng điểm đến.`,
-        );
-      const value: CacheEntry = {
-        places: normalized.places,
-        fetchedAt: now.toISOString(),
-        warnings,
-        expires: now.getTime() + this.config.SERPAPI_CACHE_TTL_MS,
-      };
-      this.cache.delete(key);
-      while (this.cache.size >= 50) this.cache.delete(this.cache.keys().next().value!);
-      this.cache.set(key, value);
-      this.logMetrics(destination.id, false, 1, Date.now() - started, value.places.length);
-      return {
-        apiVersion: '1' as const,
-        destination,
-        places: value.places,
-        source: 'serpapi' as const,
-        warnings,
-        metadata: {
-          cacheHit: false,
-          providerRequests: 1,
-          durationMs: Date.now() - started,
-          fetchedAt: value.fetchedAt,
-          missingPrices: value.places.length,
-        },
-      };
+      return raw;
     };
     const operation = work().catch((error: unknown) => {
       if (error instanceof ApiFailure) throw error;

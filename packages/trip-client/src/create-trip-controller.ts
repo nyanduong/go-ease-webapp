@@ -4,19 +4,22 @@ import {
   getDestination,
   todayAtDestination,
   type CreateTripInput,
+  type Destination,
 } from '@goease/contracts';
 import { generateSampleTrip } from '@goease/itinerary';
 import type { createTripStore } from '@goease/trip-storage';
 
 export interface TripFormValues {
   destinationId?: string;
+  destination?: Destination;
   name: string;
   startDate: string;
   durationDays: string;
   people: string;
   budgetVnd: string;
 }
-export type FormErrors = Partial<Record<keyof TripFormValues, string>>;
+export type TripFormField = Exclude<keyof TripFormValues, 'destination'>;
+export type FormErrors = Partial<Record<TripFormField, string>>;
 export function initialTripForm(now: Date): TripFormValues {
   return {
     destinationId: DESTINATION.id,
@@ -32,19 +35,28 @@ export function validateTripForm(
   form: TripFormValues,
   today: string,
 ): { ok: true; input: CreateTripInput } | { ok: false; errors: FormErrors } {
-  if (!getDestination(form.destinationId ?? DESTINATION.id))
-    return { ok: false, errors: { destinationId: 'Chọn điểm đến trong danh sách.' } };
+  if (form.destination && form.destination.countryCode !== 'VN')
+    return {
+      ok: false,
+      errors: {
+        destinationId:
+          'GoEase hiện hỗ trợ điểm đến tại Việt Nam. Hãy tìm và chọn lại địa phương trong nước.',
+      },
+    };
+  if (!form.destination && !getDestination(form.destinationId ?? DESTINATION.id))
+    return { ok: false, errors: { destinationId: 'Tìm và chọn một điểm đến trước khi lên lịch.' } };
   const result = createTripInputSchemaFor(today).safeParse({
     name: form.name,
     destinationId: form.destinationId ?? DESTINATION.id,
+    ...(form.destination ? { destination: form.destination } : {}),
     startDate: form.startDate.trim(),
     durationDays: number(form.durationDays),
     people: number(form.people),
     budgetVnd: form.budgetVnd.trim() === '' ? null : number(form.budgetVnd),
   });
   if (result.success) return { ok: true, input: result.data };
-  const messages: Record<keyof TripFormValues, string> = {
-    destinationId: 'Chọn điểm đến trong danh sách.',
+  const messages: Record<TripFormField, string> = {
+    destinationId: 'Tìm và chọn một điểm đến trước khi lên lịch.',
     name: 'Nhập tên chuyến từ 1 đến 80 ký tự.',
     startDate: 'Chọn ngày từ hôm nay trở đi; chuyến đi cần kết thúc trước năm 2101.',
     durationDays: 'Chọn từ 1 đến 5 ngày, không nhập số lẻ.',
@@ -53,7 +65,8 @@ export function validateTripForm(
   };
   const errors: FormErrors = {};
   result.error.issues.forEach((issue) => {
-    const key = issue.path[0] as keyof TripFormValues;
+    const key =
+      issue.path[0] === 'destination' ? 'destinationId' : (issue.path[0] as TripFormField);
     if (key in messages) errors[key] = messages[key];
   });
   return { ok: false, errors };

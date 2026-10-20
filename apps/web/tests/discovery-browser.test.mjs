@@ -14,6 +14,36 @@ const base = 'http://127.0.0.1:4187';
 const authOrigin = 'https://abcdefghijklmnopqrst.supabase.co';
 const owner = '12345678-1234-4234-8234-123456789abc';
 const token = 'fixture.access.signature';
+const dynamicNinhBinh = {
+  id: 'dest-ninh-binh-fixture',
+  name: 'Ninh Bình',
+  countryCode: 'VN',
+  timeZone: 'Asia/Ho_Chi_Minh',
+  currency: 'VND',
+  center: { latitude: 20.2506, longitude: 105.9745 },
+  radiusKm: 25,
+  address: 'Ninh Bình, Việt Nam',
+  selectionToken: 'a'.repeat(43),
+  source: {
+    provider: 'serpapi',
+    externalId: 'ninh-binh-fixture',
+    sourceUrl: 'https://www.google.com/maps?cid=ninh-binh',
+    fetchedAt: '2026-10-20T12:00:00Z',
+  },
+};
+const dynamicCanTho = {
+  ...dynamicNinhBinh,
+  id: 'dest-can-tho-fixture',
+  name: 'Cần Thơ',
+  timeZone: 'Asia/Ho_Chi_Minh',
+  center: { latitude: 10.0452, longitude: 105.7469 },
+  address: 'Cần Thơ, Việt Nam',
+  source: {
+    ...dynamicNinhBinh.source,
+    externalId: 'can-tho-fixture',
+    sourceUrl: 'https://www.google.com/maps?cid=cantho',
+  },
+};
 let server, browser;
 before(async () => {
   server = await preview({
@@ -59,6 +89,8 @@ async function setup(viewport = { width: 390, height: 844 }) {
   const errors = [],
     state = {
       requests: [],
+      searches: [],
+      searchDelay: null,
       writes: [],
       records: new Map(),
       failure: false,
@@ -127,17 +159,39 @@ async function setup(viewport = { width: 390, height: 844 }) {
     assert.equal(request.headers().authorization, 'Bearer ' + token);
     if (url.pathname === '/v1/auth/me')
       return reply(route, { apiVersion: '1', identity: { id: owner, provider: 'supabase' } });
+    if (url.pathname === '/v1/destinations') {
+      const query = url.searchParams.get('q');
+      state.searches.push(query);
+      if (state.searchDelay) await state.searchDelay;
+      if (query.includes('Tokyo'))
+        return fail(
+          route,
+          422,
+          'DISCOVERY_NO_RESULTS',
+          'Chưa tìm thấy điểm đến tại Việt Nam. Hãy thử tên địa phương cụ thể hơn.',
+        );
+      return reply(route, {
+        apiVersion: '1',
+        source: 'serpapi',
+        destinations: query.includes('Ninh Bình')
+          ? [dynamicNinhBinh]
+          : query.includes('Cần Thơ')
+            ? [dynamicCanTho]
+            : [],
+      });
+    }
     if (url.pathname === '/v1/discovery/preview') {
       const body = request.postDataJSON();
       state.requests.push(body);
       if (state.delay) await state.delay;
       if (state.failure)
         return fail(route, 503, 'DISCOVERY_NOT_CONFIGURED', 'Chưa cấu hình nguồn địa điểm.');
-      const destination = getDestination(body.input.destinationId),
+      const destination = body.input.destination ?? getDestination(body.input.destinationId),
         places = sourcePlaces(destination);
       const result = generateDiscoveredTrip(body.input, places, {
         tripId: randomUUID(),
         today: body.input.startDate,
+        destination,
       });
       assert.equal(result.ok, true);
       return reply(route, {
@@ -242,7 +296,6 @@ for (const [mode, viewport] of [
   test(`multi destination ${mode}: preview source, replace, edit, manual save, reopen snapshots and map`, async () => {
     const f = await setup(viewport),
       { page, state } = f;
-    await page.getByLabel('Tìm điểm đến').fill('Da Nang');
     assert.equal(await page.getByRole('button', { name: 'Đà Nẵng', exact: true }).count(), 1);
     await form(page);
     await page.getByLabel('Thiên nhiên', { exact: true }).check();
@@ -331,6 +384,111 @@ for (const [mode, viewport] of [
   });
 }
 
+for (const [mode, destination, viewport] of [
+  ['desktop', dynamicNinhBinh, { width: 1440, height: 1000 }],
+  ['mobile', dynamicCanTho, { width: 390, height: 844 }],
+]) {
+  test(`arbitrary destination ${mode}: explicit search outside popular list, snapshot save and reopen`, async () => {
+    const f = await setup(viewport),
+      { page, state } = f;
+    const query = page.getByLabel('Tìm điểm đến', { exact: true });
+    await query.fill(destination.name);
+    assert.equal(state.searches.length, 0, 'typing does not spend a provider query');
+    await page.getByText(/Chưa chọn điểm đến\./).waitFor();
+    assert.equal(
+      await page.locator('[aria-label="Chọn điểm đến"] button[aria-pressed="true"]').count(),
+      0,
+    );
+    await query.press('Enter');
+    await page.getByRole('button', { name: new RegExp('^' + destination.name) }).click();
+    assert.deepEqual(state.searches, [destination.name]);
+    assert.equal(
+      state.requests.length,
+      0,
+      'Enter in destination field never submits the itinerary',
+    );
+    await page.getByText('Đang chọn: ' + destination.name, { exact: true }).waitFor();
+    await page.getByText(/Ngân sách tính bằng VND/).waitFor();
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Khám phá ' + destination.name);
+    await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2099-10-20');
+    await page.getByLabel('Số ngày', { exact: true }).fill('2');
+    await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+    await page
+      .getByRole('heading', { name: 'Gợi ý cho ' + destination.name, exact: true })
+      .waitFor();
+    assert.deepEqual(state.requests[0].input.destination, destination);
+    await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
+    await page.waitForURL(/\/trips\/[a-f0-9-]{36}$/);
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
+    assert.deepEqual(state.writes[0].trip.destination, destination);
+    assert.equal(state.writes[0].trip.timeZone, destination.timeZone);
+    await page.reload();
+    await page
+      .getByRole('heading', { level: 1, name: 'Khám phá ' + destination.name, exact: true })
+      .waitFor();
+    await page.getByRole('tab', { name: 'Bản đồ', exact: true }).click();
+    await page
+      .getByLabel('Bản đồ OpenStreetMap', { exact: true })
+      .locator('.leaflet-marker-icon')
+      .first()
+      .waitFor();
+    assert.equal(state.searches.length, 1, 'saved trip opens without resolving destination again');
+    await finish(f, `arbitrary-${mode}`);
+  });
+}
+
+test('editing a destination query cancels stale results and requires a new selection', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  let release;
+  state.searchDelay = new Promise((resolve) => {
+    release = resolve;
+  });
+  const query = page.getByLabel('Tìm điểm đến', { exact: true });
+  await query.fill('Ninh Bình');
+  await query.press('Enter');
+  await page.getByText('Đang tìm điểm đến…', { exact: true }).waitFor();
+  await query.fill('Cần Thơ');
+  await page.getByText(/Chưa chọn điểm đến\./).waitFor();
+  state.searchDelay = null;
+  release();
+  await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Chưa chọn nơi');
+  await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+  await page.getByText('Tìm và chọn một điểm đến trước khi lên lịch.', { exact: true }).waitFor();
+  assert.equal(state.requests.length, 0);
+  assert.equal(await page.getByRole('button', { name: /^Ninh Bình/ }).count(), 0);
+  await page.getByRole('button', { name: 'Tìm điểm đến', exact: true }).click();
+  await page.getByRole('button', { name: /^Cần Thơ/ }).click();
+  await page.getByText('Đang chọn: Cần Thơ', { exact: true }).waitFor();
+  assert.deepEqual(state.searches, ['Ninh Bình', 'Cần Thơ']);
+  await finish(f, 'arbitrary-cancelled-search');
+});
+
+test('a foreign destination query explains Vietnam coverage and preserves the form without allowing a preview', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Chuyến mới của nhóm');
+  await page.getByLabel('Tìm điểm đến', { exact: true }).fill('Tokyo');
+  await page.getByRole('button', { name: 'Tìm điểm đến', exact: true }).click();
+  await page
+    .getByText('Chưa tìm thấy điểm đến tại Việt Nam. Hãy thử tên địa phương cụ thể hơn.', {
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(await page.getByLabel('Tìm điểm đến', { exact: true }).inputValue(), 'Tokyo');
+  assert.equal(
+    await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
+    'Chuyến mới của nhóm',
+  );
+  assert.equal(await page.locator('[aria-label="Chọn điểm đến"] button').count(), 0);
+  await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+  await page.getByText('Tìm và chọn một điểm đến trước khi lên lịch.', { exact: true }).waitFor();
+  assert.equal(state.requests.length, 0);
+  assert.equal(state.writes.length, 0);
+  await finish(f, 'arbitrary-vietnam-only');
+});
+
 test('missing provider keeps user input and supports an honestly empty manual plan in another city', async () => {
   const f = await setup({ width: 320, height: 568 }),
     { page, state } = f;
@@ -415,7 +573,7 @@ test('cancel discovery prevents a delayed preview from replacing current form va
   await page.getByRole('button', { name: 'Dừng tìm', exact: true }).click();
   await page.getByRole('button', { name: 'Hà Nội', exact: true }).click();
   release();
-  await page.getByText('Đang chọn: Hà Nội · Việt Nam', { exact: true }).waitFor();
+  await page.getByText('Đang chọn: Hà Nội', { exact: true }).waitFor();
   assert.equal(await page.getByRole('region', { name: 'Xem trước lịch trình' }).count(), 0);
   assert.equal(state.writes.length, 0);
   await finish(f, 'discovery-cancelled');

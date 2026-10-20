@@ -208,6 +208,19 @@ async function profileRequest(input?: ProfileInput) {
   }
 }
 export const accountSession = {
+  async searchDestinations(query: string, signal?: AbortSignal) {
+    const owner = session.userId,
+      epoch = lifecycle;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi. Hãy đăng nhập lại.');
+    const result = await auth.searchDestinations(query, signal);
+    assertSessionOwner();
+    if (owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi. Không mở điểm đến của phiên cũ.');
+    return result;
+  },
   async discoverTrip(input: DiscoveryRequest, signal?: AbortSignal) {
     const owner = session.userId,
       epoch = lifecycle;

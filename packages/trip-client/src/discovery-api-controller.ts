@@ -1,5 +1,6 @@
 import {
   apiErrorResponseSchema,
+  destinationSearchResponseSchema,
   discoveryPreviewRequestSchema,
   discoveryPreviewResponseSchema,
   type DiscoveryPreviewRequest,
@@ -7,13 +8,15 @@ import {
 import { ServerTripError } from './server-trip-controller.js';
 
 export type DiscoveryRequest = DiscoveryPreviewRequest;
+type RequestOptions = { fetcher?: typeof fetch; signal?: AbortSignal };
 
 /** The provider key never enters the client; this calls only the verified GoEase origin. */
-export async function callDiscoveryApi(
+async function requestDiscovery(
   base: string,
   token: string,
-  input: DiscoveryRequest,
-  options: { fetcher?: typeof fetch; signal?: AbortSignal } = {},
+  path: string,
+  body: unknown | undefined,
+  options: RequestOptions,
 ) {
   const url = new URL(base);
   if (
@@ -25,9 +28,6 @@ export async function callDiscoveryApi(
     token.length > 4096
   )
     throw new ServerTripError('CONFIG', 'Chưa cấu hình kết nối GoEase hợp lệ.');
-  const payload = discoveryPreviewRequestSchema.safeParse(input);
-  if (!payload.success)
-    throw new ServerTripError('INVALID', 'Kiểm tra thông tin chuyến đi trước khi tìm địa điểm.');
   const controller = new AbortController();
   const abort = () => controller.abort();
   options.signal?.addEventListener('abort', abort, { once: true });
@@ -35,15 +35,15 @@ export async function callDiscoveryApi(
   const timeout = setTimeout(abort, 45000);
   try {
     if (controller.signal.aborted) throw new ServerTripError('CANCELLED', 'Đã dừng tìm địa điểm.');
-    const response = await (options.fetcher ?? fetch)(base + '/v1/discovery/preview', {
-      method: 'POST',
+    const response = await (options.fetcher ?? fetch)(base + path, {
+      method: body === undefined ? 'GET' : 'POST',
       redirect: 'error',
       headers: {
         authorization: `Bearer ${token}`,
         accept: 'application/json',
-        'content-type': 'application/json',
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
       },
-      body: JSON.stringify(payload.data),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: controller.signal,
     });
     const reader = response.body?.getReader();
@@ -86,19 +86,8 @@ export async function callDiscoveryApi(
         response.status,
       );
     }
-    const result = discoveryPreviewResponseSchema.safeParse(data);
-    if (!result.success)
-      throw new ServerTripError('OUTPUT_INVALID', 'Dữ liệu địa điểm chưa hợp lệ. Hãy thử lại.');
-    if (
-      result.data.destination.id !== payload.data.input.destinationId ||
-      result.data.result.trip.destinationId !== payload.data.input.destinationId
-    )
-      throw new ServerTripError(
-        'OUTPUT_INVALID',
-        'Địa điểm trả về không khớp thành phố đã chọn. Hãy thử lại.',
-      );
     if (controller.signal.aborted) throw new ServerTripError('CANCELLED', 'Đã dừng tìm địa điểm.');
-    return result.data;
+    return data;
   } catch (error) {
     if (error instanceof ServerTripError) throw error;
     throw new ServerTripError(
@@ -112,4 +101,56 @@ export async function callDiscoveryApi(
     options.signal?.removeEventListener('abort', abort);
     controller.abort();
   }
+}
+
+/** Destination search is explicit and authenticated; keystrokes never query the provider. */
+export async function callDestinationSearchApi(
+  base: string,
+  token: string,
+  query: string,
+  options: RequestOptions = {},
+) {
+  const q = query.trim();
+  if (q.length < 2 || q.length > 120)
+    throw new ServerTripError('INVALID', 'Nhập tên nơi muốn đến từ 2 đến 120 ký tự.');
+  const data = await requestDiscovery(
+    base,
+    token,
+    '/v1/destinations?q=' + encodeURIComponent(q),
+    undefined,
+    options,
+  );
+  const result = destinationSearchResponseSchema.safeParse(data);
+  if (
+    !result.success ||
+    result.data.destinations.some((destination) => destination.countryCode !== 'VN')
+  )
+    throw new ServerTripError('OUTPUT_INVALID', 'Dữ liệu điểm đến chưa hợp lệ. Hãy thử lại.');
+  return result.data;
+}
+
+export async function callDiscoveryApi(
+  base: string,
+  token: string,
+  input: DiscoveryRequest,
+  options: RequestOptions = {},
+) {
+  const payload = discoveryPreviewRequestSchema.safeParse(input);
+  if (!payload.success)
+    throw new ServerTripError('INVALID', 'Kiểm tra thông tin chuyến đi trước khi tìm địa điểm.');
+  const data = await requestDiscovery(base, token, '/v1/discovery/preview', payload.data, options);
+  const result = discoveryPreviewResponseSchema.safeParse(data);
+  if (!result.success)
+    throw new ServerTripError('OUTPUT_INVALID', 'Dữ liệu địa điểm chưa hợp lệ. Hãy thử lại.');
+  if (
+    result.data.destination.id !== payload.data.input.destinationId ||
+    result.data.result.trip.destinationId !== payload.data.input.destinationId ||
+    (payload.data.input.destination &&
+      JSON.stringify(result.data.destination) !== JSON.stringify(payload.data.input.destination))
+  )
+    throw new ServerTripError(
+      'OUTPUT_INVALID',
+      'Điểm đến trả về không khớp nơi đã chọn. Hãy thử lại.',
+    );
+  return result.data;
 }

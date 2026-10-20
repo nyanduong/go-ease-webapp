@@ -47,7 +47,7 @@ export function generateDiscoveredTrip(input: unknown, placesInput: unknown, opt
   if (!parsedInput.success) return { ok: false, code: 'INVALID_INPUT', message: 'Nhu cầu chuyến không hợp lệ. Kiểm tra điểm đến, ngày, số người và ngân sách.' };
   const request = parsedInput.data;
   const parsedDestination = destinationSchema.safeParse(options.destination ?? request.destination ?? getDestination(request.destinationId));
-  if (!parsedDestination.success || parsedDestination.data.id !== request.destinationId) {
+  if (!parsedDestination.success || parsedDestination.data.id !== request.destinationId || parsedDestination.data.countryCode !== 'VN') {
     return { ok: false, code: 'INVALID_OPTIONS', message: 'Điểm đến không khớp nhu cầu chuyến.' };
   }
   const destination = parsedDestination.data;

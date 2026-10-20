@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { discoveryPlaceSchema, type Destination, type DiscoveryPlace } from '@goease/contracts';
+import { isVietnamCoordinate } from './vietnam-coverage.js';
 
 const text = (value: unknown, max: number) =>
   typeof value === 'string'
@@ -198,6 +199,7 @@ export function normalizePlaces(raw: unknown, destination: Destination, fetchedA
     if (
       !name ||
       !externalId ||
+      !isVietnamCoordinate(coordinates) ||
       distanceKm(destination.center, coordinates) > destination.radiusKm ||
       ids.has(externalId) ||
       places.some(

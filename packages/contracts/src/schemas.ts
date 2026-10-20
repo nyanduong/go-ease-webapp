@@ -100,6 +100,9 @@ function checkLastDate(startDate: string, durationDays: number, ctx: z.Refinemen
 export const createTripInputSchema = z.strictObject(tripInputShape).superRefine((input, ctx) => {
   checkLastDate(input.startDate, input.durationDays, ctx);
   checkDestination(input, ctx);
+  if (input.destination && input.destination.countryCode !== 'VN') {
+    ctx.addIssue({ code: 'custom', path: ['destination', 'countryCode'], message: 'Hiện GoEase hỗ trợ tạo chuyến trong Việt Nam. Chọn một điểm đến tại Việt Nam.' });
+  }
 });
 export type CreateTripInput = z.infer<typeof createTripInputSchema>;
 

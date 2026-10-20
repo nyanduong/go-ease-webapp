@@ -10,6 +10,9 @@ import {
   serverTripListQuerySchema,
   serverTripListResponseSchema,
   type Trip,
+  destinationSchema,
+  getDestination,
+  discoveryPlaceSchema,
 } from '@goease/contracts';
 import { ApiFailure } from '../../common/errors/api-failure.js';
 import {
@@ -20,6 +23,8 @@ import {
 import { CatalogService } from '../catalog/catalog.service.js';
 import { TripsRepository } from './trips.repository.js';
 import { tripRecord } from './trips.mapper.js';
+import { isVietnamCoordinate } from '../discovery/vietnam-coverage.js';
+import { sameDestination } from '../discovery/dynamic-destinations.js';
 export class TripsService {
   constructor(
     private readonly transactions: ActorTransactionService,
@@ -102,6 +107,24 @@ export class TripsService {
         throw new ApiFailure(429, 'TRIP_LIMIT', 'Đạt 200 thao tác mới trong 24 giờ của tài khoản.');
       const current = await this.repository.current(tx, owner, id);
       if (trip) {
+        const destination = trip.destination ?? getDestination(trip.destinationId);
+        const previousDestination = destinationSchema.safeParse(current?.destination);
+        const unchangedHistoricalDestination =
+          operation === 'update' &&
+          previousDestination.success &&
+          destination &&
+          sameDestination(previousDestination.data, destination);
+        if (
+          !unchangedHistoricalDestination &&
+          (!destination ||
+            destination.countryCode !== 'VN' ||
+            !isVietnamCoordinate(destination.center))
+        )
+          throw new ApiFailure(
+            400,
+            'BAD_REQUEST',
+            'Chuyến mới và điểm đến thay đổi chỉ hỗ trợ địa điểm tại Việt Nam.',
+          );
         const catalog = await this.catalog.validationEntries(tx);
         const places = catalog.map((p) => {
           const { id, name, destinationId, coordinates, sources } = catalogEntrySchema.parse(
@@ -111,6 +134,39 @@ export class TripsService {
         });
         const previous = await this.repository.activities(tx, owner, id);
         const old = new Map(previous.map((a) => [a.id, a]));
+        if (
+          trip.days.some((day) =>
+            day.activities.some((activity) => {
+              if (
+                activity.location.kind !== 'discovered' ||
+                isVietnamCoordinate(activity.location.placeSnapshot.coordinates)
+              )
+                return false;
+              const savedLocation = old.get(activity.id)?.locationSnapshot;
+              const savedPlace = discoveryPlaceSchema.safeParse(
+                savedLocation && typeof savedLocation === 'object' && !Array.isArray(savedLocation)
+                  ? savedLocation.placeSnapshot
+                  : undefined,
+              );
+              const place = activity.location.placeSnapshot;
+              const unchangedHistoricalPlace =
+                operation === 'update' &&
+                savedPlace.success &&
+                savedPlace.data.id === place.id &&
+                savedPlace.data.provider === place.provider &&
+                savedPlace.data.externalId === place.externalId &&
+                savedPlace.data.destinationId === place.destinationId &&
+                savedPlace.data.coordinates.latitude === place.coordinates.latitude &&
+                savedPlace.data.coordinates.longitude === place.coordinates.longitude;
+              return !unchangedHistoricalPlace;
+            }),
+          )
+        )
+          throw new ApiFailure(
+            400,
+            'BAD_REQUEST',
+            'Địa điểm mới hoặc tọa độ thay đổi chỉ hỗ trợ trong Việt Nam.',
+          );
         // Validate legacy names against their saved activity, while new references need the current canonical name.
         const checking = {
           ...trip,

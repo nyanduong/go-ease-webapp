@@ -15,8 +15,16 @@ import {
   discoveryPlacesResponseSchema,
   discoveryPreviewResponseSchema,
   apiErrorResponseSchema,
+  destinationSearchResponseSchema,
   getDestination,
 } from '@goease/contracts';
+import {
+  normalizeDestinations,
+  verifyDestination,
+  signDestination,
+} from '../dist/modules/discovery/dynamic-destinations.js';
+
+import { isVietnamCoordinate } from '../dist/modules/discovery/vietnam-coverage.js';
 
 const NOW = new Date('2026-10-20T03:00:00.000Z');
 const USER = 'b5aa7f8a-1711-4c09-b432-bcf075c57b5f';
@@ -124,13 +132,14 @@ test('discovery config requires authenticated bounded deadline and never accepts
     /SERPAPI_API_KEY/,
   );
 });
-test('public destination search supports Vietnamese accents and rejects repeated or arbitrary query fields', () =>
+test('public popular suggestions are distinct from authenticated provider search; malformed query never spends quota', () =>
   api(async (base) => {
-    const response = await fetch(`${base}/v1/destinations?q=da%20nang`);
-    assert.deepEqual(
-      (await response.json()).destinations.map((item) => item.id),
-      ['da-nang'],
-    );
+    const response = await fetch(`${base}/v1/destinations`);
+    const suggestions = await response.json();
+    assert.equal(suggestions.source, 'suggestions');
+    assert.equal(suggestions.destinations.length, 8);
+    assert.equal((await fetch(`${base}/v1/destinations?q=da%20nang`)).status, 401);
+    assert.equal((await fetch(`${base}/v1/destinations?q=a`)).status, 400);
     assert.equal((await fetch(`${base}/v1/destinations?q=a&q=b`)).status, 400);
     assert.equal((await fetch(`${base}/v1/destinations?url=https://evil.example`)).status, 400);
   }));
@@ -231,7 +240,8 @@ test('fixed SerpApi search returns schema-valid city data and cache reuse costs 
       assert.equal(parsed.searchParams.get('engine'), 'google_maps');
       assert.equal(parsed.searchParams.get('type'), 'search');
       assert.equal(parsed.searchParams.get('api_key'), SECRET);
-      assert.match(parsed.searchParams.get('q'), /Đà Nẵng Việt Nam/);
+      assert.match(parsed.searchParams.get('q'), /Đà Nẵng/);
+      assert.equal(parsed.searchParams.get('gl'), 'vn');
       assert.equal(parsed.searchParams.has('no_cache'), false);
       assert.equal(options.redirect, 'error');
       assert.equal(options.method, 'GET');
@@ -730,4 +740,412 @@ test('misclassified tour offices with business suffixes are excluded while trave
     NOW.toISOString(),
   );
   assert.equal(typedMuseum.places.length, 1);
+});
+
+const canTho = {
+  data_id: '0x31a088f10000:0xca70',
+  title: 'Cần Thơ',
+  address: 'Cần Thơ, Việt Nam',
+  gps_coordinates: { latitude: 10.0452, longitude: 105.7469 },
+};
+const ninhBinh = {
+  data_id: '0x31a088f10000:0xb100',
+  title: 'Ninh Bình',
+  address: 'Ninh Bình, Việt Nam',
+  gps_coordinates: { latitude: 20.2506, longitude: 105.9745 },
+};
+const foreign = {
+  data_id: '0x60188bfbd123:0x51f00ddcafe',
+  title: 'Tokyo',
+  country_code: 'VN',
+  address: 'Pretends to be Việt Nam',
+  gps_coordinates: { latitude: 35.6762, longitude: 139.6503 },
+};
+const search = (base, q, authorized = true) =>
+  fetch(`${base}/v1/destinations?q=${encodeURIComponent(q)}`, {
+    headers: authorized ? { authorization: `Bearer ${token()}` } : {},
+  });
+
+test('explicit destination search discovers Cần Thơ and Ninh Bình beyond suggestions with boundary-confirmed VN snapshots', () => {
+  let calls = 0;
+  return api(
+    async (base) => {
+      for (const [q, name] of [
+        ['Cần Thơ', 'Cần Thơ'],
+        ['Ninh Bình', 'Ninh Bình'],
+      ]) {
+        const response = await search(base, q);
+        assert.equal(response.status, 200);
+        const body = destinationSearchResponseSchema.parse(await response.json());
+        const destination = body.destinations[0];
+        assert.equal(body.source, 'serpapi');
+        assert.equal(body.metadata.providerRequests, 1);
+        assert.equal(destination.name, name);
+        assert.equal(getDestination(destination.id), undefined);
+        assert.equal(destination.timeZone, 'Asia/Ho_Chi_Minh');
+        assert.equal(destination.countryCode, 'VN');
+        assert.equal(destination.currency, 'VND');
+        assert.equal(verifyDestination(destination, SECRET), true);
+        assert.ok(destination.address);
+        assert.equal(destination.source.provider, 'serpapi');
+        assert.equal(JSON.stringify(body).includes(SECRET), false);
+      }
+      assert.equal(calls, 2);
+    },
+    {},
+    async (url, options) => {
+      calls++;
+      const parsed = new URL(url);
+      assert.equal(parsed.origin + parsed.pathname, 'https://serpapi.com/search.json');
+      assert.equal(parsed.searchParams.get('gl'), 'vn');
+      assert.equal(parsed.searchParams.has('ll'), false);
+      assert.equal(options.redirect, 'error');
+      const q = parsed.searchParams.get('q');
+      assert.ok(['Cần Thơ Việt Nam', 'Ninh Bình Việt Nam'].includes(q));
+      return q === 'Cần Thơ Việt Nam'
+        ? Response.json({ place_results: canTho })
+        : Response.json({ local_results: [ninhBinh] });
+    },
+  );
+});
+
+test('dynamic selection flows into preview and source-filtered places; search and discovery share persistent quota and caches', () => {
+  let calls = 0;
+  return service(
+    async (instance, directory) => {
+      const first = await instance.searchDestinations({ q: 'Cần Thơ' }, USER, signal());
+      const selected = first.destinations[0];
+      const reused = await instance.searchDestinations({ q: 'cần thơ' }, 'second-user', signal());
+      assert.equal(reused.source, 'cache');
+      assert.equal(reused.metadata.providerRequests, 0);
+      const preview = discoveryPreviewResponseSchema.parse(
+        await instance.preview(
+          {
+            input: {
+              ...tripInput,
+              name: 'Cần Thơ ngoài gợi ý',
+              destinationId: selected.id,
+              destination: selected,
+            },
+          },
+          USER,
+          signal(),
+        ),
+      );
+      assert.equal(preview.destination.id, selected.id);
+      assert.deepEqual(preview.result.trip.destination, selected);
+      assert.equal(preview.result.trip.timeZone, 'Asia/Ho_Chi_Minh');
+      assert.ok(preview.places.length > 0);
+      assert.ok(preview.places.every((place) => place.destinationId === selected.id));
+      const again = await instance.places(
+        { destinationId: selected.id, destination: selected },
+        USER,
+        signal(),
+      );
+      assert.equal(again.source, 'cache');
+      assert.equal(again.metadata.providerRequests, 0);
+      assert.equal(JSON.parse(await readFile(join(directory, 'quota.json'), 'utf8')).total, 2);
+      await rejectsCode(
+        instance.searchDestinations({ q: 'Ninh Bình' }, USER, signal()),
+        'DISCOVERY_BUDGET_EXCEEDED',
+      );
+      assert.equal(calls, 2);
+    },
+    { SERPAPI_MAX_TOTAL_ATTEMPTS: '2' },
+    async (url) => {
+      calls++;
+      const parsed = new URL(url);
+      if (!parsed.searchParams.has('ll')) return Response.json({ place_results: canTho });
+      assert.match(parsed.searchParams.get('ll'), /10\.0452,105\.7469/);
+      assert.equal(parsed.searchParams.get('gl'), 'vn');
+      return Response.json({
+        local_results: Array.from({ length: 12 }, (_, index) =>
+          rawPlace(index, {
+            title: `Bảo tàng Cần Thơ ${index}`,
+            address: 'Cần Thơ, Việt Nam',
+            gps_coordinates: {
+              latitude: 10.0452 + index * 0.002,
+              longitude: 105.7469 + index * 0.002,
+            },
+          }),
+        ),
+      });
+    },
+  );
+});
+
+test('forged or altered dynamic snapshots are rejected before provider calls, including popular-city override', () => {
+  let calls = 0;
+  return service(
+    async (instance) => {
+      const {
+        destinations: [selected],
+      } = await instance.searchDestinations({ q: 'Cần Thơ' }, USER, signal());
+      const variants = [
+        { ...selected, selectionToken: undefined },
+        { ...selected, selectionToken: 'A'.repeat(43) },
+        { ...selected, center: { latitude: 0, longitude: 0 } },
+        { ...selected, timeZone: 'Asia/Tokyo' },
+        { ...selected, radiusKm: 150 },
+        { ...selected, name: 'Spoofed name' },
+        { ...selected, source: { ...selected.source, externalId: 'changed' } },
+        { ...selected, source: { ...selected.source, sourceUrl: 'https://evil.example/' } },
+      ];
+      for (const destination of variants) {
+        await rejectsCode(
+          instance.places({ destinationId: selected.id, destination }, USER, signal()),
+          'BAD_REQUEST',
+        );
+        await rejectsCode(
+          instance.preview(
+            { input: { ...tripInput, destinationId: selected.id, destination } },
+            USER,
+            signal(),
+          ),
+          'BAD_REQUEST',
+        );
+      }
+      // Even an authentic old server signature cannot reopen discovery outside Vietnam.
+      const previouslySignedForeign = signDestination(
+        { ...selected, center: foreign.gps_coordinates, countryCode: 'VN' },
+        SECRET,
+      );
+      await rejectsCode(
+        instance.places(
+          { destinationId: selected.id, destination: previouslySignedForeign },
+          USER,
+          signal(),
+        ),
+        'BAD_REQUEST',
+      );
+      await rejectsCode(
+        instance.preview(
+          {
+            input: {
+              ...tripInput,
+              destinationId: selected.id,
+              destination: previouslySignedForeign,
+            },
+          },
+          USER,
+          signal(),
+        ),
+        'BAD_REQUEST',
+      );
+      await rejectsCode(
+        instance.places(
+          {
+            destinationId: 'da-nang',
+            destination: { ...getDestination('da-nang'), center: selected.center },
+          },
+          USER,
+          signal(),
+        ),
+        'BAD_REQUEST',
+      );
+      assert.equal(calls, 1);
+    },
+    {},
+    async () => {
+      calls++;
+      return Response.json({ place_results: canTho });
+    },
+  );
+});
+
+test('same-name Vietnam candidates retain disambiguating addresses/GPS while foreign GPS and misleading country text are filtered', () => {
+  const result = normalizeDestinations(
+    {
+      local_results: [
+        {
+          ...canTho,
+          title: 'An Phú',
+          data_id: 'same-id',
+          address: 'An Giang, Việt Nam',
+          gps_coordinates: { latitude: 10.8145, longitude: 105.0895 },
+        },
+        {
+          ...canTho,
+          title: 'An Phú',
+          data_id: 'same-id',
+          address: 'TP. Hồ Chí Minh, Việt Nam',
+          gps_coordinates: { latitude: 10.795, longitude: 106.7466 },
+        },
+        foreign,
+        {
+          ...canTho,
+          title: 'No address or country',
+          data_id: 'no-address',
+          address: undefined,
+          country_code: undefined,
+        },
+        { ...canTho, title: 'No coordinates', gps_coordinates: undefined },
+      ],
+    },
+    NOW.toISOString(),
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.destinations.length, 3);
+  assert.notEqual(result.destinations[0].id, result.destinations[1].id);
+  assert.equal(result.destinations[0].address, 'An Giang, Việt Nam');
+  assert.equal(result.destinations[1].address, 'TP. Hồ Chí Minh, Việt Nam');
+  assert.equal(result.destinations[2].countryCode, 'VN');
+  assert.equal(result.destinations[2].address, undefined);
+});
+
+test('Vietnam polygon coverage includes independent island datasets and rejects foreign neighbors without border buffers', () => {
+  for (const [name, latitude, longitude] of [
+    ['Cần Thơ', 10.0452, 105.7469],
+    ['Ninh Bình', 20.2506, 105.9745],
+    ['Bến Ninh Kiều', 10.0347, 105.784],
+    ['Phú Quốc', 10.2899, 103.984],
+    ['Côn Đảo', 8.7033, 106.5975],
+    ['Sân bay Côn Đảo', 8.7314, 106.6327],
+    ['Cát Bà', 20.727, 107.048],
+    ['Lý Sơn', 15.3846, 109.1211],
+    ['Phú Quý', 10.5347, 108.9526],
+    ['Hà Tiên', 10.3831, 104.4878],
+  ])
+    assert.equal(isVietnamCoordinate({ latitude, longitude }), true, name);
+  for (const [name, latitude, longitude] of [
+    ['Tokyo', 35.6762, 139.6503],
+    ['Kep Cambodia', 10.4833, 104.3167],
+    ['Phnom Penh', 11.5564, 104.9282],
+    ['Bangkok', 13.7563, 100.5018],
+  ])
+    assert.equal(isVietnamCoordinate({ latitude, longitude }), false, name);
+  // A sea centroid not confirmed by these land polygons must fail honestly.
+  assert.equal(isVietnamCoordinate({ latitude: 20.9101, longitude: 107.1839 }), false);
+  const haTien = {
+    ...getDestination('da-nang'),
+    center: { latitude: 10.3831, longitude: 104.4878 },
+    radiusKm: 25,
+  };
+  const result = normalizePlaces(
+    {
+      local_results: [
+        rawPlace(0, { gps_coordinates: haTien.center }),
+        rawPlace(1, {
+          title: 'Foreign place incorrectly labeled Việt Nam',
+          address: 'Việt Nam',
+          gps_coordinates: { latitude: 10.4833, longitude: 104.3167 },
+        }),
+      ],
+    },
+    haTien,
+    NOW.toISOString(),
+  );
+  assert.equal(result.places.length, 1);
+  assert.equal(result.rejected, 1);
+});
+
+test('destination search failures are truthful, bounded and uncached; auth and cancellation precede outbound quota', async () => {
+  for (const [fetcher, code] of [
+    [
+      async () => Response.json({ local_results: [{ title: 'Missing GPS' }] }),
+      'DISCOVERY_NO_RESULTS',
+    ],
+    [async () => Response.json({ local_results: [] }), 'DISCOVERY_NO_RESULTS'],
+    [async () => Response.json({ place_results: foreign }), 'DISCOVERY_NO_RESULTS'],
+    [async () => Response.json({ unexpected: [] }), 'DISCOVERY_OUTPUT_INVALID'],
+    [async () => new Response('x'.repeat(2 * 1024 * 1024 + 1)), 'DISCOVERY_OUTPUT_INVALID'],
+    [async () => new Response(SECRET, { status: 429 }), 'DISCOVERY_RATE_LIMITED'],
+    [async () => Response.json({ error: SECRET }), 'DISCOVERY_UPSTREAM_UNAVAILABLE'],
+  ])
+    await service(
+      async (instance, directory) => {
+        await rejectsCode(instance.searchDestinations({ q: 'Anywhere' }, USER, signal()), code);
+        assert.equal(JSON.parse(await readFile(join(directory, 'quota.json'), 'utf8')).total, 1);
+      },
+      {},
+      fetcher,
+    );
+  await service(
+    async (instance) => {
+      await rejectsCode(instance.searchDestinations({ q: 'Anywhere' }), 'AUTH_INVALID');
+      const controller = new AbortController();
+      controller.abort();
+      await rejectsCode(
+        instance.searchDestinations({ q: 'Anywhere' }, USER, controller.signal),
+        'DISCOVERY_CANCELLED',
+      );
+    },
+    {},
+    async () => assert.fail('invalid search must not spend'),
+  );
+});
+
+test('dynamic origin proof survives draft time and service restart but rejects server-key rotation', async () => {
+  let selected;
+  await service(
+    async (instance) => {
+      selected = (await instance.searchDestinations({ q: 'Cần Thơ' }, USER, signal()))
+        .destinations[0];
+    },
+    {},
+    async () => Response.json({ place_results: canTho }),
+  );
+  assert.equal(verifyDestination(selected, SECRET), true);
+  assert.equal(verifyDestination(selected, 'different_server_key_12345678901234567890'), false);
+  assert.equal(
+    verifyDestination(
+      { ...selected, source: { ...selected.source, fetchedAt: '2027-10-20T03:00:00.000Z' } },
+      SECRET,
+    ),
+    false,
+  );
+});
+
+test('optional destination search metrics record only aggregate cache/cost diagnostics', async () => {
+  const originalInfo = console.info,
+    logs = [];
+  console.info = (...items) => logs.push(items);
+  try {
+    await service(
+      async (instance) => {
+        await instance.searchDestinations({ q: 'Cần Thơ private query' }, USER, signal());
+      },
+      {},
+      async () => Response.json({ place_results: canTho }),
+    );
+    assert.equal(logs.length, 0);
+    await service(
+      async (instance) => {
+        await instance.searchDestinations({ q: 'Cần Thơ private query' }, USER, signal());
+        await instance.searchDestinations({ q: 'Cần Thơ private query' }, USER, signal());
+      },
+      { SERPAPI_LOG_METRICS: 'true' },
+      async () => Response.json({ place_results: canTho }),
+    );
+    const metrics = logs.map(([message]) => JSON.parse(message));
+    assert.equal(metrics.length, 2);
+    for (const record of metrics) {
+      assert.deepEqual(
+        Object.keys(record).sort(),
+        ['event', 'cacheHit', 'providerRequests', 'durationMs', 'resultCount'].sort(),
+      );
+      assert.equal(record.event, 'goease.destination_search');
+      assert.equal(record.resultCount, 1);
+      assert.ok(Number.isInteger(record.durationMs) && record.durationMs >= 0);
+    }
+    assert.deepEqual(
+      metrics.map((record) => [record.cacheHit, record.providerRequests]),
+      [
+        [false, 1],
+        [true, 0],
+      ],
+    );
+    for (const value of [
+      SECRET,
+      USER,
+      'Cần Thơ',
+      'private query',
+      'gps_coordinates',
+      'data_id',
+      'api_key',
+    ])
+      assert.equal(JSON.stringify(logs).includes(value), false);
+  } finally {
+    console.info = originalInfo;
+  }
 });
