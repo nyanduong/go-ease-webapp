@@ -1,0 +1,43 @@
+{
+  "suggestions": [
+    {
+      "value": "Ninh Bình",
+      "type": "place",
+      "latitude": 20.2129969,
+      "longitude": 105.92299,
+      "data_id": "0x313670ab6f10c8c1:0x6de5534e3c130c2d"
+    },
+    {
+      "value": "Hoa Lư",
+      "subtext": "Ninh Bình",
+      "type": "place",
+      "latitude": 20.267606699999998,
+      "longitude": 105.9582372,
+      "data_id": "0x313679f0d9f25fd3:0x2df5442da5a00929"
+    },
+    {
+      "value": "Ninh Binh Legend Hotel",
+      "subtext": "Đường Lê Thái Tổ, Hoa Lư, Ninh Bình",
+      "type": "place",
+      "latitude": 20.2743929,
+      "longitude": 105.9583176,
+      "data_id": "0x313679e61e830bcb:0x4a08422073a7973a"
+    },
+    {
+      "value": "Ninh Binh Hidden Charm Hotel & Resort",
+      "subtext": "Nam Hoa Lư, Ninh Bình",
+      "type": "place",
+      "latitude": 20.217192,
+      "longitude": 105.942623,
+      "data_id": "0x31367a6758f34a45:0x1e4b69d459aef701"
+    },
+    {
+      "value": "Ninh Binh Tulip Hotel & Restaurant",
+      "subtext": "Đinh Tiên Hoàng, Hoa Lư, Ninh Bình",
+      "type": "place",
+      "latitude": 20.2800878,
+      "longitude": 105.9675642,
+      "data_id": "0x313679672794bdb1:0xeb965c3fe1bb4ca"
+    }
+  ]
+}

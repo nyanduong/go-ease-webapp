@@ -25,6 +25,7 @@ import {
 } from '../dist/modules/discovery/dynamic-destinations.js';
 
 import { isVietnamCoordinate } from '../dist/modules/discovery/vietnam-coverage.js';
+import ninhBinhAutocomplete from './fixtures/ninh-binh-autocomplete.json' with { type: 'json' };
 
 const NOW = new Date('2026-10-20T03:00:00.000Z');
 const USER = 'b5aa7f8a-1711-4c09-b432-bcf075c57b5f';
@@ -761,6 +762,97 @@ const foreign = {
   address: 'Pretends to be Việt Nam',
   gps_coordinates: { latitude: 35.6762, longitude: 139.6503 },
 };
+const autocompletePlace = (entry) => ({
+  type: 'place',
+  value: entry.title,
+  subtext: entry.address,
+  latitude: entry.gps_coordinates?.latitude,
+  longitude: entry.gps_coordinates?.longitude,
+  data_id: entry.data_id,
+  place_id: entry.place_id,
+  country_code: entry.country_code,
+});
+const autocomplete = (...entries) => ({ suggestions: entries.map(autocompletePlace) });
+
+test('actual Ninh Bình autocomplete data keeps Ninh Bình distinct from Hoa Lư and moves only exact names ahead of provider order', async () => {
+  const [province, city, ...hotels] = ninhBinhAutocomplete.suggestions;
+  const raw = { suggestions: [city, ...hotels, province] };
+  for (const query of ['Ninh Bình', 'ninh binh', 'NINH BÌNH']) {
+    const normalized = normalizeDestinations(raw, NOW.toISOString(), query);
+    assert.equal(normalized.valid, true);
+    assert.equal(normalized.destinations.length, 5);
+    assert.equal(normalized.destinations[0].name, 'Ninh Bình');
+    assert.deepEqual(
+      normalized.destinations.slice(1).map((destination) => destination.name),
+      [city.value, ...hotels.map((hotel) => hotel.value)],
+    );
+    assert.equal(normalized.destinations[0].address, undefined);
+    assert.deepEqual(normalized.destinations[0].center, {
+      latitude: 20.2129969,
+      longitude: 105.92299,
+    });
+    const hoaLu = normalized.destinations.find((destination) => destination.name === 'Hoa Lư');
+    assert.ok(hoaLu);
+    assert.equal(hoaLu.address, 'Ninh Bình');
+    assert.notEqual(hoaLu.id, normalized.destinations[0].id);
+    assert.equal(hoaLu.source.externalId, city.data_id);
+    assert.equal(normalized.destinations[0].source.externalId, province.data_id);
+  }
+  let calls = 0;
+  await service(
+    async (instance) => {
+      const result = await instance.searchDestinations({ q: 'Ninh Bình' }, USER, signal());
+      assert.equal(result.destinations[0].name, 'Ninh Bình');
+      assert.equal(result.metadata.providerRequests, 1);
+      assert.ok(result.destinations.some((destination) => destination.name === 'Hoa Lư'));
+      const cached = await instance.searchDestinations({ q: 'Ninh Bình' }, USER, signal());
+      assert.equal(cached.source, 'cache');
+      assert.equal(cached.metadata.providerRequests, 0);
+      assert.equal(calls, 1);
+    },
+    {},
+    async (url) => {
+      calls++;
+      const parsed = new URL(url);
+      assert.equal(parsed.searchParams.get('engine'), 'google_maps_autocomplete');
+      assert.equal(parsed.searchParams.get('q'), 'Ninh Bình');
+      assert.equal(parsed.searchParams.get('ll'), '@16.0471,108.2062,5z');
+      assert.equal(parsed.searchParams.get('gl'), 'vn');
+      assert.equal(parsed.searchParams.get('hl'), 'vi');
+      assert.equal(parsed.searchParams.has('type'), false);
+      return Response.json(raw);
+    },
+  );
+});
+
+test('autocomplete ignores incomplete suggestions and moves exact matches first while preserving every nonexact provider position', () => {
+  const place = autocompletePlace(canTho);
+  const result = normalizeDestinations(
+    {
+      suggestions: [
+        { ...place, value: 'Hoa Lư', data_id: 'different-city' },
+        { ...place, value: 'Ninh Bình resort A', data_id: 'prefix-a' },
+        { ...place, value: 'Ninh Bình resort B', data_id: 'prefix-b' },
+        { ...place, value: 'Ninh Bình', type: 'keyword', data_id: 'keyword' },
+        { ...place, value: 'Ninh Bình', latitude: undefined, data_id: 'no-gps' },
+        { ...place, value: 'Ninh Bình', data_id: undefined },
+        { ...autocompletePlace(foreign), value: 'Ninh Bình', country_code: 'VN' },
+        { ...place, value: 'Ninh Bình', data_id: 'province' },
+      ],
+    },
+    NOW.toISOString(),
+    'Ninh Bình',
+  );
+  assert.deepEqual(
+    result.destinations.map((destination) => destination.name),
+    ['Ninh Bình', 'Hoa Lư', 'Ninh Bình resort A', 'Ninh Bình resort B'],
+  );
+  assert.equal(result.destinations.length, 4);
+  assert.equal(
+    normalizeDestinations({ place_results: canTho }, NOW.toISOString(), 'Cần Thơ').valid,
+    false,
+  );
+});
 const search = (base, q, authorized = true) =>
   fetch(`${base}/v1/destinations?q=${encodeURIComponent(q)}`, {
     headers: authorized ? { authorization: `Bearer ${token()}` } : {},
@@ -798,13 +890,13 @@ test('explicit destination search discovers Cần Thơ and Ninh Bình beyond sug
       const parsed = new URL(url);
       assert.equal(parsed.origin + parsed.pathname, 'https://serpapi.com/search.json');
       assert.equal(parsed.searchParams.get('gl'), 'vn');
-      assert.equal(parsed.searchParams.has('ll'), false);
+      assert.equal(parsed.searchParams.get('ll'), '@16.0471,108.2062,5z');
+      assert.equal(parsed.searchParams.get('engine'), 'google_maps_autocomplete');
+      assert.equal(parsed.searchParams.has('type'), false);
       assert.equal(options.redirect, 'error');
       const q = parsed.searchParams.get('q');
-      assert.ok(['Cần Thơ Việt Nam', 'Ninh Bình Việt Nam'].includes(q));
-      return q === 'Cần Thơ Việt Nam'
-        ? Response.json({ place_results: canTho })
-        : Response.json({ local_results: [ninhBinh] });
+      assert.ok(['Cần Thơ', 'Ninh Bình'].includes(q));
+      return Response.json(autocomplete(q === 'Cần Thơ' ? canTho : ninhBinh));
     },
   );
 });
@@ -855,7 +947,8 @@ test('dynamic selection flows into preview and source-filtered places; search an
     async (url) => {
       calls++;
       const parsed = new URL(url);
-      if (!parsed.searchParams.has('ll')) return Response.json({ place_results: canTho });
+      if (parsed.searchParams.get('engine') === 'google_maps_autocomplete')
+        return Response.json(autocomplete(canTho));
       assert.match(parsed.searchParams.get('ll'), /10\.0452,105\.7469/);
       assert.equal(parsed.searchParams.get('gl'), 'vn');
       return Response.json({
@@ -948,7 +1041,7 @@ test('forged or altered dynamic snapshots are rejected before provider calls, in
     {},
     async () => {
       calls++;
-      return Response.json({ place_results: canTho });
+      return Response.json(autocomplete(canTho));
     },
   );
 });
@@ -956,7 +1049,7 @@ test('forged or altered dynamic snapshots are rejected before provider calls, in
 test('same-name Vietnam candidates retain disambiguating addresses/GPS while foreign GPS and misleading country text are filtered', () => {
   const result = normalizeDestinations(
     {
-      local_results: [
+      suggestions: [
         {
           ...canTho,
           title: 'An Phú',
@@ -980,7 +1073,7 @@ test('same-name Vietnam candidates retain disambiguating addresses/GPS while for
           country_code: undefined,
         },
         { ...canTho, title: 'No coordinates', gps_coordinates: undefined },
-      ],
+      ].map(autocompletePlace),
     },
     NOW.toISOString(),
   );
@@ -1042,11 +1135,11 @@ test('Vietnam polygon coverage includes independent island datasets and rejects 
 test('destination search failures are truthful, bounded and uncached; auth and cancellation precede outbound quota', async () => {
   for (const [fetcher, code] of [
     [
-      async () => Response.json({ local_results: [{ title: 'Missing GPS' }] }),
+      async () => Response.json({ suggestions: [{ value: 'Missing GPS', type: 'place' }] }),
       'DISCOVERY_NO_RESULTS',
     ],
-    [async () => Response.json({ local_results: [] }), 'DISCOVERY_NO_RESULTS'],
-    [async () => Response.json({ place_results: foreign }), 'DISCOVERY_NO_RESULTS'],
+    [async () => Response.json({ suggestions: [] }), 'DISCOVERY_NO_RESULTS'],
+    [async () => Response.json(autocomplete(foreign)), 'DISCOVERY_NO_RESULTS'],
     [async () => Response.json({ unexpected: [] }), 'DISCOVERY_OUTPUT_INVALID'],
     [async () => new Response('x'.repeat(2 * 1024 * 1024 + 1)), 'DISCOVERY_OUTPUT_INVALID'],
     [async () => new Response(SECRET, { status: 429 }), 'DISCOVERY_RATE_LIMITED'],
@@ -1083,7 +1176,7 @@ test('dynamic origin proof survives draft time and service restart but rejects s
         .destinations[0];
     },
     {},
-    async () => Response.json({ place_results: canTho }),
+    async () => Response.json(autocomplete(canTho)),
   );
   assert.equal(verifyDestination(selected, SECRET), true);
   assert.equal(verifyDestination(selected, 'different_server_key_12345678901234567890'), false);
@@ -1106,7 +1199,7 @@ test('optional destination search metrics record only aggregate cache/cost diagn
         await instance.searchDestinations({ q: 'Cần Thơ private query' }, USER, signal());
       },
       {},
-      async () => Response.json({ place_results: canTho }),
+      async () => Response.json(autocomplete(canTho)),
     );
     assert.equal(logs.length, 0);
     await service(
@@ -1115,7 +1208,7 @@ test('optional destination search metrics record only aggregate cache/cost diagn
         await instance.searchDestinations({ q: 'Cần Thơ private query' }, USER, signal());
       },
       { SERPAPI_LOG_METRICS: 'true' },
-      async () => Response.json({ place_results: canTho }),
+      async () => Response.json(autocomplete(canTho)),
     );
     const metrics = logs.map(([message]) => JSON.parse(message));
     assert.equal(metrics.length, 2);

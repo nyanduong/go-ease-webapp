@@ -53,7 +53,7 @@ pnpm dev:admin
 | Endpoint | Hành vi |
 | --- | --- |
 | `GET /v1/destinations` | Trả gợi ý phổ biến tương thích bản cũ; không gọi provider. |
-| `GET /v1/destinations?q=...` | Xác minh tài khoản; từ khóa 2–120 ký tự tìm thực qua SerpApi Google Maps trong Việt Nam. Trả tối đa 10 kết quả đã kiểm tra vùng/GPS/múi giờ, nguồn, chữ ký và metadata cache/lượt gọi. |
+| `GET /v1/destinations?q=...` | Xác minh tài khoản; từ khóa 2–120 ký tự tìm gợi ý địa danh qua SerpApi Google Maps Autocomplete trong Việt Nam. Giữ các ứng viên riêng biệt, ưu tiên tên khớp từ khóa; trả tối đa 10 kết quả đã kiểm tra vùng/GPS/múi giờ, nguồn, chữ ký và metadata cache/lượt gọi. |
 | `POST /v1/discovery/places` | Xác minh Google/Supabase; nhận `destinationId`, snapshot `destination`, `interests`; chuẩn hóa địa điểm trong vùng đã chọn. |
 | `POST /v1/discovery/preview` | Xác minh tài khoản; nhận `input` và `interests`; trả trip, candidates, giải thích, cảnh báo và metadata. |
 | Trip CRUD hiện có | Lưu/mở snapshot theo owner và version; không gọi provider. |
@@ -61,6 +61,8 @@ pnpm dev:admin
 Mỗi truy vấn chưa có cache gọi tối đa một search SerpApi; không auto retry, không tải details/reviews/directions cho toàn bộ kết quả. Có cache từ khóa điểm đến và cache điểm tham quan theo điểm đến/sở thích, tối đa 50 mục mỗi loại trong RAM, 6 giờ mặc định. Restart làm mất cache; quota vẫn được giữ trên đĩa. Cache hit không tốn thêm request upstream. Tìm điểm đến và tìm điểm tham quan dùng chung quota; không gọi provider theo từng phím gõ.
 
 Client gửi toàn bộ snapshot đã chọn vào preview. Backend kiểm tra chữ ký bao phủ định danh, tọa độ, bán kính, địa chỉ, múi giờ và nguồn trước khi tìm địa điểm. Chữ ký xác nhận nguồn gốc, không thay thế thời điểm thu thập dữ liệu và không hết hạn trong lúc người dùng giữ nháp; đổi key backend yêu cầu tìm/chọn lại cho lần tìm mới. Mở chuyến đã lưu chỉ đọc snapshot, không cần key hoặc chữ ký mới. Không có endpoint proxy cho client tự chọn engine, URL hoặc API key.
+
+Tìm điểm đến dùng `google_maps_autocomplete`, giữ nguyên từ khóa người dùng, ngôn ngữ Việt Nam và tâm tìm kiếm rộng trong nước. Chỉ gợi ý loại `place` có định danh và GPS được xác nhận mới có thể chọn; gợi ý từ khóa thiếu GPS không biến thành địa điểm. Tìm điểm tham quan sau khi chọn vẫn dùng `google_maps` search. Không dùng một `place_results` duy nhất làm toàn bộ danh sách điểm đến, không tự đổi tên địa danh theo từ khóa và không gộp tỉnh/thành phố có danh tính khác nhau. Cache tìm điểm đến có phiên bản riêng cho giao thức này.
 
 Quota ghi trước khi gọi provider, gồm tài khoản/ngày, tổng/ngày, tổng tích lũy và theo phút. Một process sở hữu thư mục quota. Khóa có PID/nonce; chỉ phục hồi khi xác minh process cũ đã chết, không reset số lượt. Khóa không rõ chủ hoặc file hỏng trả lỗi để kiểm tra. Không xóa `.discovery-runtime` để lấy lại lượt. Chạy nhiều replica cần guard/cache dùng chung thay cho thư mục local.
 
@@ -90,6 +92,7 @@ Kiểm tra phạm vi dùng polygon đất liền/đảo từ geoBoundaries và N
 
 - [SerpApi Maps Local Results](https://serpapi.com/maps-local-results)
 - [SerpApi Google Maps Search](https://serpapi.com/google-maps-api)
+- [SerpApi Google Maps Autocomplete](https://serpapi.com/google-maps-autocomplete-api)
 - [geoBoundaries VNM ADM0: metadata và giấy phép CC BY 4.0](https://www.geoboundaries.org/api/current/gbOpen/VNM/ADM0/)
 - [Natural Earth: giấy phép public domain](https://www.naturalearthdata.com/about/terms-of-use/)
 - [SerpApi Maps Directions](https://serpapi.com/google-maps-directions-api)
