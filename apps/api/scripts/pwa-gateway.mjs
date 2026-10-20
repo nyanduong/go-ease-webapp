@@ -87,17 +87,11 @@ const server = createServer((req, res) => {
 });
 server.listen(port, '127.0.0.1', () =>
   console.info(
-    'GoEase account QA gateway: loopback:3103, 30-minute lifetime. No credentials logged.',
+    'GoEase account QA gateway: loopback:3103, running until stopped. No credentials logged.',
   ),
 );
-const timer = setTimeout(() => {
-  server.close();
-  server.closeAllConnections();
-  console.info('QA gateway expired.');
-}, 30 * 60000);
 for (const signal of ['SIGINT', 'SIGTERM'])
   process.on(signal, () => {
-    clearTimeout(timer);
     server.close();
     server.closeAllConnections();
   });

@@ -44,7 +44,7 @@ Mở PWA http://127.0.0.1:5174 và bấm **Tiếp tục với Google**. Google A
 
 ## HTTPS tạm cho demo được chủ dự án cho phép
 
-`apps/api/scripts/pwa-gateway.mjs` chỉ bind loopback 3103, sống 30 phút, giới hạn 60 request/phút, chỉ chuyển health/catalog và các route auth/trips/admin cần thiết tới API 3000. Route riêng vẫn phải qua JWT và quyền backend. Không mở database, filesystem hoặc AI/demo endpoints.
+`apps/api/scripts/pwa-gateway.mjs` chỉ bind loopback 3103, chạy liên tục đến khi dừng thủ công, giới hạn 60 request/phút, chỉ chuyển health/catalog và các route auth/trips/admin cần thiết tới API 3000. Route riêng vẫn phải qua JWT và quyền backend. Không mở database, filesystem hoặc AI/demo endpoints.
 
 ```powershell
 node apps/api/scripts/pwa-gateway.mjs
@@ -52,7 +52,7 @@ node apps/api/scripts/pwa-gateway.mjs
 & "$env:LOCALAPPDATA/GoEase/tools/cloudflared.exe" tunnel --url http://127.0.0.1:3103 --no-autoupdate --protocol http2
 ```
 
-Lấy URL HTTPS mới Cloudflare in ra, thay `VITE_API_BASE_URL` trong web/admin env local rồi khởi động lại Vite nếu cần. Không ghi URL tạm vào source. Gateway hết 30 phút thì API demo ngừng; URL quick tunnel đổi sau mỗi lần tạo. Ctrl+C hai terminal để đóng. Đây là đường demo cho máy hiện tại, chưa phải hosting production; các request/token thử đi qua Cloudflare theo phạm vi đã được cho phép.
+Lấy URL HTTPS mới Cloudflare in ra, thay `VITE_API_BASE_URL` trong web/admin env local rồi khởi động lại Vite nếu cần. Không ghi URL tạm vào source. Gateway không tự hết hạn và không cần cờ `--keep-alive`; URL quick tunnel đổi sau mỗi lần tạo. Ctrl+C hai terminal để đóng. Đây là đường demo cho máy hiện tại, chưa phải hosting production; các request/token thử đi qua Cloudflare theo phạm vi đã được cho phép.
 
 ## Phiên và dữ liệu
 

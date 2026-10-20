@@ -2,6 +2,7 @@ import { ProfileCard } from './profile-card';
 import { useEffect, useRef, useState } from 'react';
 import { AccountGate, Button, Brand, Notice, PageTitle } from '../../components/ui';
 import { accountSession, accountTrips, useAccount } from './session';
+import { JourneySketch, LoginArtwork } from './login-artwork';
 
 export function LoginPage() {
   const { session, hasSavedSession } = useAccount();
@@ -37,52 +38,34 @@ export function LoginPage() {
     <main className="postcard-login">
       <header className="postcard-login-header">
         <Brand />
-        <p>Mỗi chuyến đi, một câu chuyện.</p>
+        <span className="postcard-language" aria-label="Ngôn ngữ: Tiếng Việt">
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z" />
+          </svg>
+          Tiếng Việt
+        </span>
       </header>
       <div className="postcard-login-content">
-        <section className="postcard-story" aria-label="Bưu thiếp Đà Lạt">
-          <p className="postcard-kicker">Một chút cảm hứng, trước khi đi</p>
-          <p className="postcard-journal">
-            Dành một khoảng trời cho
-            <br />
-            <em>một chuyến đi thật riêng.</em>
-          </p>
-          <div className="postcard-arrival">
-            <figure className="dalat-postcard">
-              <img
-                src="/dalat-illustration.png"
-                alt="Nắng chiều trên hồ, rừng thông và những ngọn đồi Đà Lạt"
-                width="1536"
-                height="1024"
-                fetchPriority="high"
-              />
-              <figcaption>
-                <svg
-                  aria-hidden="true"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                >
-                  <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z" />
-                  <circle cx="12" cy="10" r="2.5" />
-                </svg>
-                Đà Lạt, Việt Nam
-              </figcaption>
-            </figure>
-          </div>
-        </section>
+        <LoginArtwork />
         <section className="postcard-signin" aria-labelledby="login-title">
-          <p className="postcard-signin-eyebrow">Chào bạn, người sắp lên đường</p>
+          <p className="postcard-signin-eyebrow">ĐI MỘT CHUYẾN, THÊM MỘT CÂU CHUYỆN</p>
           <h1 id="login-title">
             Chuyến đi mới,
             <br />
             bắt đầu <span>từ đây.</span>
           </h1>
           <p className="postcard-signin-description">
-            Đăng nhập để tạo, chỉnh sửa và mở lại lịch trình của bạn.
+            Đăng nhập để tạo, chỉnh sửa
+            <br className="postcard-description-break" /> và lưu lại lịch trình của bạn.
           </p>
           <button
             type="button"
@@ -92,8 +75,22 @@ export function LoginPage() {
               void accountSession.loginGoogle();
             }}
           >
-            <img src="/google-g.png" alt="" width="20" height="20" className="shrink-0" />
+            <span className="postcard-google-mark">
+              <img src="/google-g.png" alt="" width="24" height="24" />
+            </span>
             <span>Tiếp tục với Google</span>
+            <svg
+              className="postcard-button-arrow"
+              aria-hidden="true"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="m9 5 7 7-7 7" />
+            </svg>
           </button>
           <p className="postcard-signin-note">
             <svg
@@ -126,13 +123,14 @@ export function LoginPage() {
               Thử lại kết nối
             </Button>
           )}
+          <JourneySketch />
         </section>
       </div>
       <footer className="postcard-login-footer">
+        <p>Mỗi hành trình đẹp bắt đầu từ một ý tưởng.</p>
         <p>
-          <span>GoEase.</span> Just go. We’ll plan.
+          Đà Lạt đang chờ bạn <span aria-hidden="true">↗</span>
         </p>
-        <p>Từ một ý tưởng, đến một chuyến đi.</p>
       </footer>
     </main>
   );

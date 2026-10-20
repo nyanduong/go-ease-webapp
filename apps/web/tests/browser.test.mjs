@@ -387,6 +387,30 @@ test('all private deep links require Google; legacy local/IndexedDB bytes remain
   await finish(f, 'google-gate');
 });
 
+test('Cloudinary image selects responsive variants and falls back locally when CDN fails', async () => {
+  const f = await setup(),
+    { page, context } = f;
+  const requested = [];
+  await context.route('https://res.cloudinary.com/**', (route) => {
+    requested.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto(base + '/login');
+  await page.waitForFunction(() => {
+    const img = document.querySelector('.dalat-postcard > img');
+    return (
+      img instanceof HTMLImageElement &&
+      img.complete &&
+      img.naturalWidth > 0 &&
+      img.currentSrc.endsWith('/login-lake-fallback.webp')
+    );
+  });
+  assert(requested.length > 0);
+  assert(requested.every((url) => url.includes('/f_auto,q_auto,c_limit,w_')));
+  assert.equal(await page.locator('.dalat-postcard > img').getAttribute('srcset'), null);
+  await finish(f, 'cloudinary-fallback');
+});
+
 test('phone login fits narrow and short screens with a visible touch-sized Google button', async () => {
   const f = await setup(),
     { page } = f;

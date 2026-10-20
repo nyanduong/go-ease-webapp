@@ -2,6 +2,7 @@ import { travelLinks } from '@goease/trip-client/travel-links-controller';
 import { getDalatPlaces } from '@goease/catalog';
 import { Link } from '../../app/router';
 import { PageTitle } from '../../components/ui';
+import { ScenicImage } from '../../components/scenic-image';
 
 export function AboutPage() {
   return (
@@ -11,8 +12,13 @@ export function AboutPage() {
         <br />
         khám phá nhiều hơn.
       </PageTitle>
-      <div className="relative flex min-h-60 items-end overflow-hidden rounded-3xl bg-[url('/dalat-illustration.png')] bg-cover bg-center sm:min-h-72 [&>div]:flex [&>div]:w-full [&>div]:flex-col [&>div]:gap-3 [&>div]:bg-linear-to-t [&>div]:from-ink/90 [&>div]:to-transparent [&>div]:p-6 [&>div]:pt-20 [&>div]:text-white sm:[&>div]:p-8">
-        <div>
+      <div className="relative flex min-h-60 items-end overflow-hidden rounded-3xl sm:min-h-72 [&>div]:flex [&>div]:w-full [&>div]:flex-col [&>div]:gap-3 [&>div]:bg-linear-to-t [&>div]:from-ink/90 [&>div]:to-transparent [&>div]:p-6 [&>div]:pt-20 [&>div]:text-white sm:[&>div]:p-8">
+        <ScenicImage
+          decorative
+          className="absolute inset-0 size-full object-cover object-center"
+          sizes="(max-width: 1023px) 100vw, 1100px"
+        />
+        <div className="relative">
           <h2>
             Một kế hoạch,
             <br />

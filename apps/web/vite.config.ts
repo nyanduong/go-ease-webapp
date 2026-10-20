@@ -16,7 +16,11 @@ function customerPwa(): Plugin {
     },
     async closeBundle() {
       const files = (await readdir(output, { recursive: true }))
-        .filter((file) => /\.(html|js|css|png|svg|webmanifest)$/.test(file) && file !== 'sw.js')
+        .filter(
+          (file) =>
+            /\.(html|js|css|png|webp|svg|webmanifest)$/.test(file) &&
+            !['sw.js', 'dalat-illustration.png', 'logo.png'].includes(file),
+        )
         .sort();
       const hash = createHash('sha256');
       for (const file of files) {

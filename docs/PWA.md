@@ -16,6 +16,50 @@ PWA ở http://127.0.0.1:5174; admin ở 5173; API ở 3000. Mọi route sử d�
 
 ## Giao diện desktop/mobile và chuyển động
 
+### Ảnh Cloudinary
+
+Màn login dùng hai postcard tạo mới theo ảnh tham khảo, lưu trên Cloudinary dưới
+public ID `login-lake_kilh7d` và `login-lane_t7weei` (version `1792500892`). Hai ảnh
+có WebP dự phòng local được service worker precache. Ảnh gốc, bản WebP upload và
+prompt cuối nằm ở `apps/web/assets/login/README.md`; source ảnh gốc không nằm trong
+thư mục public/build. Đây là ảnh minh họa tạo bằng imagegen, không xác nhận địa danh thật.
+
+Ảnh nội dung mặc định lấy từ cloud `dqc4hufot`; URL public có phiên bản nằm trong
+`src/platform/public-media.ts`. Có thể ghi đè bằng `VITE_CLOUDINARY_DALAT_URL`, dạng
+`https://res.cloudinary.com/<cloud-name>/image/upload/v<version>/<public-id>.png`.
+Đây là URL public, không phải API key/secret hoặc URL trang console. Cấu hình không hợp lệ
+hoặc CDN lỗi thì app dùng `public/dalat-fallback.webp`. Tải ảnh lên Media Library rồi sao chép delivery URL
+vào `apps/web/.env.local`; restart Vite sau khi đổi env. Không cần upload preset công khai
+hoặc đưa credential Cloudinary vào frontend để hiển thị ảnh đã upload.
+
+Login/Trang chủ/Giới thiệu dùng chung `ScenicImage`: `f_auto,q_auto,c_limit` và
+`srcset` 480/768/1024/1536 px. Nếu CDN lỗi, ảnh quay về bản WebP local 768 × 512.
+Ảnh login/trang chủ tải ưu tiên; ảnh Giới thiệu tải lazy. Icon cài PWA và logo SVG
+giữ local. Service worker cache bản WebP dự phòng, không cache CDN hay precache hai
+PNG gốc lớn `dalat-illustration.png` và `logo.png`. Các PNG gốc vẫn được bảo toàn.
+
+Ngày 20/10/2026 đã upload 9 tài nguyên PWA vào thư mục Media Library `goease`
+(dynamic folder; public ID không tự mang tiền tố thư mục):
+
+| File local | Public ID | Version |
+| --- | --- | --- |
+| dalat-illustration.png | dalat-illustration_gf8pyn | 1792497986 |
+| logo.png | logo_cpgws2 | 1792497987 |
+| google-g.png | google-g_p2ie6b | 1792497987 |
+| dalat-fallback.webp | dalat-fallback_kbqyki | 1792497987 |
+| icons/icon-192.png | icon-192_qujoqt | 1792497987 |
+| icons/icon-512.png | icon-512_czfgur | 1792497987 |
+| icons/maskable-512.png | maskable-512_xv4zas | 1792497988 |
+| icons/apple-touch-icon.png | apple-touch-icon_gug7se | 1792497987 |
+| icons/favicon-round.svg | favicon-round_f4qxcp | 1792497987 |
+
+Đã kiểm tra ảnh Đà Lạt CDN live tại màn login: ảnh tải thành công từ
+`res.cloudinary.com`. Với header Accept WebP, các biến thể 480/768/1024 px lần lượt
+trả WebP 27.500 / 78.074 / 121.706 bytes; 1536 px trả JPEG 283.419 bytes.
+`f_auto` chọn định dạng theo client, không đảm bảo tất cả response đều là WebP.
+Các phép đo này tách khỏi browser tests dùng fixture. Logo, Google mark và icon
+cài đặt tiếp tục được phân phối local; bản cloud đã có để quản lý/lưu trữ.
+
 Từ 1024 px, desktop dùng sidebar trái; trang chủ có dashboard và từ 1280 px có cột tổng quan. Màn tạo chuyến có hướng dẫn bên cạnh form; chi tiết thu gọn tiêu đề/ngày/số người, có cột ngân sách bên phải. Dưới 1024 px, mobile/tablet dùng menu dưới, nội dung một cột và nút chạm lớn. Hai bố cục cùng state và nghiệp vụ.
 
 Hiệu ứng vào trang, chuyển ngày/tab và xuất hiện thẻ dùng Web Animations API, khoảng 240 ms; hover/nhấn dùng Tailwind transitions. Không trì hoãn điều hướng hoặc tự chạy vòng lặp. `prefers-reduced-motion` tắt chuyển động và có test riêng.
