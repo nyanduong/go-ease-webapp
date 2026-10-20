@@ -1,14 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { todayAtDestination } from '@goease/contracts';
-import { generateSampleTrip } from '@goease/itinerary';
-import {
-  initialTripForm,
-  validateTripForm,
-  type FormErrors,
-} from '@goease/trip-client/create-trip-controller';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Trip } from '@goease/contracts';
 import { Button, Notice, dateLabel } from '../../components/ui';
-import { Link, navigate, useLeaveGuard } from '../../app/router';
-import { TripForm } from '../trips/trip-form';
+import { Link, navigate } from '../../app/router';
+import { NewAccountTrip } from '../trips/new-account-trip';
 import { TripView } from '../trips/trip-view';
 import { accountTrips, useAccount } from './session';
 
@@ -25,10 +19,32 @@ export function AccountWorkspace({
     [deleted, setDeleted] = useState(false),
     [saveFailed, setSaveFailed] = useState(false),
     [saving, setSaving] = useState(false),
+    [cancelled, setCancelled] = useState(false),
     [message, setMessage] = useState('');
+  const listRequested = useRef<string | null>(null);
+  const [listLoadedOwner, setListLoadedOwner] = useState<string | null>(null);
+  const listReady = listLoadedOwner !== null && listLoadedOwner === trips.owner;
+  useEffect(() => {
+    if (
+      mode !== 'list' ||
+      !trips.ready ||
+      trips.busy ||
+      !trips.owner ||
+      listRequested.current === trips.owner
+    )
+      return;
+    const owner = trips.owner;
+    listRequested.current = owner;
+    void accountTrips.list().then((ok) => {
+      if (ok && accountTrips.getSnapshot().owner === owner) setListLoadedOwner(owner);
+    });
+  }, [mode, trips.ready, trips.busy, trips.owner]);
   useEffect(() => {
     if (created && !creating) navigate(`/trips/${encodeURIComponent(created)}`, true);
   }, [created, creating]);
+  useEffect(() => {
+    if (cancelled && !creating) navigate('/trips', true);
+  }, [cancelled, creating]);
   useEffect(() => {
     if (deleted && !trips.busy) navigate('/trips', true);
   }, [deleted, trips.busy]);
@@ -52,11 +68,13 @@ export function AccountWorkspace({
   }, [id, mode, trips.draft]);
   const places = useMemo(
     () =>
-      catalog.map((place) => {
-        const { id, name, destinationId, coordinates, sources } = place.entry;
-        return { id, name, destinationId, coordinates, sources };
-      }),
-    [catalog],
+      catalog
+        .map((place) => {
+          const { id, name, destinationId, coordinates, sources } = place.entry;
+          return { id, name, destinationId, coordinates, sources };
+        })
+        .filter((place) => !trip || place.destinationId === trip.destinationId),
+    [catalog, trip?.destinationId],
   );
   const activePlaceIds = useMemo(
     () => new Set(catalog.filter((place) => place.enabled).map((place) => place.entry.id)),
@@ -84,7 +102,9 @@ export function AccountWorkspace({
           secondary
           disabled={blocked}
           onClick={() => {
-            void work(() => accountTrips.list());
+            void work(async () => {
+              if (await accountTrips.list()) setListLoadedOwner(accountTrips.getSnapshot().owner);
+            });
           }}
         >
           Tải lại chuyến
@@ -103,7 +123,7 @@ export function AccountWorkspace({
       )}
       {trips.message && <Notice error={trips.conflict}>{trips.message}</Notice>}
       {message && <Notice error>{message}</Notice>}
-      {trips.pending && (
+      {trips.pending && !saving && !trips.busy && (
         <Notice error>
           Chưa xác nhận được thay đổi đã lưu. Bạn có thể thử lại mà không cần nhập lại.
           <Button
@@ -219,7 +239,10 @@ export function AccountWorkspace({
           Xem thêm chuyến
         </Button>
       )}
-      {mode === 'list' && !trips.items.length && trips.ready && (
+      {mode === 'list' && !listReady && trips.busy && (
+        <p role="status">Đang tải danh sách chuyến đi…</p>
+      )}
+      {mode === 'list' && !trips.items.length && trips.ready && listReady && (
         <p>Chưa có chuyến nào. Tạo hành trình đầu tiên của bạn.</p>
       )}
       {mode === 'list' && !creating && (
@@ -235,22 +258,15 @@ export function AccountWorkspace({
       {creating && (
         <NewAccountTrip
           disabled={locked}
-          onCancel={() => setCreating(false)}
-          onCreate={async (input) => {
-            const today = todayAtDestination(new Date()),
-              result = generateSampleTrip(
-                input,
-                catalog.filter((place) => place.enabled).map((place) => place.entry),
-                { tripId: crypto.randomUUID(), today },
-              );
-            if (!result.ok) {
-              setMessage(result.message);
-              return;
-            }
+          onCancel={() => {
+            setCreating(false);
+            setCancelled(true);
+          }}
+          onCreate={async (trip: Trip) => {
             await work(async () => {
-              await accountTrips.begin(result.trip);
+              if (!(await accountTrips.begin(trip))) return;
               setCreating(false);
-              setCreated(result.trip.id);
+              setCreated(trip.id);
             });
           }}
         />
@@ -335,57 +351,5 @@ export function AccountWorkspace({
         />
       )}
     </section>
-  );
-}
-function NewAccountTrip({
-  disabled,
-  onCancel,
-  onCreate,
-}: {
-  disabled: boolean;
-  onCancel: () => void;
-  onCreate: (
-    input: Extract<ReturnType<typeof validateTripForm>, { ok: true }>['input'],
-  ) => Promise<void>;
-}) {
-  const [initial] = useState(() => initialTripForm(new Date())),
-    [form, setForm] = useState(initial),
-    [errors, setErrors] = useState<FormErrors>({});
-  useLeaveGuard(JSON.stringify(form) !== JSON.stringify(initial), disabled);
-  return (
-    <form
-      className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        const result = validateTripForm(form, todayAtDestination(new Date()));
-        if (!result.ok) {
-          setErrors(result.errors);
-          return;
-        }
-        void onCreate(result.input);
-      }}
-    >
-      <h3>Lên lịch trình Đà Lạt</h3>
-      <TripForm values={form} onChange={setForm} errors={errors} disabled={disabled} />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={disabled}>
-          Tạo lịch trình
-        </Button>
-        <Button
-          secondary
-          disabled={disabled}
-          onClick={() => {
-            if (
-              JSON.stringify(form) === JSON.stringify(initial) ||
-              window.confirm('Bỏ thông tin chuyến đi đang nhập?')
-            )
-              onCancel();
-          }}
-        >
-          Hủy tạo chuyến
-        </Button>
-      </div>
-    </form>
   );
 }

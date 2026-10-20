@@ -31,7 +31,15 @@ execFileSync(
     },
   },
 );
-execFileSync(process.execPath, ['--test', 'tests/browser.test.mjs'], {
-  cwd: root,
-  stdio: 'inherit',
-});
+const targets = process.argv.slice(2);
+execFileSync(
+  process.execPath,
+  [
+    '--test',
+    ...(targets.length ? targets : ['tests/browser.test.mjs', 'tests/discovery-browser.test.mjs']),
+  ],
+  {
+    cwd: root,
+    stdio: 'inherit',
+  },
+);

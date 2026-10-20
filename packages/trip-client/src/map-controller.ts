@@ -25,7 +25,11 @@ export function projectDayMap(input: unknown, dayId: string, catalog: Place[]) {
   }[] = [];
   day.activities.forEach((activity, index) => {
     const place =
-      activity.location.kind === 'catalog' ? places.get(activity.location.placeId) : undefined;
+      activity.location.kind === 'discovered'
+        ? activity.location.placeSnapshot
+        : activity.location.kind === 'catalog'
+          ? places.get(activity.location.placeId)
+          : undefined;
     if (!place) {
       unlocated.push({
         id: activity.id,

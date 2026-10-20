@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { findTimeOverlaps, type Place, type Trip } from '@goease/contracts';
+import {
+  findTimeOverlaps,
+  getDestination,
+  type Place,
+  type Trip,
+  type DiscoveryPlace,
+} from '@goease/contracts';
 import {
   activityForm,
   moveActivity,
@@ -122,6 +128,18 @@ function TripSession({
     [buffer, places, activePlaceIds],
   );
   const trip = editing ? projection.trip : source;
+  const destinationName =
+    trip.destination?.name ?? getDestination(trip.destinationId)?.name ?? trip.destinationId;
+  const discoveredPlaces = useMemo(() => {
+    const snapshots = new Map<string, DiscoveryPlace>();
+    buffer.layout.days.forEach((day) =>
+      day.activities.forEach((activity) => {
+        if (activity.location.kind === 'discovered')
+          snapshots.set(activity.location.placeId, activity.location.placeSnapshot);
+      }),
+    );
+    return [...snapshots.values()];
+  }, [buffer.layout]);
   const encoded = JSON.stringify(projection.trip),
     sourceEncoded = JSON.stringify(source);
   const dirty =
@@ -208,7 +226,7 @@ function TripSession({
       <header className="flex flex-col gap-2 py-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-xs font-bold tracking-widest text-teal uppercase">
-            Đà Lạt · Việt Nam
+            {destinationName} · Việt Nam
           </span>
           <span
             role="status"
@@ -361,10 +379,46 @@ function TripSession({
                       <div>
                         <h3 className="text-lg text-ink">{activity.name}</h3>
                         <p className="mt-1 text-xs text-muted">
-                          {activity.location.kind === 'catalog'
-                            ? 'Địa điểm tham quan'
-                            : 'Hoạt động của bạn'}
+                          {activity.location.kind === 'discovered'
+                            ? 'Địa điểm từ nguồn tìm kiếm'
+                            : activity.location.kind === 'catalog'
+                              ? 'Địa điểm GoEase biên tập'
+                              : 'Hoạt động của bạn'}
                         </p>
+                        {activity.location.kind === 'discovered' && (
+                          <div className="mt-2 flex flex-col gap-1 text-xs text-muted">
+                            <p>{activity.location.placeSnapshot.address}</p>
+                            <p>
+                              {activity.location.placeSnapshot.durationMinutes} phút tham quan (ước
+                              tính)
+                              {activity.location.placeSnapshot.rating !== null
+                                ? ` · Đánh giá ${activity.location.placeSnapshot.rating}/5`
+                                : ''}
+                            </p>
+                            <a
+                              className="min-h-8 py-1 text-teal underline"
+                              href={activity.location.placeSnapshot.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                            >
+                              Xem nguồn địa điểm ↗
+                            </a>
+                            {activity.location.placeSnapshot.openingHours && (
+                              <p>
+                                Giờ được nguồn cung cấp:{' '}
+                                {activity.location.placeSnapshot.openingHours}
+                              </p>
+                            )}
+                            <p>
+                              Dữ liệu ngày{' '}
+                              {new Date(
+                                activity.location.placeSnapshot.fetchedAt,
+                              ).toLocaleDateString('vi-VN')}
+                              ; hãy kiểm tra lại trước khi đi.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       {activity.notes && (
                         <details className="text-xs text-muted">
@@ -385,6 +439,7 @@ function TripSession({
                             showErrors ? projection.errors.activities[activity.id] : undefined
                           }
                           places={available}
+                          discoveredPlaces={discoveredPlaces}
                           disabled={blocked}
                           onClose={() => setOpenActivity(null)}
                         />
@@ -533,14 +588,21 @@ function TripSession({
             <div className="flex flex-col gap-4 rounded-3xl border border-line bg-paper p-5">
               <h2>Thông tin hành trình</h2>
               <p>
-                Đà Lạt · {dateLabel(trip.startDate)} đến {dateLabel(trip.days.at(-1)!.date)}
+                {destinationName} · {dateLabel(trip.startDate)} đến{' '}
+                {dateLabel(trip.days.at(-1)!.date)}
               </p>
               <p>
                 {trip.people} người · {trip.durationDays} ngày
               </p>
               <Notice>
-                {trip.generationSource === 'ai' ? 'Lịch trình do AI gợi ý' : 'Lịch trình gợi ý'} ·
-                Hãy kiểm tra giờ mở cửa và giá trước khi đi.
+                {trip.generationSource === 'ai'
+                  ? 'Lịch trình do AI gợi ý'
+                  : trip.generationSource === 'discovery'
+                    ? 'Lịch trình từ địa điểm đã tìm'
+                    : trip.generationSource === 'sample'
+                      ? 'Lịch trình mẫu GoEase'
+                      : 'Lịch trình của bạn'}{' '}
+                · Hãy kiểm tra giờ mở cửa và giá trước khi đi.
               </Notice>
             </div>
           )}

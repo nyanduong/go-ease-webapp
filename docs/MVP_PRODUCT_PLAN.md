@@ -1,6 +1,6 @@
 # Phạm vi MVP GoEase và kế hoạch bàn giao
 
-Định hướng mở rộng đã xác nhận ngày 20/10/2026: hỗ trợ nhiều điểm đến, tìm dữ liệu qua SerpApi và tạo đề xuất lịch trình để người dùng chỉnh/lưu. Xem [lộ trình nhiều điểm đến](MULTI_DESTINATION_PLAN.md). Các giới hạn Đà Lạt bên dưới mô tả nền MVP hiện có, không phải giới hạn dài hạn; chưa coi lộ trình mới là chức năng đã triển khai.
+Định hướng mở rộng đã xác nhận ngày 20/10/2026: hỗ trợ nhiều điểm đến, tìm dữ liệu qua SerpApi và tạo đề xuất lịch trình để người dùng chỉnh/lưu. Xem [lộ trình nhiều điểm đến](MULTI_DESTINATION_PLAN.md) và [bàn giao triển khai](MULTI_DESTINATION_HANDOFF.md). Các giới hạn Đà Lạt bên dưới mô tả nền MVP lịch sử; PWA hiện đã hỗ trợ 8 điểm đến Việt Nam qua luồng discovery.
 
 Cập nhật ngày 20/10/2026 theo quyết định bắt buộc đăng nhập Google. GoEase bàn giao PWA cho một người tổ chức chuyến du lịch Đà Lạt: tạo lịch trình, chỉnh hoạt động, dự toán chi phí và lưu vào tài khoản. PWA/admin đã triển khai Google OAuth và kho chuyến tài khoản; backend mặc định yêu cầu Google OAuth. Bản local đã có smoke Google thật; chưa coi đây là nghiệm thu production. Kho khách legacy được giữ nguyên; màn Tài khoản có bước chuyển bản sao vào server sau khi xác nhận tài khoản. AI beta PWA tạm tắt, chờ tích hợp nháp tài khoản.
 

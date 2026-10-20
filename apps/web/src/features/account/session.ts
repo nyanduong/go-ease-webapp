@@ -7,6 +7,7 @@ import { createAccountTrips } from '@goease/trip-client/account-trip-controller'
 import { fetchManagedCatalog } from '@goease/trip-client/catalog-api-controller';
 import type { ManagedPlace } from '@goease/contracts';
 import { ServerTripError } from '@goease/trip-client/server-trip-controller';
+import type { DiscoveryRequest } from '@goease/trip-client/discovery-api-controller';
 import { readLegacyTrips, browserStorage } from '../../platform/browser-storage';
 import { navigate } from '../../app/router';
 
@@ -207,6 +208,19 @@ async function profileRequest(input?: ProfileInput) {
   }
 }
 export const accountSession = {
+  async discoverTrip(input: DiscoveryRequest, signal?: AbortSignal) {
+    const owner = session.userId,
+      epoch = lifecycle;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi. Hãy đăng nhập lại.');
+    const result = await auth.discoveryPreview(input, signal);
+    assertSessionOwner();
+    if (owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi. Không mở lịch trình của phiên cũ.');
+    return result;
+  },
   resume: () => maintainSession(true),
   loadProfile: () => profileRequest(),
   saveProfile: (input: ProfileInput) => profileRequest(input),

@@ -81,6 +81,27 @@ const configSchema = z
         }
       }),
     TRIPS_DB_TIMEOUT_MS: integer(500, 5000, '3000'),
+    SERPAPI_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    SERPAPI_API_KEY: z
+      .string()
+      .trim()
+      .max(256)
+      .default('')
+      .refine((value) => !value || /^[A-Za-z0-9_-]{32,256}$/.test(value)),
+    SERPAPI_TIMEOUT_MS: integer(100, 15000, '3000'),
+    SERPAPI_MAX_ATTEMPTS_PER_MINUTE: integer(1, 30, '4'),
+    SERPAPI_MAX_ATTEMPTS_PER_USER_DAY: integer(1, 100, '10'),
+    SERPAPI_MAX_ATTEMPTS_PER_DAY: integer(1, 1000, '40'),
+    SERPAPI_MAX_TOTAL_ATTEMPTS: integer(1, 10000, '100'),
+    SERPAPI_CACHE_TTL_MS: integer(60000, 86400000, '21600000'),
+    SERPAPI_STATE_DIR: z.string().trim().min(1).max(1024).default('.discovery-runtime'),
+    SERPAPI_LOG_METRICS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
     GEMINI_ENABLED: z
       .enum(['true', 'false'])
       .default('false')
@@ -106,6 +127,17 @@ const configSchema = z
     GEMINI_STATE_DIR: z.string().trim().min(1).max(1024).default('.ai-runtime'),
   })
   .superRefine((value, ctx) => {
+    if (
+      value.SERPAPI_ENABLED &&
+      value.SERPAPI_API_KEY &&
+      (!value.AUTH_ENABLED ||
+        value.AUTH_TIMEOUT_MS + value.SERPAPI_TIMEOUT_MS + 500 > value.API_REQUEST_TIMEOUT_MS)
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SERPAPI_ENABLED'],
+        message: 'Discovery cần Auth và tổng deadline Auth + SerpApi nhỏ hơn API deadline.',
+      });
     if (value.CATALOG_ADMIN_ENABLED && (!value.TRIPS_ENABLED || !value.DATABASE_URL))
       ctx.addIssue({
         code: 'custom',

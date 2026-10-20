@@ -48,12 +48,13 @@ model Trip {
   schemaVersion Int @default(1)
   generationSource String? @db.VarChar(10)
   name String @db.VarChar(80)
-  destinationId String @db.VarChar(20)
+  destinationId String @db.VarChar(80)
+  destination Json?
   startDate String @db.VarChar(10)
   durationDays Int
   people Int
   budgetVnd Int?
-  timeZone String @db.VarChar(40)
+  timeZone String @db.VarChar(80)
   currency String @db.VarChar(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
   deletedAt DateTime? @db.Timestamptz(3)
@@ -82,6 +83,7 @@ model TripActivity {
   name String @db.VarChar(120)
   locationKind String @db.VarChar(10)
   placeId String? @db.VarChar(80)
+  locationSnapshot Json?
   startTime String? @db.VarChar(5)
   endTime String? @db.VarChar(5)
   costVnd Int?

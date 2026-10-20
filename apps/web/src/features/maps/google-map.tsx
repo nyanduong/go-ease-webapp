@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { DayMap } from '@goease/trip-client/map-controller';
 import { Button, Notice } from '../../components/ui';
+
+const OsmDayMap = lazy(() => import('./osm-map'));
 
 let loading: Promise<typeof google.maps> | undefined;
 function loadGoogleMaps(key: string) {
@@ -53,17 +55,20 @@ export function directionsUrl(latitude: number, longitude: number) {
 export function GoogleDayMap({ model }: { model: DayMap }) {
   const container = useRef<HTMLDivElement>(null),
     [status, setStatus] = useState(''),
+    [useOsm, setUseOsm] = useState(false),
     [attempt, retry] = useState(0);
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   useEffect(() => {
-    if (!key || !model.region || !container.current) return;
+    if (!key || useOsm || !model.region || !container.current) return;
     let disposed = false,
       map: google.maps.Map | undefined;
     const markers: google.maps.marker.AdvancedMarkerElement[] = [];
     const previousFailure = window.gm_authFailure;
     window.gm_authFailure = () => {
-      if (!disposed)
+      if (!disposed) {
         setStatus('Chưa hiển thị được bản đồ. Bạn có thể chọn địa điểm và mở chỉ đường bên dưới.');
+        setUseOsm(true);
+      }
     };
     setStatus('Đang tải bản đồ…');
     void loadGoogleMaps(key)
@@ -106,7 +111,10 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
         });
       })
       .catch(() => {
-        if (!disposed) setStatus('Chưa tải được bản đồ. Hãy thử lại hoặc mở chỉ đường bên dưới.');
+        if (!disposed) {
+          setStatus('Chưa tải được bản đồ. Hãy thử lại hoặc mở chỉ đường bên dưới.');
+          setUseOsm(true);
+        }
       });
     const deadline = setTimeout(() => {
       if (!disposed)
@@ -123,12 +131,12 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
       });
       if (map) google.maps.event.clearInstanceListeners(map);
     };
-  }, [model, key, attempt]);
+  }, [model, key, attempt, useOsm]);
   return (
     <section className="flex min-w-0 flex-col gap-5" aria-label="Bản đồ theo ngày">
       {!model.pins.length ? (
         <Notice>Chưa có địa điểm để hiển thị trên bản đồ ngày này.</Notice>
-      ) : key ? (
+      ) : key && !useOsm ? (
         <>
           <div
             ref={container}
@@ -145,11 +153,25 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
           )}
         </>
       ) : (
-        <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-3xl bg-mint p-6 text-center [&>span]:text-5xl">
-          <span aria-hidden="true">⌖</span>
-          <h3>Địa điểm trong ngày của bạn</h3>
-          <p>Bản đồ tạm thời chưa hiển thị. Bạn vẫn có thể mở chỉ đường tới từng địa điểm.</p>
-        </div>
+        <>
+          {status && key && (
+            <Notice>
+              {status}
+              <Button
+                secondary
+                onClick={() => {
+                  setUseOsm(false);
+                  retry((value) => value + 1);
+                }}
+              >
+                Thử lại Google Maps
+              </Button>
+            </Notice>
+          )}
+          <Suspense fallback={<Notice>Đang mở bản đồ…</Notice>}>
+            <OsmDayMap model={model} />
+          </Suspense>
+        </>
       )}
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {model.pins.map((pin, index) => (

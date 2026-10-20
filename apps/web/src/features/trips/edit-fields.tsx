@@ -1,5 +1,6 @@
-import type { Place } from '@goease/contracts';
+import type { DiscoveryPlace, Place } from '@goease/contracts';
 import type { ActivityErrors, ActivityForm } from '@goease/trip-client/edit-trip-controller';
+import { notesAfterPlaceChange } from '@goease/trip-client/edit-trip-controller';
 import type { GroupErrors, GroupForm } from '@goease/trip-client/budget-controller';
 import { Button } from '../../components/ui';
 
@@ -8,6 +9,7 @@ export function ActivityFields({
   onChange,
   errors = {},
   places,
+  discoveredPlaces = [],
   disabled,
   onClose,
 }: {
@@ -15,6 +17,7 @@ export function ActivityFields({
   onChange: (value: ActivityForm) => void;
   errors?: ActivityErrors;
   places: Place[];
+  discoveredPlaces?: DiscoveryPlace[];
   disabled: boolean;
   onClose: () => void;
 }) {
@@ -29,11 +32,19 @@ export function ActivityFields({
           <select
             value={value.kind}
             onChange={(event) =>
-              onChange({ ...value, kind: event.target.value as ActivityForm['kind'] })
+              onChange({
+                ...value,
+                kind: event.target.value as ActivityForm['kind'],
+                placeId: '',
+                placeSnapshot: undefined,
+              })
             }
           >
             <option value="custom">Tự nhập</option>
             <option value="catalog">Địa điểm gợi ý</option>
+            {!!discoveredPlaces.length && (
+              <option value="discovered">Địa điểm đã tìm cho chuyến</option>
+            )}
           </select>
         </label>
         {value.kind === 'catalog' && (
@@ -47,6 +58,7 @@ export function ActivityFields({
                   placeId: event.target.value,
                   name: places.find((place) => place.id === event.target.value)?.name ?? value.name,
                   costVnd: '',
+                  notes: notesAfterPlaceChange(value.notes),
                 })
               }
             >
@@ -60,10 +72,49 @@ export function ActivityFields({
             {errors.placeId && <small className="text-error">{errors.placeId}</small>}
           </label>
         )}
+        {value.kind === 'discovered' && (
+          <label className="col-span-full">
+            Địa điểm đã tìm
+            <select
+              aria-label="Địa điểm đã tìm"
+              value={value.placeId}
+              onChange={(event) => {
+                const place = discoveredPlaces.find((item) => item.id === event.target.value);
+                onChange({
+                  ...value,
+                  placeId: place?.id ?? '',
+                  placeSnapshot: place,
+                  name: place?.name ?? value.name,
+                  costVnd: '',
+                  notes: notesAfterPlaceChange(value.notes),
+                });
+              }}
+            >
+              <option value="">Chọn địa điểm</option>
+              {discoveredPlaces.map((place) => (
+                <option key={place.id} value={place.id}>
+                  {place.name}
+                </option>
+              ))}
+            </select>
+            {value.placeSnapshot && (
+              <small>
+                {value.placeSnapshot.address} · Thời lượng tham quan ước tính{' '}
+                {value.placeSnapshot.durationMinutes} phút
+              </small>
+            )}
+            <small>
+              Khi thay địa điểm, giờ trong lịch được giữ nguyên. Kiểm tra lại thời lượng tham quan
+              và di chuyển trước khi lưu.
+            </small>
+            {errors.placeId && <small className="text-error">{errors.placeId}</small>}
+          </label>
+        )}
         <label className="col-span-full">
           Tên hoạt động
           <input
             value={value.name}
+            readOnly={value.kind === 'discovered'}
             maxLength={120}
             aria-invalid={!!errors.name}
             onChange={(event) => onChange({ ...value, name: event.target.value })}

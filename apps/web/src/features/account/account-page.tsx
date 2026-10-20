@@ -129,7 +129,7 @@ export function LoginPage() {
       <footer className="postcard-login-footer">
         <p>Mỗi hành trình đẹp bắt đầu từ một ý tưởng.</p>
         <p>
-          Đà Lạt đang chờ bạn <span aria-hidden="true">↗</span>
+          Điểm đến mới đang chờ bạn <span aria-hidden="true">↗</span>
         </p>
       </footer>
     </main>

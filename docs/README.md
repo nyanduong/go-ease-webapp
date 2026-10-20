@@ -5,6 +5,7 @@
 ## Phạm vi sản phẩm hiện tại
 
 - [Định hướng mở rộng nhiều điểm đến với SerpApi](MULTI_DESTINATION_PLAN.md)
+- [Bàn giao nhiều điểm đến: cấu hình, tests và nghiệm thu SerpApi thật](MULTI_DESTINATION_HANDOFF.md)
 - [MVP PWA đã chốt, luồng user/admin và thứ tự bàn giao](MVP_PRODUCT_PLAN.md)
 - [Cấu hình, UX, dữ liệu, offline và triển khai PWA](PWA.md)
 - [Cấu trúc thư mục](FOLDER_STRUCTURE.md)

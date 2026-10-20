@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { addCalendarDays, calendarDateSchema, clockTimeSchema, DESTINATION } from './calendar.js';
+import { coordinatesSchema, destinationIdSchema, destinationSchema, getDestination, timeZoneSchema, type Destination } from './destinations.js';
+import { discoveryPlaceSchema } from './discovery-place.js';
 
 export const SCHEMA_VERSION = 1;
 export const TRIP_LIMITS = Object.freeze({
@@ -14,8 +16,8 @@ export const activityCostVndSchema = z.number().int().min(0).max(TRIP_LIMITS.max
 export const placeSchema = z.strictObject({
   id: idSchema,
   name: z.string().trim().min(1).max(120),
-  destinationId: z.literal(DESTINATION.id),
-  coordinates: z.strictObject({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }),
+  destinationId: destinationIdSchema,
+  coordinates: coordinatesSchema,
   sources: z.array(z.strictObject({ url: z.httpUrl(), accessedOn: calendarDateSchema })).min(1),
 });
 export type Place = z.infer<typeof placeSchema>;
@@ -34,12 +36,19 @@ export const activitySchema = z.strictObject({
   location: z.discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('catalog'), placeId: idSchema }),
     z.strictObject({ kind: z.literal('custom') }),
+    z.strictObject({ kind: z.literal('discovered'), placeId: idSchema, placeSnapshot: discoveryPlaceSchema }),
   ]),
   startTime: clockTimeSchema.nullable(),
   endTime: clockTimeSchema.nullable(),
   costVnd: activityCostVndSchema,
   notes: z.string().max(500),
 }).superRefine((activity, ctx) => {
+  if (activity.location.kind === 'discovered' && activity.location.placeId !== activity.location.placeSnapshot.id) {
+    ctx.addIssue({ code: 'custom', path: ['location', 'placeId'], message: 'Địa điểm phải khớp snapshot' });
+  }
+  if (activity.location.kind === 'discovered' && activity.name !== activity.location.placeSnapshot.name) {
+    ctx.addIssue({ code: 'custom', path: ['name'], message: 'Tên địa điểm phải khớp snapshot' });
+  }
   if ((activity.startTime === null) !== (activity.endTime === null)) {
     ctx.addIssue({ code: 'custom', path: ['endTime'], message: 'Nhập cả hai giờ hoặc để trống cả hai' });
   } else if (activity.startTime !== null && activity.endTime !== null && activity.endTime <= activity.startTime) {
@@ -64,12 +73,23 @@ export type TripDay = z.infer<typeof tripDaySchema>;
 
 const tripInputShape = {
   name: z.string().trim().min(1).max(80),
-  destinationId: z.literal(DESTINATION.id),
+  destinationId: destinationIdSchema,
+  destination: destinationSchema.optional(),
   startDate: calendarDateSchema,
   durationDays: z.number().int().min(1).max(TRIP_LIMITS.maxDays),
   people: z.number().int().min(1).max(TRIP_LIMITS.maxPeople),
   budgetVnd: budgetVndSchema,
 };
+
+function checkDestination(input: { destinationId: string; destination?: Destination | undefined; timeZone?: string; currency?: string }, ctx: z.RefinementCtx): void {
+  const destination = input.destination ?? getDestination(input.destinationId);
+  if (!destination || destination.id !== input.destinationId) {
+    ctx.addIssue({ code: 'custom', path: ['destinationId'], message: 'Chọn điểm đến hợp lệ hoặc cung cấp snapshot điểm đến' });
+    return;
+  }
+  if (input.timeZone !== undefined && input.timeZone !== destination.timeZone) ctx.addIssue({ code: 'custom', path: ['timeZone'], message: 'Múi giờ không khớp điểm đến' });
+  if (input.currency !== undefined && input.currency !== destination.currency) ctx.addIssue({ code: 'custom', path: ['currency'], message: 'Tiền tệ không khớp điểm đến' });
+}
 
 function checkLastDate(startDate: string, durationDays: number, ctx: z.RefinementCtx): void {
   if (!calendarDateSchema.safeParse(startDate).success || !Number.isInteger(durationDays) || durationDays < 1 || durationDays > 5) return;
@@ -79,6 +99,7 @@ function checkLastDate(startDate: string, durationDays: number, ctx: z.Refinemen
 
 export const createTripInputSchema = z.strictObject(tripInputShape).superRefine((input, ctx) => {
   checkLastDate(input.startDate, input.durationDays, ctx);
+  checkDestination(input, ctx);
 });
 export type CreateTripInput = z.infer<typeof createTripInputSchema>;
 
@@ -92,14 +113,18 @@ export function createTripInputSchemaFor(today: string) {
 
 export const tripSchema = z.strictObject({
   schemaVersion: z.literal(SCHEMA_VERSION),
-  generationSource: z.enum(['sample', 'ai']).optional(),
+  generationSource: z.enum(['sample', 'ai', 'discovery']).optional(),
   id: idSchema,
   ...tripInputShape,
-  timeZone: z.literal(DESTINATION.timeZone),
+  timeZone: timeZoneSchema,
   currency: z.literal(DESTINATION.currency),
   days: z.array(tripDaySchema).min(1).max(TRIP_LIMITS.maxDays),
 }).superRefine((trip, ctx) => {
   checkLastDate(trip.startDate, trip.durationDays, ctx);
+  checkDestination(trip, ctx);
+  if (trip.destinationId !== DESTINATION.id && !trip.destination) {
+    ctx.addIssue({ code: 'custom', path: ['destination'], message: 'Chuyến ngoài catalog Đà Lạt cần snapshot điểm đến để mở lại ổn định' });
+  }
   if (trip.days.length !== trip.durationDays) {
     ctx.addIssue({ code: 'custom', path: ['days'], message: 'Số ngày không khớp thời lượng' });
   }
@@ -117,6 +142,9 @@ export const tripSchema = z.strictObject({
       } catch { /* checkLastDate / days length reports the invalid range. */ }
     }
     day.activities.forEach((activity, activityIndex) => {
+      if (activity.location.kind === 'discovered' && activity.location.placeSnapshot.destinationId !== trip.destinationId) {
+        ctx.addIssue({ code: 'custom', path: ['days', dayIndex, 'activities', activityIndex, 'location'], message: 'Địa điểm không thuộc điểm đến của chuyến' });
+      }
       if (activityIds.has(activity.id)) ctx.addIssue({ code: 'custom', path: ['days', dayIndex, 'activities', activityIndex, 'id'], message: 'Activity ID trùng trong chuyến' });
       activityIds.add(activity.id);
       // Validate each operand before addition, even when another refinement failed.
@@ -130,7 +158,9 @@ export type Trip = z.infer<typeof tripSchema>;
 
 /** Optional catalog check at ingestion; plain tripSchema needs no external data. */
 export function tripSchemaWithCatalog(input: unknown) {
-  const places = catalogSchema.parse(input);
+  // Manual and discovered trips do not require the original 8-place sample catalogue.
+  const places = z.array(placeSchema).max(1000).parse(input);
+  if (new Set(places.map((place) => place.id)).size !== places.length) throw new RangeError('Place ID trùng');
   const byId = new Map(places.map((place) => [place.id, place]));
   return tripSchema.superRefine((trip, ctx) => {
     trip.days.forEach((day, dayIndex) => day.activities.forEach((activity, activityIndex) => {
@@ -138,7 +168,10 @@ export function tripSchemaWithCatalog(input: unknown) {
         const place = byId.get(activity.location.placeId);
         const path = ['days', dayIndex, 'activities', activityIndex];
         if (!place) ctx.addIssue({ code: 'custom', path: [...path, 'location', 'placeId'], message: 'Place không có trong catalog' });
-        else if (activity.name !== place.name) ctx.addIssue({ code: 'custom', path: [...path, 'name'], message: 'Tên địa điểm không khớp catalog' });
+        else {
+          if (activity.name !== place.name) ctx.addIssue({ code: 'custom', path: [...path, 'name'], message: 'Tên địa điểm không khớp catalog' });
+          if (place.destinationId !== trip.destinationId) ctx.addIssue({ code: 'custom', path: [...path, 'location'], message: 'Địa điểm catalog không thuộc điểm đến của chuyến' });
+        }
       }
     }));
   });

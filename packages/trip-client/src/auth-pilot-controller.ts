@@ -1,5 +1,6 @@
 import { readAccountProfile, validateProfile, type ProfileInput } from './account-profile.js';
 import { authIdentityResponseSchema } from '@goease/contracts';
+import { callDiscoveryApi, type DiscoveryRequest } from './discovery-api-controller.js';
 import {
   callServerTripApi,
   ServerTripError,
@@ -594,6 +595,53 @@ export function createAuthPilot(options: {
           current = null;
           pending = null;
           publish({ busy: false });
+        }
+      }
+    },
+    async discoveryPreview(input: DiscoveryRequest, signal?: AbortSignal) {
+      const active = session,
+        backend = verifiedBackend,
+        generation = epoch;
+      if (
+        pending ||
+        !active ||
+        active.expires <= now() ||
+        !backend ||
+        state.phase !== 'backend-verified'
+      )
+        throw new ServerTripError('AUTH_REQUIRED', 'Đăng nhập lại để tìm địa điểm cho chuyến đi.');
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) abort();
+      current = controller;
+      const task = callDiscoveryApi(backend, active.access, input, {
+        ...(options.fetcher ? { fetcher: options.fetcher } : {}),
+        signal: controller.signal,
+      });
+      pending = task.then(
+        () => {},
+        () => {},
+      );
+      try {
+        const result = await task;
+        if (generation !== epoch || controller.signal.aborted || active.expires <= now())
+          throw new ServerTripError(
+            'CANCELLED',
+            'Phiên đã thay đổi. Không áp dụng lịch trình của phiên cũ.',
+          );
+        return result;
+      } catch (error) {
+        if (error instanceof ServerTripError && error.status === 401) {
+          cancel();
+          if (!options.refreshOnUnauthorized) await erase();
+        }
+        throw error;
+      } finally {
+        signal?.removeEventListener('abort', abort);
+        if (current === controller) {
+          current = null;
+          pending = null;
         }
       }
     },

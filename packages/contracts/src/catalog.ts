@@ -17,10 +17,6 @@ export const referenceCostSchema = z.discriminatedUnion('status', [
 /** Metadata for planning, separate from persisted Place/Trip v1. */
 export const catalogEntrySchema = placeSchema.extend({
   category: placeCategorySchema,
-  coordinates: placeSchema.shape.coordinates.extend({
-    latitude: z.number().min(DALAT_DEMO_BOUNDS.south).max(DALAT_DEMO_BOUNDS.north),
-    longitude: z.number().min(DALAT_DEMO_BOUNDS.west).max(DALAT_DEMO_BOUNDS.east),
-  }),
   coordinateKind: z.literal('source-map-marker'),
   coordinateSourceUrl: z.httpUrl(),
   suggestedDurationMinutes: z.number().int().min(15).max(480),
@@ -28,6 +24,10 @@ export const catalogEntrySchema = placeSchema.extend({
   visitTimeHint: z.enum(['daytime', 'evening', 'flexible']),
   referenceCost: referenceCostSchema,
 }).superRefine((entry, ctx) => {
+  if (entry.destinationId === 'da-lat' && (entry.coordinates.latitude < DALAT_DEMO_BOUNDS.south || entry.coordinates.latitude > DALAT_DEMO_BOUNDS.north
+    || entry.coordinates.longitude < DALAT_DEMO_BOUNDS.west || entry.coordinates.longitude > DALAT_DEMO_BOUNDS.east)) {
+    ctx.addIssue({ code: 'custom', path: ['coordinates'], message: 'Tọa độ catalog mẫu nằm ngoài vùng Đà Lạt' });
+  }
   if (!entry.sources.some((source) => source.url === entry.coordinateSourceUrl)) {
     ctx.addIssue({ code: 'custom', path: ['coordinateSourceUrl'], message: 'Nguồn tọa độ phải nằm trong sources' });
   }

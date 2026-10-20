@@ -11,7 +11,10 @@ export function PlanningGuide() {
       <ol className="my-7 flex flex-col gap-6">
         {[
           ['Điền vài thông tin', 'Chọn ngày, số người và ngân sách chung.'],
-          ['Tạo lịch trình của nhóm', 'Bắt đầu từ mẫu Đà Lạt, rồi thêm những nơi bạn thích.'],
+          [
+            'Tạo lịch trình của nhóm',
+            'Chọn thành phố, tìm địa điểm rồi chỉnh lịch trình theo ý nhóm.',
+          ],
           [
             'Xem lại và lưu chuyến',
             'Điều chỉnh hoạt động, chi phí và quản lý chuyến qua tài khoản.',

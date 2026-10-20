@@ -39,6 +39,9 @@ export function generateSampleTrip(input: unknown, catalogInput: unknown, option
   const parsedCatalog = catalogEntriesSchema.safeParse(catalogInput);
   if (!parsedCatalog.success) return fail('INVALID_CATALOG', 'Catalog phải có 8–20 địa điểm hợp lệ, ID riêng, nguồn và tọa độ trong vùng demo.');
   const request = parsedInput.data;
+  if (request.destinationId !== DESTINATION.id || parsedCatalog.data.some((entry) => entry.destinationId !== request.destinationId)) {
+    return fail('INVALID_CATALOG', 'Lịch mẫu Đà Lạt chỉ dùng catalog của Đà Lạt. Chọn tìm địa điểm cho điểm đến khác.');
+  }
   const required = request.durationDays * 2;
   // Both starts can fit a visit of up to 4 hours without overlap (09–13, 14–18).
   const eligible = parsedCatalog.data.filter((entry) => entry.visitTimeHint !== 'evening' && entry.suggestedDurationMinutes <= 240);
@@ -86,3 +89,5 @@ export function generateSampleTrip(input: unknown, catalogInput: unknown, option
   if (budget.overBudgetVnd !== null && budget.overBudgetVnd > 0) warnings.push(`Tổng tham khảo đã vượt ngân sách ${budget.overBudgetVnd} VND; hãy chỉnh lịch trình.`);
   return { ok: true, kind: 'sample', algorithmVersion: SAMPLE_ALGORITHM_VERSION, label: SAMPLE_LABEL, trip: result.data, budget, warnings };
 }
+
+export * from './discovery.js';

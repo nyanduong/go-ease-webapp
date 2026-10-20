@@ -51,6 +51,8 @@ Schemas runtime nằm tại [contracts API](../../packages/contracts/src/api.ts)
 | GET /v1/health | Không query | `{apiVersion:'1', service:'goease-api', status:'ok', scope:'process', dependencies:{database:'not-configured', gemini:'not-configured'}}` |
 | GET /v1/catalog | `destinationId=da-lat`, bỏ query mặc định Đà Lạt | `{apiVersion:'1', catalog:{destinationId, accessedOn, label, sourceName, sourceUrl, entries}}`; entries theo CatalogEntry, hiện 15 địa điểm |
 
+Discovery nhiều điểm đến có `GET /v1/destinations`, `POST /v1/discovery/places` và `POST /v1/discovery/preview`. Hai POST xác minh danh tính Google/Supabase, giữ key SerpApi tại backend, có cache/quota/timeout và không tự lưu chuyến. Xem [runbook nhiều điểm đến](../../docs/MULTI_DESTINATION_HANDOFF.md) cho cấu hình, snapshots và bằng chứng nghiệm thu.
+
 Health chỉ xác nhận tiến trình HTTP trả lời được, **không kiểm tra/readiness DB/Gemini/catalog**. Database báo not-configured hoặc configured-unverified theo cấu hình; Gemini báo not-configured khi tắt/thiếu biến hoặc configured-unverified khi đủ cấu hình, không báo provider/quota ready. Catalog validate mỗi lần trước khi gửi; dữ liệu server sai trả 500 thay vì danh sách rỗng/thành công giả. Query sai/không hỗ trợ/key lạ/lặp/nested trả 400. Catalog không có POST/ghi chuyến; POST AI tạo đề xuất riêng theo GEMINI.md. Route/method không có trả 404. HEAD theo GET của Express nhưng không body; CORS preflight hợp lệ trả 204.
 
 Lỗi ứng dụng có envelope chung:
