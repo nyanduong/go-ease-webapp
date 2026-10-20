@@ -2,7 +2,7 @@
 
 Định hướng được chủ sản phẩm xác nhận ngày 20/10/2026: người dùng chọn nơi muốn đi; GoEase tìm dữ liệu địa điểm qua SerpApi, chuẩn hóa và lọc, tạo đề xuất lịch trình để người dùng xem, chỉnh sửa và lưu vào tài khoản. Catalog Đà Lạt hiện tại là dữ liệu nền, không phải giới hạn dài hạn của sản phẩm.
 
-Lộ trình này đã được triển khai cho 8 điểm đến Việt Nam. Kết quả kiểm thử, cấu hình vận hành và giới hạn thực tế được ghi tại [bàn giao nhiều điểm đến](MULTI_DESTINATION_HANDOFF.md). Không tự đăng ký gói trả phí, thay quota tài khoản nhà cung cấp hoặc đưa API key vào frontend.
+Lộ trình này đã được mở rộng sang tìm điểm đến động qua SerpApi trong Việt Nam, theo phạm vi chủ sản phẩm xác nhận. Tám điểm đến ban đầu chỉ còn là gợi ý phổ biến, không phải danh sách cho phép. Kết quả kiểm thử, cấu hình vận hành và giới hạn thực tế được ghi tại [bàn giao nhiều điểm đến](MULTI_DESTINATION_HANDOFF.md). Không tự đăng ký gói trả phí, thay quota tài khoản nhà cung cấp hoặc đưa API key vào frontend.
 
 ## Trải nghiệm đích
 

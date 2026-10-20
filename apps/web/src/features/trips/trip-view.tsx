@@ -130,6 +130,7 @@ function TripSession({
   const trip = editing ? projection.trip : source;
   const destinationName =
     trip.destination?.name ?? getDestination(trip.destinationId)?.name ?? trip.destinationId;
+  const destination = trip.destination ?? getDestination(trip.destinationId);
   const discoveredPlaces = useMemo(() => {
     const snapshots = new Map<string, DiscoveryPlace>();
     buffer.layout.days.forEach((day) =>
@@ -226,7 +227,8 @@ function TripSession({
       <header className="flex flex-col gap-2 py-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-xs font-bold tracking-widest text-teal uppercase">
-            {destinationName} · Việt Nam
+            {destinationName}
+            {destination?.countryCode === 'VN' ? ' · Việt Nam' : ''}
           </span>
           <span
             role="status"

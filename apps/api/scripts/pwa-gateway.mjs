@@ -25,8 +25,12 @@ const server = createServer((req, res) => {
     method = req.method;
   const publicRoute =
     method === 'GET' &&
-    ['/v1/health', '/v1/catalog/places', '/v1/destinations'].includes(url.pathname);
+    (['/v1/health', '/v1/catalog/places'].includes(url.pathname) ||
+      (url.pathname === '/v1/destinations' && !url.searchParams.get('q')?.trim()));
   const privateRoute =
+    (method === 'GET' &&
+      url.pathname === '/v1/destinations' &&
+      !!url.searchParams.get('q')?.trim()) ||
     (method === 'GET' && url.pathname === '/v1/auth/me') ||
     (method === 'POST' &&
       ['/v1/discovery/places', '/v1/discovery/preview'].includes(url.pathname)) ||

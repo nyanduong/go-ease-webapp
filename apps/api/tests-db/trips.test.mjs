@@ -91,6 +91,22 @@ function discoveredTrip(id = 'discovery-' + randomUUID(), places = discoveryPlac
   assert.equal(result.ok, true);
   return result.trip;
 }
+function manualDestinationTrip(destination, id = 'manual-' + randomUUID()) {
+  return tripSchema.parse({
+    schemaVersion: 1,
+    id,
+    name: 'Manual destination fixture',
+    destinationId: destination.id,
+    destination,
+    timeZone: destination.timeZone,
+    currency: destination.currency,
+    startDate: '2026-10-15',
+    durationDays: 1,
+    people: 2,
+    budgetVnd: null,
+    days: [{ id: 'day-1', date: '2026-10-15', activities: [] }],
+  });
+}
 function token(subject) {
   const now = Math.floor(Date.now() / 1000),
     enc = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
@@ -334,7 +350,7 @@ test('destination/snapshot mismatches and cross-city catalogue references are re
     );
   }));
 
-test('all eight selectable destinations accept and reopen manual empty trips without fabricated catalogue places', () =>
+test('popular destination suggestions accept and reopen manual empty trips without fabricated catalogue places', () =>
   fixture(async ({ request, A }) => {
     for (const destination of DESTINATIONS) {
       const t = tripSchema.parse({
@@ -417,6 +433,245 @@ test('custom destination snapshots preserve their valid IANA time zone and SQL g
     delete manual.generationSource;
     await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: manual }), 201);
     assert.deepEqual((await ok(await request('A', 'GET', '/' + manual.id))).trip, manual);
+  }));
+
+test('Vietnam destination outside popular suggestions retains its provider source through PostgreSQL save/reopen/edit without a live provider or current selection proof', () =>
+  fixture(async ({ request, A }) => {
+    const destination = {
+      id: 'dest-can-tho-fixture',
+      name: 'Cần Thơ fixture',
+      countryCode: 'VN',
+      timeZone: 'Asia/Ho_Chi_Minh',
+      currency: 'VND',
+      center: { latitude: 10.0452, longitude: 105.7469 },
+      radiusKm: 25,
+      address: 'Cần Thơ, Việt Nam',
+      source: {
+        provider: 'serpapi',
+        externalId: 'can-tho-provider-fixture',
+        sourceUrl: 'https://www.google.com/maps?q=Can+Tho',
+        fetchedAt: '2026-10-15T08:00:00Z',
+      },
+      // Persistence parses opaque proof syntax; only a new paid provider lookup verifies its signature.
+      selectionToken: 'offline_fixture_opaque_selection_proof_not_authenticated',
+    };
+    const places = discoveryPlaces().map((place, index) => ({
+      ...place,
+      destinationId: destination.id,
+      coordinates: {
+        latitude: destination.center.latitude + index * 0.001,
+        longitude: destination.center.longitude,
+      },
+    }));
+    const planned = generateDiscoveredTrip(
+      {
+        name: 'Cần Thơ của mình',
+        destinationId: destination.id,
+        destination,
+        startDate: '2026-10-15',
+        durationDays: 1,
+        people: 2,
+        budgetVnd: null,
+      },
+      places,
+      { tripId: 'discovered-vietnam-' + randomUUID(), today: '2026-10-15' },
+    );
+    assert.equal(planned.ok, true);
+    const t = planned.trip;
+    const created = await ok(
+      await request('A', 'POST', '', { mutationId: randomUUID(), trip: t }),
+      201,
+    );
+    assert.deepEqual(created.result.trip, t);
+    const persisted = await admin.query(
+      'SELECT destination,"timeZone",currency FROM "Trip" WHERE "ownerSubject"=$1::uuid AND id=$2',
+      [A, t.id],
+    );
+    assert.deepEqual(persisted.rows[0].destination, destination);
+    assert.equal(persisted.rows[0].destination.countryCode, 'VN');
+    assert.equal(persisted.rows[0].timeZone, 'Asia/Ho_Chi_Minh');
+    assert.equal(persisted.rows[0].currency, 'VND');
+    const reopened = serverTripResponseSchema.parse(
+      await ok(await request('A', 'GET', '/' + t.id)),
+    );
+    assert.deepEqual(reopened.trip, t);
+    await error(await request('B', 'GET', '/' + t.id), 404, 'NOT_FOUND');
+    const edited = structuredClone(reopened.trip);
+    delete edited.destination.selectionToken;
+    edited.days[0].activities[0].notes = 'Ghi chú sau khi nguồn tạm không khả dụng';
+    const saved = await ok(
+      await request('A', 'PUT', '/' + t.id, {
+        mutationId: randomUUID(),
+        expectedVersion: 1,
+        trip: edited,
+      }),
+    );
+    assert.equal(saved.result.version, 2);
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + t.id))).trip, edited);
+  }));
+
+test('new manual trips and destination changes reject foreign GPS despite forged Vietnam country metadata', () =>
+  fixture(async ({ request, A }) => {
+    const base = getDestination('ha-noi');
+    const unsupported = [
+      {
+        ...base,
+        id: 'dest-tokyo-fixture',
+        name: 'Tokyo fixture',
+        countryCode: 'JP',
+        timeZone: 'Asia/Tokyo',
+        center: { latitude: 35.6762, longitude: 139.6503 },
+      },
+      {
+        ...base,
+        id: 'dest-spoofed-tokyo-fixture',
+        name: 'Spoofed Vietnam fixture',
+        center: { latitude: 35.6762, longitude: 139.6503 },
+      },
+      // Phnom Penh is inside Vietnam's rough bounding rectangle but outside its actual boundary.
+      {
+        ...base,
+        id: 'dest-spoofed-border-fixture',
+        name: 'Cross-border fixture',
+        center: { latitude: 11.5564, longitude: 104.9282 },
+      },
+      {
+        ...base,
+        id: 'dest-unknown-country-fixture',
+        name: 'Unconfirmed country fixture',
+        countryCode: null,
+      },
+    ];
+    for (const destination of unsupported) {
+      await error(
+        await request('A', 'POST', '', {
+          mutationId: randomUUID(),
+          trip: manualDestinationTrip(destination),
+        }),
+        400,
+        'BAD_REQUEST',
+      );
+    }
+    assert.equal(
+      (
+        await admin.query('SELECT count(*)::int AS n FROM "Trip" WHERE "ownerSubject"=$1::uuid', [
+          A,
+        ])
+      ).rows[0].n,
+      0,
+    );
+    const t = manualDestinationTrip(base);
+    await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: t }), 201);
+    for (const destination of unsupported) {
+      await error(
+        await request('A', 'PUT', '/' + t.id, {
+          mutationId: randomUUID(),
+          expectedVersion: 1,
+          trip: manualDestinationTrip(destination, t.id),
+        }),
+        400,
+        'BAD_REQUEST',
+      );
+    }
+    const reopened = serverTripResponseSchema.parse(
+      await ok(await request('A', 'GET', '/' + t.id)),
+    );
+    assert.equal(reopened.version, 1);
+    assert.deepEqual(reopened.trip, t);
+  }));
+
+test('new or changed discovered activities reject foreign GPS while unchanged historical place snapshots remain editable', () =>
+  fixture(async ({ request, A }) => {
+    const t = discoveredTrip();
+    const foreign = structuredClone(t);
+    foreign.days[0].activities[0].location.placeSnapshot.coordinates = {
+      latitude: 35.6762,
+      longitude: 139.6503,
+    };
+    await error(
+      await request('A', 'POST', '', { mutationId: randomUUID(), trip: foreign }),
+      400,
+      'BAD_REQUEST',
+    );
+    await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: t }), 201);
+    await error(
+      await request('A', 'PUT', '/' + t.id, {
+        mutationId: randomUUID(),
+        expectedVersion: 1,
+        trip: foreign,
+      }),
+      400,
+      'BAD_REQUEST',
+    );
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + t.id))).trip, t);
+    const historicalLocation = foreign.days[0].activities[0].location;
+    // A previously saved place snapshot remains intact after the geographic policy changes.
+    await admin.query(
+      'UPDATE "TripActivity" SET "locationSnapshot"=$4::jsonb WHERE "ownerSubject"=$1::uuid AND "tripId"=$2 AND id=$3',
+      [A, t.id, foreign.days[0].activities[0].id, JSON.stringify(historicalLocation)],
+    );
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + t.id))).trip, foreign);
+    const edited = structuredClone(foreign);
+    edited.days[0].activities[0].notes = 'Ghi chú trên địa điểm đã lưu trước chính sách mới';
+    const saved = await ok(
+      await request('A', 'PUT', '/' + t.id, {
+        mutationId: randomUUID(),
+        expectedVersion: 1,
+        trip: edited,
+      }),
+    );
+    assert.equal(saved.result.version, 2);
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + t.id))).trip, edited);
+  }));
+
+test('historical foreign snapshots remain readable and editable without permitting a different foreign destination', () =>
+  fixture(async ({ request, A }) => {
+    const original = manualDestinationTrip(getDestination('ha-noi'));
+    await ok(await request('A', 'POST', '', { mutationId: randomUUID(), trip: original }), 201);
+    const oldDestination = {
+      id: 'dest-historical-tokyo-fixture',
+      name: 'Historical Tokyo fixture',
+      countryCode: null,
+      timeZone: 'Asia/Tokyo',
+      currency: 'VND',
+      center: { latitude: 35.6762, longitude: 139.6503 },
+      radiusKm: 25,
+      source: {
+        provider: 'serpapi',
+        externalId: 'historical-tokyo-fixture',
+        sourceUrl: 'https://www.google.com/maps?q=Tokyo',
+        fetchedAt: '2026-10-15T08:00:00Z',
+      },
+      selectionToken: 'offline_historical_opaque_selection_proof_not_authenticated',
+    };
+    const legacy = manualDestinationTrip(oldDestination, original.id);
+    // Seed a pre-policy snapshot directly into the dedicated isolated test DB, without bypassing the new HTTP creation guard.
+    await admin.query(
+      'UPDATE "Trip" SET "destinationId"=$3,destination=$4::jsonb,"timeZone"=$5 WHERE "ownerSubject"=$1::uuid AND id=$2',
+      [A, original.id, oldDestination.id, JSON.stringify(oldDestination), oldDestination.timeZone],
+    );
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + legacy.id))).trip, legacy);
+    const edited = { ...legacy, name: 'Đã sửa tên chuyến cũ' };
+    const saved = await ok(
+      await request('A', 'PUT', '/' + legacy.id, {
+        mutationId: randomUUID(),
+        expectedVersion: 1,
+        trip: edited,
+      }),
+    );
+    assert.equal(saved.result.version, 2);
+    assert.deepEqual((await ok(await request('A', 'GET', '/' + legacy.id))).trip, edited);
+    const changed = { ...oldDestination, center: { latitude: 34.6937, longitude: 135.5023 } };
+    await error(
+      await request('A', 'PUT', '/' + legacy.id, {
+        mutationId: randomUUID(),
+        expectedVersion: 2,
+        trip: manualDestinationTrip(changed, legacy.id),
+      }),
+      400,
+      'BAD_REQUEST',
+    );
+    await error(await request('B', 'GET', '/' + legacy.id), 404, 'NOT_FOUND');
   }));
 
 test('real PostgreSQL CRUD preserves normalized ordering/null/zero/legacy source and scopes every endpoint by verified user', () =>

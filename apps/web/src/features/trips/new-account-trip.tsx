@@ -51,19 +51,21 @@ export function NewAccountTrip({
   const [preview, setPreview] = useState<DiscoveryPreviewResponse | null>(null);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
+  const [destinationBusy, setDestinationBusy] = useState(false);
   const controller = useRef<AbortController | null>(null);
   const changed = JSON.stringify(form) !== JSON.stringify(initial) || selectedInterests.length > 0;
-  useLeaveGuard(changed, disabled || busy);
+  useLeaveGuard(changed, disabled || busy || destinationBusy);
   useEffect(() => () => controller.current?.abort(), []);
   const validate = () => {
-    const result = validateTripForm(form, todayAtDestination(new Date()));
+    const destination = form.destination ?? getDestination(form.destinationId ?? 'da-lat');
+    const result = validateTripForm(form, todayAtDestination(new Date(), destination));
     setErrors(result.ok ? {} : result.errors);
     if (!result.ok) setMessage('Kiểm tra các thông tin được đánh dấu.');
     return result;
   };
   async function discover() {
     const parsed = validate();
-    if (!parsed.ok || busy || disabled) return;
+    if (!parsed.ok || busy || destinationBusy || disabled) return;
     const request = new AbortController();
     controller.current = request;
     setBusy(true);
@@ -92,8 +94,8 @@ export function NewAccountTrip({
   }
   async function manual() {
     const parsed = validate();
-    if (!parsed.ok || busy || disabled) return;
-    const destination = getDestination(parsed.input.destinationId);
+    if (!parsed.ok || busy || destinationBusy || disabled) return;
+    const destination = parsed.input.destination ?? getDestination(parsed.input.destinationId);
     if (!destination) return;
     const id = crypto.randomUUID();
     const trip = tripSchema.parse({
@@ -113,7 +115,14 @@ export function NewAccountTrip({
   }
   async function sample() {
     const parsed = validate();
-    if (!parsed.ok || parsed.input.destinationId !== 'da-lat' || busy || disabled) return;
+    if (
+      !parsed.ok ||
+      parsed.input.destinationId !== 'da-lat' ||
+      busy ||
+      destinationBusy ||
+      disabled
+    )
+      return;
     const result = generateSampleTrip(
       parsed.input,
       catalog.filter((place) => place.enabled).map((place) => place.entry),
@@ -170,7 +179,8 @@ export function NewAccountTrip({
         <p className="text-xs font-bold tracking-widest text-teal uppercase">Điểm đến của bạn</p>
         <h3 className="mt-2 text-2xl">Một nơi mới, một hành trình mới.</h3>
         <p className="mt-2 text-sm text-muted">
-          Chọn thành phố và sở thích. Xem gợi ý, chỉnh sửa rồi chủ động lưu vào tài khoản.
+          Tìm nơi bạn muốn đến, chọn sở thích rồi xem gợi ý. Chỉnh sửa và chủ động lưu vào tài
+          khoản.
         </p>
       </div>
       <form
@@ -187,9 +197,12 @@ export function NewAccountTrip({
             setForm(value);
             setPreview(null);
             setMessage('');
+            setErrors({});
           }}
           errors={errors}
           disabled={disabled || busy}
+          searchDestinations={accountSession.searchDestinations}
+          onSearchBusyChange={setDestinationBusy}
         />
         <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
           <legend className="mb-3 font-semibold">
@@ -238,15 +251,19 @@ export function NewAccountTrip({
           </Notice>
         )}
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={disabled || busy}>
+          <Button type="submit" disabled={disabled || busy || destinationBusy}>
             Tìm địa điểm và lên lịch
           </Button>
-          <Button secondary disabled={disabled || busy} onClick={() => void manual()}>
+          <Button
+            secondary
+            disabled={disabled || busy || destinationBusy}
+            onClick={() => void manual()}
+          >
             Tạo lịch trống
           </Button>
           <Button
             secondary
-            disabled={disabled || busy}
+            disabled={disabled || busy || destinationBusy}
             onClick={() => {
               if (!changed || window.confirm('Bỏ thông tin chuyến đi đang nhập?')) onCancel();
             }}
@@ -264,7 +281,7 @@ export function NewAccountTrip({
             Lịch mẫu từ bộ địa điểm GoEase đã biên tập, không truy vấn dữ liệu mới. Giá và giờ cần
             được kiểm tra trước khi đi.
           </p>
-          <Button secondary disabled={disabled} onClick={() => void sample()}>
+          <Button secondary disabled={disabled || destinationBusy} onClick={() => void sample()}>
             Tạo lịch mẫu Đà Lạt
           </Button>
         </details>

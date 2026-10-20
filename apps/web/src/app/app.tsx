@@ -75,7 +75,7 @@ export function App() {
             </div>
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-2 text-xs text-muted">
               <span className="size-1.5 rounded-full bg-teal" aria-hidden="true" />
-              Việt Nam <span className="hidden sm:inline">· Đi cùng nhau</span>
+              Cùng bạn khám phá <span className="hidden sm:inline">· Đi cùng nhau</span>
             </span>
           </div>
         </header>

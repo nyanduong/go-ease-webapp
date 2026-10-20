@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { discoveryPreviewResponseSchema, findTimeOverlaps, getDestination, summarizeBudget, tripSchema } from '@goease/contracts';
+import { discoveryPreviewResponseSchema, findTimeOverlaps, getDestination, summarizeBudget, todayAtDestination, tripSchema } from '@goease/contracts';
 import { distanceKm, generateDiscoveredTrip, generateSampleTrip } from '@goease/itinerary';
 import { getDalatCatalog } from '@goease/catalog';
 
@@ -37,6 +37,18 @@ test('planner uses nearby supplied places deterministically, snapshots sources a
   assert.deepEqual({ input, places }, before);
   assert.equal(discoveryPreviewResponseSchema.safeParse({ apiVersion: '1', destination: getDestination('ha-noi'), source: 'serpapi', places, result }).success, true);
   assert.equal(discoveryPreviewResponseSchema.safeParse({ apiVersion: '1', destination: getDestination('ha-noi'), source: 'serpapi', places, result: { ...result, budget: { ...result.budget, knownCostVnd: 999 } } }).success, false);
+});
+
+test('preview response rejects a different destination or a changed snapshot even if the trip and places parse alone', () => {
+  const places = [place(0)];
+  const result = generateDiscoveredTrip(input, places, options);
+  assert.equal(result.ok, true);
+  const response = { apiVersion: '1', destination: result.trip.destination, source: 'serpapi', places, result };
+  assert.equal(discoveryPreviewResponseSchema.safeParse(response).success, true);
+  assert.equal(discoveryPreviewResponseSchema.safeParse({ ...response, destination: getDestination('da-nang') }).success, false);
+  assert.equal(discoveryPreviewResponseSchema.safeParse({ ...response, destination: { ...response.destination, center: { latitude: 0, longitude: 0 } } }).success, false);
+  assert.equal(discoveryPreviewResponseSchema.safeParse({ ...response, places: [place(0, { destinationId: 'da-nang' })] }).success, false);
+  assert.equal(discoveryPreviewResponseSchema.safeParse({ ...response, destination: { ...response.destination, address: 'Different selected region' } }).success, false);
 });
 
 test('deduplicates external IDs and rejects wrong-destination or far-away candidates', () => {
@@ -82,6 +94,49 @@ test('persisted plan preserves source snapshots despite later provider updates a
   assert.equal(restored.days[0].activities[0].name, 'Địa điểm fixture 0');
   assert.deepEqual(summarizeBudget(restored), result.budget);
   assert.equal(generateSampleTrip(input, getDalatCatalog(), options).code, 'INVALID_CATALOG');
+});
+
+test('planner schedules a Vietnam provider selection outside the popular list and preserves its sourced snapshot', () => {
+  const destination = {
+    id: 'dest-can-tho-from-provider', name: 'Cần Thơ', countryCode: 'VN', currency: 'VND', timeZone: 'Asia/Ho_Chi_Minh',
+    center: { latitude: 10.0452, longitude: 105.7469 }, radiusKm: 25, address: 'Cần Thơ, Việt Nam',
+    source: { provider: 'serpapi', externalId: 'can-tho-map-identity', sourceUrl: 'https://www.google.com/maps?q=Can+Tho', fetchedAt: '2026-10-20T12:00:00Z' },
+    selectionToken: 'opaque_backend_selection_proof_not_authenticated_by_planner',
+  };
+  assert.equal(getDestination(destination.id), undefined);
+  const request = { ...input, destinationId: destination.id, destination, startDate: '2026-10-21', durationDays: 1 };
+  const localOptions = { ...options, today: todayAtDestination(new Date('2026-10-20T17:00:00Z'), destination) };
+  const places = [place(0, { destinationId: destination.id, coordinates: { latitude: 10.046, longitude: 105.747 } }),
+    place(1, { destinationId: destination.id, coordinates: { latitude: 10.047, longitude: 105.747 } }),
+    place(2, { destinationId: 'ha-noi' }), place(3, { destinationId: destination.id, coordinates: { latitude: 21.0285, longitude: 105.8542 } })];
+  const before = structuredClone({ request, places });
+  const result = generateDiscoveredTrip(request, places, localOptions);
+  assert.equal(result.ok, true);
+  assert.equal(result.trip.timeZone, 'Asia/Ho_Chi_Minh');
+  assert.equal(result.trip.destination.countryCode, 'VN');
+  assert.deepEqual(result.trip.destination, destination);
+  assert.equal(result.trip.currency, 'VND');
+  assert.equal(result.trip.days[0].activities.length, 2);
+  assert.ok(result.trip.days[0].activities.every((activity) => activity.location.placeSnapshot.destinationId === destination.id));
+  assert.deepEqual({ request, places }, before);
+  assert.equal(generateDiscoveredTrip({ ...request, startDate: '2026-10-20' }, places, localOptions).code, 'INVALID_INPUT');
+  assert.equal(generateDiscoveredTrip({ ...request, destination: undefined }, places, localOptions).code, 'INVALID_INPUT');
+  assert.deepEqual(tripSchema.parse(JSON.parse(JSON.stringify(result.trip))), result.trip);
+  destination.name = 'Later provider update';
+  assert.equal(result.trip.destination.name, 'Cần Thơ');
+});
+
+test('planner rejects new foreign or unknown-country selections even when coordinates and source are valid', () => {
+  const destination = {
+    id: 'dest-old-tokyo-fixture', name: 'Tokyo', countryCode: 'JP', currency: 'VND', timeZone: 'Asia/Tokyo',
+    center: { latitude: 35.6762, longitude: 139.6503 }, radiusKm: 25,
+  };
+  const request = { ...input, destinationId: destination.id, destination };
+  const places = [place(0, { destinationId: destination.id, coordinates: destination.center })];
+  assert.equal(generateDiscoveredTrip(request, places, options).code, 'INVALID_INPUT');
+  assert.equal(generateDiscoveredTrip({ ...request, destination: { ...destination, countryCode: null } }, places, options).code, 'INVALID_INPUT');
+  const forgedOptions = { ...getDestination('ha-noi'), countryCode: 'JP', center: destination.center };
+  assert.equal(generateDiscoveredTrip(input, places, { ...options, destination: forgedOptions }).code, 'INVALID_OPTIONS');
 });
 
 test('distance estimates are symmetric, finite at poles and clearly independent of live routes', () => {

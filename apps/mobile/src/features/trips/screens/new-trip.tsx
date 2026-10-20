@@ -6,7 +6,7 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { BackHandler, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createTripSubmission, initialTripForm, validateTripForm, type FormErrors, type TripFormValues } from '../create-trip-controller';
+import { createTripSubmission, initialTripForm, validateTripForm, type FormErrors, type TripFormField } from '../create-trip-controller';
 import { localTripStore, useLocalTrips } from '../local-trip-store';
 import { Action, colors, ConfirmDialog, Icon, IconButton, styles } from '../components/ui';
 import { AiPlanner, type AiPlannerSession } from '../components/ai-planner';
@@ -22,7 +22,7 @@ export default function NewTripScreen() {
   const busy = sampleBusy || aiBusy;
   const [discard, setDiscard] = useState(false); const scroll = useRef<ScrollView>(null);
   useKeyboardScroll(scroll);
-  const positions = useRef<Partial<Record<keyof TripFormValues, number>>>({});
+  const positions = useRef<Partial<Record<TripFormField, number>>>({});
   const { state } = useLocalTrips();
   const [submission] = useState(() => createTripSubmission({ store: localTripStore, getCatalog: getDalatCatalog, newId: randomUUID, now: () => new Date() }));
   const leave = useCallback(() => { if (aiSession.current && !aiSession.current.discard()) return; if (!submission.discard()) return; if (router.canGoBack()) router.back(); else router.replace('/'); }, [submission]);
@@ -31,7 +31,7 @@ export default function NewTripScreen() {
     if (JSON.stringify(form) !== JSON.stringify(initial) || localTripStore.getSnapshot().draft) setDiscard(true); else leave();
   }, [form, initial, leave, aiBusy]);
   useFocusEffect(useCallback(() => { if (Platform.OS === 'web') return; const listener = BackHandler.addEventListener('hardwareBackPress', () => { requestLeave(); return true; }); return () => listener.remove(); }, [requestLeave]));
-  const field = (key: keyof TripFormValues, label: string, placeholder: string, numeric = false, hint?: string) => <View onLayout={(event) => { if (key !== 'durationDays' && key !== 'people') positions.current[key] = event.nativeEvent.layout.y; }} style={{ gap: 5 }}>
+  const field = (key: TripFormField, label: string, placeholder: string, numeric = false, hint?: string) => <View onLayout={(event) => { if (key !== 'durationDays' && key !== 'people') positions.current[key] = event.nativeEvent.layout.y; }} style={{ gap: 5 }}>
     <Text style={styles.label}>{key === 'people' ? 'Số người' : label}</Text>
     <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: errors[key] ? colors.error : colors.line, borderRadius: 9, backgroundColor: colors.paper, paddingLeft: 11, gap: 8 }}><Icon name={key === 'name' ? 'create-outline' : key === 'startDate' ? 'calendar-outline' : key === 'budgetVnd' ? 'wallet-outline' : key === 'people' ? 'people-outline' : 'time-outline'} size={17} color={colors.muted} /><TextInput accessibilityLabel={label} value={form[key]} editable={!busy && !aiLocked} placeholder={placeholder} placeholderTextColor="#8A9899" autoCapitalize={key === 'name' ? 'sentences' : 'none'}
       keyboardType={numeric ? 'number-pad' : key === 'startDate' ? 'numbers-and-punctuation' : 'default'}
@@ -69,7 +69,7 @@ export default function NewTripScreen() {
           void submission.submit(form).then((result) => {
             if (result.ok) { router.replace({ pathname: '/trips/[id]', params: { id: result.tripId } }); return; }
             setErrors(result.errors ?? {}); setMessage(result.message);
-            const first = (Object.keys(initial) as (keyof TripFormValues)[]).find((key) => result.errors?.[key]);
+            const first = (Object.keys(initial) as TripFormField[]).find((key) => result.errors?.[key]);
             scroll.current?.scrollTo({ y: first ? Math.max(0, (positions.current[first] ?? 0) - 16) : 0, animated: true });
           }).finally(() => { saving.current = false; setBusy(false); });
         }} />

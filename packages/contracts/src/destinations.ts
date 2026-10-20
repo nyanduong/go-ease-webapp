@@ -6,16 +6,24 @@ export const timeZoneSchema = z.string().min(1).max(80).refine((value) => {
   try { new Intl.DateTimeFormat('en-US', { timeZone: value }).format(0); return true; }
   catch { return false; }
 }, 'Múi giờ không hợp lệ');
+export const destinationSourceSchema = z.strictObject({
+  provider: z.literal('serpapi'), externalId: z.string().trim().min(1).max(300),
+  sourceUrl: z.httpUrl(), fetchedAt: z.iso.datetime(),
+});
 /** Monetary fields remain explicitly VND until a separate currency conversion policy exists. */
 export const destinationSchema = z.strictObject({
   id: destinationIdSchema, name: z.string().trim().min(1).max(120),
-  countryCode: z.string().regex(/^[A-Z]{2}$/), timeZone: timeZoneSchema, currency: z.literal('VND'),
+  countryCode: z.string().length(2).regex(/^[A-Z]{2}$/).nullable(), timeZone: timeZoneSchema, currency: z.literal('VND'),
   center: coordinatesSchema, radiusKm: z.number().min(1).max(150),
+  address: z.string().trim().min(1).max(500).optional(), source: destinationSourceSchema.optional(),
+  // An opaque provider-selection proof, validated by the backend before another paid lookup.
+  // Parsing a stored snapshot does not authenticate this token or contact the provider.
+  selectionToken: z.string().min(32).max(128).regex(/^[A-Za-z0-9_-]+$/).refine((value) => value.trim() === value).optional(),
 });
 export type Destination = z.infer<typeof destinationSchema>;
 
-/** Search starting points, not claims that a live place catalogue exists for each city. */
-export const DESTINATIONS: readonly Destination[] = Object.freeze([
+/** Optional popular starting points, not the complete set of searchable destinations in Vietnam. */
+export const POPULAR_DESTINATIONS: readonly Destination[] = Object.freeze([
   { id: 'da-lat', name: 'Đà Lạt', center: { latitude: 11.9404, longitude: 108.4583 }, radiusKm: 35 },
   { id: 'ha-noi', name: 'Hà Nội', center: { latitude: 21.0285, longitude: 105.8542 }, radiusKm: 35 },
   { id: 'da-nang', name: 'Đà Nẵng', center: { latitude: 16.0544, longitude: 108.2022 }, radiusKm: 35 },
@@ -26,7 +34,11 @@ export const DESTINATIONS: readonly Destination[] = Object.freeze([
   { id: 'phu-quoc', name: 'Phú Quốc', center: { latitude: 10.2899, longitude: 103.984 }, radiusKm: 45 },
 ].map((destination) => Object.freeze({ ...destination, center: Object.freeze(destination.center), countryCode: 'VN', timeZone: 'Asia/Ho_Chi_Minh', currency: 'VND' as const })));
 
+/** Backward-compatible alias for existing fixtures and the curated Đà Lạt sample. */
+export const DESTINATIONS = POPULAR_DESTINATIONS;
+
+/** Looks up a popular starting point only; absence does not mean an unsupported destination. */
 export function getDestination(id: string): Destination | undefined {
-  const destination = DESTINATIONS.find((value) => value.id === id);
+  const destination = POPULAR_DESTINATIONS.find((value) => value.id === id);
   return destination ? { ...destination, center: { ...destination.center } } : undefined;
 }

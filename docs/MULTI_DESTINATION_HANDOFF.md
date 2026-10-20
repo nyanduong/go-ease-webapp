@@ -4,7 +4,8 @@ Ngày thực hiện: 20/10/2026. Phạm vi: PWA khách hàng và NestJS API tron
 
 ## Phạm vi đã triển khai
 
-- Một điểm đến/chuyến; 8 điểm khởi đầu: Đà Lạt, Hà Nội, Đà Nẵng, Hội An, TP. Hồ Chí Minh, Huế, Nha Trang, Phú Quốc. Tìm tên có hoặc không dấu. Danh sách được quản lý tại `packages/contracts/src/destinations.ts`; mô hình có snapshot điểm đến để bổ sung nơi khác mà không phụ thuộc literal Đà Lạt.
+- Một điểm đến/chuyến; tìm địa phương hoặc địa danh bất kỳ qua SerpApi trong Việt Nam, không bị giới hạn trong tám thành phố ban đầu. Tám điểm trong `POPULAR_DESTINATIONS` chỉ là gợi ý nhanh. Người dùng bấm tìm kiếm hoặc Enter rồi xác nhận kết quả có tọa độ/địa chỉ; nhập lại từ khóa sẽ yêu cầu chọn lại để tránh tạo chuyến sai nơi.
+- Điểm đến động có định danh từ provider, tọa độ đã kiểm tra vùng Việt Nam, múi giờ `Asia/Ho_Chi_Minh`, nguồn/ngày lấy và chữ ký xác nhận của backend. Nơi chưa có GPS hoặc không xác nhận được trong vùng hỗ trợ không được chọn. Ngân sách chuyến dùng VND.
 - 1–5 ngày, 1–20 người, ngân sách VND cho cả nhóm; chọn sở thích, nhận dữ liệu SerpApi thực và xem trước. Thay địa điểm, chỉnh giờ/ghi chú/chi phí và chủ động lưu; nháp được giữ theo tài khoản. Không tự lưu kết quả tìm kiếm.
 - Địa điểm có GPS trong bán kính, định danh nội bộ từ provider ID, nguồn và ngày thu thập. Loại trùng, dữ liệu sai vùng/thiếu GPS/đóng cửa và các văn phòng du lịch/chỗ ở không phải điểm tham quan. Mức giá Google không được suy ra thành giá vé.
 - Bộ xếp lịch xác định theo khoảng cách, thời lượng, giờ mở cửa có cấu trúc và giờ nghỉ; tối đa 3 hoạt động gợi ý/ngày. Di chuyển là ước tính từ đường chim bay, không phải Directions hoặc dữ liệu giao thông. Ngày thiếu hoạt động có cảnh báo và cho thêm thủ công.
@@ -51,20 +52,23 @@ pnpm dev:admin
 
 | Endpoint | Hành vi |
 | --- | --- |
-| `GET /v1/destinations?q=` | Tìm trong danh sách điểm đến đã xác nhận vùng/tọa độ, không gọi provider. |
-| `POST /v1/discovery/places` | Xác minh Google/Supabase; nhận `destinationId`, `interests`; chuẩn hóa địa điểm. |
+| `GET /v1/destinations` | Trả gợi ý phổ biến tương thích bản cũ; không gọi provider. |
+| `GET /v1/destinations?q=...` | Xác minh tài khoản; từ khóa 2–120 ký tự tìm thực qua SerpApi Google Maps trong Việt Nam. Trả tối đa 10 kết quả đã kiểm tra vùng/GPS/múi giờ, nguồn, chữ ký và metadata cache/lượt gọi. |
+| `POST /v1/discovery/places` | Xác minh Google/Supabase; nhận `destinationId`, snapshot `destination`, `interests`; chuẩn hóa địa điểm trong vùng đã chọn. |
 | `POST /v1/discovery/preview` | Xác minh tài khoản; nhận `input` và `interests`; trả trip, candidates, giải thích, cảnh báo và metadata. |
 | Trip CRUD hiện có | Lưu/mở snapshot theo owner và version; không gọi provider. |
 
-Mỗi truy vấn chưa có cache gọi tối đa một search SerpApi; không auto retry, không tải details/reviews/directions cho toàn bộ kết quả. Cache tối đa 50 truy vấn trong RAM, 6 giờ mặc định, khóa theo điểm đến và sở thích. Restart làm mất cache; quota vẫn được giữ trên đĩa. Cache hit không tốn thêm request upstream.
+Mỗi truy vấn chưa có cache gọi tối đa một search SerpApi; không auto retry, không tải details/reviews/directions cho toàn bộ kết quả. Có cache từ khóa điểm đến và cache điểm tham quan theo điểm đến/sở thích, tối đa 50 mục mỗi loại trong RAM, 6 giờ mặc định. Restart làm mất cache; quota vẫn được giữ trên đĩa. Cache hit không tốn thêm request upstream. Tìm điểm đến và tìm điểm tham quan dùng chung quota; không gọi provider theo từng phím gõ.
+
+Client gửi toàn bộ snapshot đã chọn vào preview. Backend kiểm tra chữ ký bao phủ định danh, tọa độ, bán kính, địa chỉ, múi giờ và nguồn trước khi tìm địa điểm. Chữ ký xác nhận nguồn gốc, không thay thế thời điểm thu thập dữ liệu và không hết hạn trong lúc người dùng giữ nháp; đổi key backend yêu cầu tìm/chọn lại cho lần tìm mới. Mở chuyến đã lưu chỉ đọc snapshot, không cần key hoặc chữ ký mới. Không có endpoint proxy cho client tự chọn engine, URL hoặc API key.
 
 Quota ghi trước khi gọi provider, gồm tài khoản/ngày, tổng/ngày, tổng tích lũy và theo phút. Một process sở hữu thư mục quota. Khóa có PID/nonce; chỉ phục hồi khi xác minh process cũ đã chết, không reset số lượt. Khóa không rõ chủ hoặc file hỏng trả lỗi để kiểm tra. Không xóa `.discovery-runtime` để lấy lại lượt. Chạy nhiều replica cần guard/cache dùng chung thay cho thư mục local.
 
-Log tùy chọn chỉ có event, destinationId, cacheHit, providerRequests, durationMs và placeCount; không ghi JWT, owner, API key, query hay raw provider body. Lỗi provider, timeout, thiếu cấu hình, hết quota, thiếu địa điểm có mã/trạng thái rõ; form được giữ và người dùng có thể chủ động lập lịch trống.
+Log tùy chọn chỉ có event, destinationId, cacheHit, providerRequests, durationMs và số lượng kết quả; không ghi JWT, owner, API key, query hay raw provider body. Lỗi provider, timeout, thiếu cấu hình, hết quota, thiếu địa điểm có mã/trạng thái rõ; form được giữ và người dùng có thể chủ động lập lịch trống.
 
 ## Kiểm chứng
 
-Kết quả cuối và ảnh nghiệm thu trực tiếp được ghi trong [biên bản QA](qa/multi-destination/README.md). Fixture dùng trong kiểm thử lỗi/ownership không được tính là dữ liệu live.
+Kết quả nền và ảnh nghiệm thu trước được ghi trong [biên bản nhiều điểm đến](qa/multi-destination/README.md); phần mở rộng hiện tại ghi trong [biên bản tìm điểm đến động tại Việt Nam](qa/dynamic-destinations/README.md). Fixture dùng trong kiểm thử lỗi/ownership không được tính là dữ liệu live.
 
 | Mốc | Bằng chứng |
 | --- | --- |
@@ -78,9 +82,16 @@ Kết quả cuối và ảnh nghiệm thu trực tiếp được ghi trong [biê
 
 Chưa hỗ trợ lịch nhiều thành phố trong một chuyến, tiền tệ khác VND, booking, cộng tác tài khoản hoặc bảo đảm thời gian di chuyển thực. Giá chưa có nguồn giữ `null`; giờ mở cửa chưa đủ 7 ngày hoặc có khoảng qua đêm chưa hiểu rõ chỉ hiển thị nguồn/cảnh báo. Đổi địa điểm giữ giờ người dùng chọn, xóa số liệu di chuyển cũ và yêu cầu kiểm tra lại. Chuyến tài khoản cần mạng; PWA chỉ cache giao diện, không cache API/token hoặc tile bản đồ ngoại tuyến.
 
+Tìm bất kỳ từ khóa không đồng nghĩa mọi nơi đều có dữ liệu. Phạm vi sản phẩm là Việt Nam; kết quả phụ thuộc độ phủ Google Maps/SerpApi. Vùng không có GPS/múi giờ rõ ràng hoặc không đủ điểm tham quan sẽ trả thông báo cụ thể. Lập lịch quanh tâm đã chọn trong bán kính 25 km mặc định cho điểm đến động, không tự diễn giải cả quốc gia hoặc một hành trình nhiều vùng thành một lịch thành phố.
+
+Kiểm tra phạm vi dùng polygon đất liền/đảo từ geoBoundaries và Natural Earth, không nới biên giới theo một khung chữ nhật hoặc dựa vào tên quốc gia. Một số tâm vùng nước như tọa độ giữa Vịnh Hạ Long chưa nằm trong dữ liệu đất/đảo có thể bị từ chối; người dùng có thể tìm thành phố/khu vực trên bờ tương ứng. Không coi đây là dữ liệu ranh giới pháp lý hoặc đầy đủ mọi địa danh ngoài biển.
+
 ## Nguồn kỹ thuật
 
 - [SerpApi Maps Local Results](https://serpapi.com/maps-local-results)
+- [SerpApi Google Maps Search](https://serpapi.com/google-maps-api)
+- [geoBoundaries VNM ADM0: metadata và giấy phép CC BY 4.0](https://www.geoboundaries.org/api/current/gbOpen/VNM/ADM0/)
+- [Natural Earth: giấy phép public domain](https://www.naturalearthdata.com/about/terms-of-use/)
 - [SerpApi Maps Directions](https://serpapi.com/google-maps-directions-api)
 - [Leaflet](https://leafletjs.com/reference.html)
 - [OpenStreetMap Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/)

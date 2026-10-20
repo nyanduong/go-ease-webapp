@@ -37,7 +37,7 @@ export class TripsRepository {
   activities(tx: Transaction, owner: Owner, tripId: string) {
     return tx.tripActivity.findMany({
       where: { ...owner, tripId },
-      select: { id: true, placeId: true, name: true },
+      select: { id: true, placeId: true, name: true, locationSnapshot: true },
     });
   }
   async remove(tx: Transaction, owner: Owner, id: string, timestamp: Date) {
