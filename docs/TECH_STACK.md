@@ -1,6 +1,10 @@
 # Công nghệ cho GoEase
 
-## App chạy trên Expo Go
+## PWA khách hàng và admin
+
+PWA ở `apps/web`: React + TypeScript + Vite + Tailwind CSS 4. IndexedDB giữ chuyến khách/bản nháp account; manifest và service worker cache giao diện để dùng ngoại tuyến. Admin React/Vite ở `apps/admin`, giữ quyền server hiện có. [Runbook PWA](PWA.md). `packages/trip-client` giữ controllers chung với Expo, adapter platform nằm ở từng app.
+
+## App chạy trên Expo Go (giữ cho native)
 
 | Công nghệ | Dùng để làm gì | Thời điểm |
 | --- | --- | --- |
@@ -41,7 +45,7 @@ API key Gemini chỉ nằm ở backend. Đầu ra AI phải validate và tính l
 
 ## Công nghệ bổ sung sau
 
-Web admin dùng React + Vite + TypeScript; Tailwind/shadcn có thể thêm khi làm admin. Chưa cần web khách hàng, Docker/Kubernetes, Redis/queue, microservices hay hệ thống nhiều agent cho mốc demo Expo Go.
+PWA khách hàng dùng Tailwind; admin đã tách riêng và giữ giao diện hiện có. Docker/Kubernetes, Redis/queue và microservices chưa được thêm trong lần chuyển PWA.
 
 Development build và EAS Build dành cho thư viện native tùy chỉnh hoặc bản cài độc lập. Chỉ chọn dịch vụ/đường phân phối sau khi kiểm tra quyền và chi phí. [Development builds](https://docs.expo.dev/develop/development-builds/introduction/).
 

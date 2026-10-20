@@ -1,6 +1,6 @@
 # GoEase mobile
 
-Expo SDK 57, React Native 0.86.3, React 19.2.3 và TypeScript. Expo Router có danh sách `/`, tạo chuyến `/trips/new`, lịch trình `/trips/[id]`, bản đồ `/trips/[id]/map` và `/about`; dùng safe area/scroll trên Android/iOS. Chuyến lưu cục bộ, chưa có backend.
+Expo SDK 57, React Native 0.86.3, React 19.2.3 và TypeScript. Expo Router có danh sách `/`, tạo chuyến `/trips/new`, lịch trình `/trips/[id]`, bản đồ `/trips/[id]/map` và `/about`; dùng safe area/scroll trên Android/iOS. Chuyến khách lưu cục bộ; tài khoản gọi backend NestJS hiện có. Logic thuần dùng chung với PWA qua `@goease/trip-client`; `apps/web` là PWA riêng.
 
 ## Chạy từ root repository
 
@@ -9,7 +9,7 @@ pnpm install --frozen-lockfile
 pnpm dev:mobile
 ```
 
-Script cố định `expo start --go` để nhắm Expo Go, không phải development client. `pnpm dev:mobile:tunnel` dùng khi LAN không tới được Metro; helper ngrok có sẵn trong devDependencies. Quét QR mới khi chuyển chế độ kết nối. `pnpm dev:web` mở bản web để kiểm tra UI, không là kết quả Android/iOS.
+Script cố định `expo start --go` để nhắm Expo Go, không phải development client. `pnpm dev:mobile:tunnel` dùng khi LAN không tới được Metro; helper ngrok có sẵn trong devDependencies. Quét QR mới khi chuyển chế độ kết nối. `pnpm dev:mobile:web` mở Expo Web để kiểm tra UI, không là kết quả Android/iOS.
 
 Các lệnh root build `@goease/contracts` trước khi chạy Metro. Màn Về GoEase dùng metadata từ package này. Khi sửa contracts, xem [lệnh watch và schema dùng chung](../../packages/contracts/README.md); không copy model/giới hạn vào mobile.
 

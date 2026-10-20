@@ -6,7 +6,12 @@ test('trips disabled/missing database fail closed without a mock store or auth c
   for (const [env, code] of [
     [{}, 'TRIPS_DISABLED'],
     [
-      { TRIPS_ENABLED: 'true', AUTH_ENABLED: 'true', API_REQUEST_TIMEOUT_MS: '8000' },
+      {
+        TRIPS_ENABLED: 'true',
+        AUTH_ENABLED: 'true',
+        AUTH_GOOGLE_ONLY: 'false',
+        API_REQUEST_TIMEOUT_MS: '8000',
+      },
       'TRIPS_NOT_CONFIGURED',
     ],
   ]) {
@@ -27,7 +32,12 @@ test('trips disabled/missing database fail closed without a mock store or auth c
   }
 });
 test('database config refuses personal/public/admin URLs and auth/DB deadlines that can commit after HTTP deadline', () => {
-  const env = { TRIPS_ENABLED: 'true', AUTH_ENABLED: 'true', API_REQUEST_TIMEOUT_MS: '8000' };
+  const env = {
+    TRIPS_ENABLED: 'true',
+    AUTH_ENABLED: 'true',
+    AUTH_GOOGLE_ONLY: 'false',
+    API_REQUEST_TIMEOUT_MS: '8000',
+  };
   const good = 'postgresql://goease_runtime:offline_fixture@127.0.0.1:55475/goease_dev_local';
   assert.equal(readConfig({ ...env, DATABASE_URL: good }).TRIPS_ENABLED, true);
   for (const url of [

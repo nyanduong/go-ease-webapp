@@ -1,6 +1,6 @@
 # Cây thư mục GoEase
 
-Đây là cấu trúc hiện có sau refactor backend. Frontend chưa chuyển sang PWA: `apps/web` vẫn là admin React/Vite, `apps/mobile` vẫn là Expo. Không tạo thêm ứng dụng hoặc module rỗng trong lần này.
+PWA khách hàng nằm ở `apps/web`, admin đã chuyển sang `apps/admin`. Expo được giữ ở `apps/mobile`; PWA và mobile dùng chung controllers trong `packages/trip-client`. Backend giữ các module đã refactor.
 
 ```text
 go-ease-webapp/
@@ -39,14 +39,25 @@ go-ease-webapp/
 │   │   ├── src/features/trips/    # Screens, components, controllers
 │   │   ├── assets/
 │   │   └── tests/
-│   └── web/                      # Web admin hiện tại
+│   ├── admin/                    # Quản trị catalog, React/Vite
+│   │   ├── src/
+│   │   └── tests/
+│   └── web/                      # PWA khách hàng, React/Vite/Tailwind
 │       ├── src/
-│       └── tests/
+│       │   ├── app/              # Shell, router và error boundary
+│       │   ├── components/       # UI dùng chung
+│       │   ├── features/         # trips, account, maps, ai, about
+│       │   ├── platform/         # IndexedDB và PWA lifecycle
+│       │   └── tailwind.css      # Tailwind theme + base utilities
+│       ├── public/               # Manifest, icons, ảnh thương hiệu
+│       ├── scripts/              # SW build và browser test harness
+│       └── tests/                # Cache policy và Chromium scenarios
 ├── packages/
 │   ├── contracts/                # Schema/type/logic thuần dùng chung
 │   ├── catalog/                  # Catalog Đà Lạt tĩnh có nguồn
 │   ├── itinerary/                # Bộ sinh lịch trình mẫu
-│   └── trip-storage/             # Local repository/store/revision
+│   ├── trip-storage/             # Local repository/store/revision
+│   └── trip-client/              # Controllers thuần dùng chung PWA/mobile
 ├── docs/
 │   └── architecture/BACKEND.md
 ├── tests/                        # Kiểm tra consumer/HTTP xuyên workspace
@@ -68,6 +79,8 @@ Trip mutation, catalog validation, RLS, quyền admin và revision giữ nguyên
 
 Route mobile nằm tại `apps/mobile/src/app`, gọi screen/controller trong `src/features/trips`. Chuyến khách dùng [trip-storage](../packages/trip-storage/README.md); chuyến tài khoản có namespace riêng và gọi API, không tự ghi vào kho khách khi mạng lỗi. Xem [đồng bộ chuyến tài khoản](MOBILE_ACCOUNT_SYNC.md).
 
-`apps/web` tiếp tục chạy bằng `pnpm dev:admin`. `pnpm dev:web` hiện mở Expo Web của mobile; chưa là PWA sản phẩm đã hoàn thiện. Cấu trúc PWA khách hàng và việc chuyển admin sang `apps/admin` là giai đoạn sau.
+`pnpm dev:web` chạy PWA ở 5174; `pnpm dev:admin` chạy admin ở 5173. Expo Web cũ dùng `pnpm dev:mobile:web`. Xem [PWA runbook](PWA.md) để cấu hình Google Maps, auth, kiểm tra offline và deploy.
+
+Không import source giữa các app. Các file `*-controller.ts` cũ của mobile re-export `@goease/trip-client` để giữ tương thích tests/import. Native adapter dùng AsyncStorage/SecureStore; PWA dùng IndexedDB và sessionStorage của tab. `trip-storage` giữ schema/revision; browser repository bao trọn thao tác bằng transaction để tránh lost update giữa tab.
 
 [Contracts](../packages/contracts/README.md) không chứa Prisma, cấu hình server hoặc secret. [Catalog](../packages/catalog/README.md) giữ dataset tĩnh; catalog quản lý có database là trách nhiệm backend. [Itinerary](../packages/itinerary/README.md) giữ logic sinh mẫu dùng chung.

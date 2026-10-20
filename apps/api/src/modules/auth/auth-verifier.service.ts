@@ -15,6 +15,7 @@ const claimsSchema = z.object({
   exp: z.number().int(),
   iat: z.number().int(),
   is_anonymous: z.boolean().optional(),
+  amr: z.array(z.object({ method: z.string() })).optional(),
 });
 function claims(token: string, issuer: string, now: number) {
   try {
@@ -60,6 +61,7 @@ async function boundedUser(response: Response) {
         aud: z.literal('authenticated'),
         role: z.literal('authenticated'),
         is_anonymous: z.boolean().optional(),
+        identities: z.array(z.object({ provider: z.string() })).optional(),
       })
       .parse(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))));
   } finally {
@@ -169,6 +171,13 @@ export class AuthVerifier {
       const current = Math.floor((this.options.now ?? Date.now)() / 1000);
       if (user.id !== parsed.sub || user.is_anonymous === true || parsed.exp <= current)
         throw new ApiFailure(401, 'AUTH_INVALID', 'Danh tính hoặc hạn token không khớp.');
+      if (
+        this.config.AUTH_GOOGLE_ONLY &&
+        (!parsed.amr?.some((method) => method.method === 'oauth') ||
+          !user.identities?.some((identity) => identity.provider === 'google'))
+      ) {
+        throw new ApiFailure(401, 'AUTH_INVALID', 'Cần phiên Google OAuth được xác minh.');
+      }
       return authIdentityResponseSchema.parse({
         apiVersion: '1',
         identity: { id: user.id, provider: 'supabase' },

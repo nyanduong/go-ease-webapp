@@ -36,6 +36,10 @@ const configSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((value) => value === 'true'),
+    AUTH_GOOGLE_ONLY: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
     SUPABASE_AUTH_URL: z
       .string()
       .max(128)

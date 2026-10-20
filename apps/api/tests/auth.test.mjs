@@ -10,7 +10,12 @@ const KEY = 'sb_publishable_offline_fixture_00000000';
 const NOW = 1800000000000,
   ID = 'b5aa7f8a-1711-4c09-b432-bcf075c57b5f',
   OTHER = '12345678-1234-4234-8234-123456789abc';
-const env = { AUTH_ENABLED: 'true', SUPABASE_AUTH_URL: URL, SUPABASE_PUBLISHABLE_KEY: KEY };
+const env = {
+  AUTH_ENABLED: 'true',
+  AUTH_GOOGLE_ONLY: 'false',
+  SUPABASE_AUTH_URL: URL,
+  SUPABASE_PUBLISHABLE_KEY: KEY,
+};
 // Structurally shaped but unsigned test token. Only explicit provider doubles accept it.
 function token(patch = {}, alg = 'ES256') {
   const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -284,4 +289,30 @@ test('user auth does not grant Gemini backend access and demo session does not e
   } finally {
     await app.close();
   }
+});
+
+test('Google-only API requires verified OAuth method and Google identity, ignoring client metadata', async () => {
+  for (const [amr, identities, expected] of [
+    [[{ method: 'oauth' }], [{ provider: 'google' }], 200],
+    [[{ method: 'password' }], [{ provider: 'google' }], 401],
+    [[{ method: 'oauth' }], [{ provider: 'github' }], 401],
+    [undefined, [{ provider: 'google' }], 401],
+  ]) {
+    await fixture(
+      async (base) => {
+        const response = await request(base, token({ amr }));
+        assert.equal(response.status, expected);
+      },
+      { AUTH_GOOGLE_ONLY: 'true' },
+      async () =>
+        new Response(
+          JSON.stringify({
+            ...user(),
+            identities,
+            user_metadata: { provider: 'google', role: 'admin' },
+          }),
+        ),
+    );
+  }
+  assert.equal(readConfig({}).AUTH_GOOGLE_ONLY, true);
 });

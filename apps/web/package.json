@@ -4,26 +4,35 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests",
-    "test": "tsc -p tsconfig.tests.json && node --test tests/*.test.mjs"
+    "lint": "eslint src tests scripts vite.config.ts",
+    "test": "tsc -p tsconfig.logic-tests.json && node --test tests/service-worker.test.mjs tests/trip-edit.test.mjs tests/google-auth.test.mjs tests/account-profile.test.mjs tests/token-session.test.mjs",
+    "test:e2e": "node scripts/test-browser.mjs"
   },
   "dependencies": {
+    "@goease/catalog": "workspace:*",
     "@goease/contracts": "workspace:*",
+    "@goease/itinerary": "workspace:*",
+    "@goease/trip-client": "workspace:*",
+    "@goease/trip-storage": "workspace:*",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/google.maps": "3.58.1",
+    "@types/node": "^24.0.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "6.1.2",
-    "vite": "8.3.4",
-    "typescript": "~6.0.3",
     "eslint": "^9.39.5",
+    "tailwindcss": "4.3.3",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2",
-    "@playwright/test": "1.64.1",
-    "@goease/catalog": "workspace:*"
+    "vite": "8.3.4"
   }
 }

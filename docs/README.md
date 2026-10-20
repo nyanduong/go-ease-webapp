@@ -1,6 +1,21 @@
-# GoEase khởi động lại với Expo Go
+# Tài liệu GoEase
 
-Bộ tài liệu cho team phát triển lại GoEase, ngày 14/10/2026. Nền Expo + TypeScript đã có tại `apps/mobile`; xem [README root](../README.md) để cài dependency và chạy Expo Go. Mốc sản phẩm tiếp theo là luồng lập lịch trình trên Android và iPhone.
+Ứng dụng khách hàng hiện phát triển chính ở **PWA `apps/web`**; admin đã chuyển sang `apps/admin`. Expo vẫn được giữ. [Chạy PWA, bản đồ và offline](PWA.md) · [Cây dự án hiện tại](FOLDER_STRUCTURE.md). Các tài liệu theo issue/mốc Expo bên dưới giữ bối cảnh lịch sử.
+
+## Phạm vi sản phẩm hiện tại
+
+- [Định hướng mở rộng nhiều điểm đến với SerpApi](MULTI_DESTINATION_PLAN.md)
+- [MVP PWA đã chốt, luồng user/admin và thứ tự bàn giao](MVP_PRODUCT_PLAN.md)
+- [Cấu hình, UX, dữ liệu, offline và triển khai PWA](PWA.md)
+- [Cấu trúc thư mục](FOLDER_STRUCTURE.md)
+- [Kiến trúc backend](architecture/BACKEND.md)
+- [Admin catalog và quyền vận hành](ADMIN_CATALOG.md)
+
+Kế hoạch MVP cập nhật ngày 20/10/2026: bắt buộc đăng nhập Google, chỉ chuyến tài khoản, không có khách vãng lai. PWA/admin đã chuyển Google OAuth và account-only; xem [setup Google](GOOGLE_LOGIN.md). Nghiệm thu production/thiết bị vẫn là bước riêng. Dùng kế hoạch này cho phạm vi PWA; đối chiếu README/code và runbook tương ứng cho cách chạy hiện tại.
+
+## Các mốc Expo và hướng dẫn kỹ thuật trước đây
+
+Bộ tài liệu cho team phát triển lại GoEase, ngày 14/10/2026. Nền Expo + TypeScript đã có tại `apps/mobile`; xem [README root](../README.md) để cài dependency và chạy Expo Go. Các mô tả Expo bên dưới giữ bối cảnh mốc cũ; sản phẩm bàn giao đầu tiên hiện đi theo kế hoạch PWA ở trên.
 
 - [Công nghệ và tài liệu học](TECH_STACK.md)
 - [Cây thư mục đề xuất](FOLDER_STRUCTURE.md)

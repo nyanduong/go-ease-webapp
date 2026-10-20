@@ -25,7 +25,7 @@ test('missing budget differs from explicit zero; over/equal/remaining states are
   assert.equal(missing.budgetText, 'Chưa đặt'); assert.equal(missing.summary.remainingVnd, null); assert.equal(missing.warning, false);
   const zero = budgetView({ ...trip, budgetVnd: 0 }); assert.equal(zero.budgetText, '0 đ'); assert.equal(zero.summary.overBudgetVnd, 110000);
   const equal = budgetView({ ...trip, budgetVnd: 110000 }); assert.equal(equal.warning, false); assert.match(equal.difference, /bằng ngân sách/);
-  const remaining = budgetView({ ...trip, budgetVnd: 120000 }); assert.match(remaining.difference, /theo chi phí đã biết: 10\.000 đ/);
+  const remaining = budgetView({ ...trip, budgetVnd: 120000 }); assert.match(remaining.difference, /sau các khoản đã nhập: 10\.000 đ/);
   assert.match(remaining.completeness, /chưa đầy đủ/);
 });
 test('format VND accepts safe integer bounds and never rounds invalid money', () => {
@@ -64,7 +64,7 @@ test('removing final priced and final unknown activities never leaves stale tota
   assert.equal(budgetView(trip).summary.knownCostVnd, 0); assert.equal(budgetView(trip).summary.unknownCostCount, 1);
   const finalId = trip.days.flatMap(day => day.activities)[0].id;
   trip = removeActivity(trip, finalId);
-  const view = budgetView(trip); assert.equal(view.summary.unknownCostCount, 0); assert.match(view.completeness, /Chưa có hoạt động/);
+  const view = budgetView(trip); assert.equal(view.summary.unknownCostCount, 0); assert.match(view.completeness, /Thêm hoạt động/);
   assert.equal(view.days.every(day => day.knownCostVnd === 0 && day.unknownCostCount === 0), true);
 });
 test('trip total at cap is exact; adding beyond cap fails without altering draft', () => {
