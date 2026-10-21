@@ -138,3 +138,8 @@ The viewer now fades/scales in (220 ms) and out (160 ms); desktop thumbnails hav
 ### Remove credits from viewer — 2026-10-21
 
 Per the explicit request, the viewer no longer renders author/source/license controls or attribution text. It retains the image, location title, Close button, animations, Escape and backdrop closing. Asset provenance and license metadata remain in the distributed travel README and manifest. Build/lint and five related browser flows pass; assertions check that the viewer has no links, attribution details or credit text. Viewer screenshots updated.
+
+
+### Image-only viewer — 2026-10-21
+
+The viewer now shows only the full photograph against a dark backdrop. The white panel, visible location title and Close button are removed. The transparent dialog keeps an accessible label and closes through Escape or clicking outside; animations remain. Build/lint and the affected browser flows verify the frameless layout, absence of visible controls/text, image bounds and closing behavior. Viewer screenshots refreshed.

@@ -1504,7 +1504,12 @@ for (const [mode, viewport] of [
       enlargedBounds.width > thumbnailBounds.width,
       'photo opens larger than the trip thumbnail',
     );
-    assert.equal(await photoDialog.locator('a, details').count(), 0);
+    assert.equal(await photoDialog.locator('a, details, button, h2, p').count(), 0);
+    assert.equal(
+      await photoDialog.evaluate((node) => getComputedStyle(node).backgroundColor),
+      'rgba(0, 0, 0, 0)',
+    );
+    assert.equal(await photoDialog.evaluate((node) => getComputedStyle(node).padding), '0px');
     assert.doesNotMatch(await photoDialog.innerText(), /Ghi nhận ảnh|Xem nguồn|Bản quyền|CC BY/);
     const modalBounds = await photoDialog.boundingBox();
     assert(modalBounds.x >= 0 && modalBounds.x + modalBounds.width <= viewport.width);
@@ -1514,7 +1519,8 @@ for (const [mode, viewport] of [
     await page.mouse.click(2, 2);
     await photoDialog.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
-    await photoDialog.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await photoDialog.waitFor({ state: 'hidden' });
     assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
     await capture('trips');
     await page

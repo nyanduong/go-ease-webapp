@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { TravelPhoto } from './travel-photos';
 
 export function TravelPhotoView({
@@ -27,7 +27,6 @@ function PhotoChain({
   const [opened, setOpened] = useState(false);
   const [closing, setClosing] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
   const photo = photos[index];
   const closeViewer = () => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) dialog.current?.close();
@@ -61,7 +60,7 @@ function PhotoChain({
       </button>
       <dialog
         ref={dialog}
-        aria-labelledby={titleId}
+        aria-label="Thông tin ảnh"
         data-closing={closing || undefined}
         onClose={() => {
           setOpened(false);
@@ -85,28 +84,13 @@ function PhotoChain({
           )
             closeViewer();
         }}
-        className="photo-viewer fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl overflow-y-auto rounded-2xl border border-line bg-paper p-3 text-ink shadow-2xl backdrop:bg-ink/60 sm:p-5"
+        className="photo-viewer fixed inset-0 m-auto h-fit max-h-[calc(100dvh-2rem)] w-fit max-w-[calc(100%-2rem)] overflow-visible border-0 bg-transparent p-0 backdrop:bg-ink/80"
       >
-        <h2 id={titleId} className="sr-only">
-          Thông tin ảnh
-        </h2>
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold">{photo.alt}</p>
-          <div>
-            <button
-              type="button"
-              onClick={closeViewer}
-              className="min-h-11 rounded-xl border border-line px-4 text-sm font-semibold"
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
         {opened && (
           <img
             src={photo.src}
             alt={photo.alt}
-            className="mx-auto max-h-[70dvh] w-full rounded-xl bg-ink/5 object-contain"
+            className="block h-auto max-h-[calc(100dvh-2rem)] w-auto max-w-[calc(100vw-2rem)] object-contain"
             decoding="async"
             referrerPolicy="no-referrer"
             onError={() => setIndex((value) => value + 1)}
