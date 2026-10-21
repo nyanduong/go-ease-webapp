@@ -117,7 +117,19 @@ async function fixture(run) {
       issuer,
       A,
     ]);
-    await run({ A, B, prefix, request, create, update, base, token: tokens.A, advanceAuthWindow: () => { authClock += 60000; } });
+    await run({
+      A,
+      B,
+      prefix,
+      request,
+      create,
+      update,
+      base,
+      token: tokens.A,
+      advanceAuthWindow: () => {
+        authClock += 60000;
+      },
+    });
   } finally {
     await app.close();
   }
@@ -464,7 +476,13 @@ test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved
     );
     await failure(await request(null, 'GET', '/v1/content/' + id), 404, 'NOT_FOUND');
     const published = await update(draft, { status: 'published' });
-    const { tripIds } = await checkCmsDatabaseBrowser({ base, token, owner: A, record: published, advanceAuthWindow });
+    const { tripIds } = await checkCmsDatabaseBrowser({
+      base,
+      token,
+      owner: A,
+      record: published,
+      advanceAuthWindow,
+    });
     assert.equal(tripIds.length, 3);
     const trips = await admin.query(
       'SELECT id,"ownerSubject",destination FROM "Trip" WHERE id=ANY($1::varchar[])',
