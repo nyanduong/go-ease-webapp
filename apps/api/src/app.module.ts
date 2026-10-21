@@ -8,6 +8,7 @@ import { TripsModule } from './modules/trips/trips.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { DiscoveryModule } from './modules/discovery/discovery.module.js';
+import { ProfileMediaModule } from './modules/profile-media/profile-media.module.js';
 @Module({})
 export class AppModule {
   static register(config: ApiConfig, options: ApiOptions): DynamicModule {
@@ -22,6 +23,7 @@ export class AppModule {
         AiModule,
         HealthModule,
         DiscoveryModule,
+        ProfileMediaModule,
       ],
     };
   }

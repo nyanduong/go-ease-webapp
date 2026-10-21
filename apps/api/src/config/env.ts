@@ -25,6 +25,7 @@ const configSchema = z
   .object({
     API_HOST: z.enum(['127.0.0.1', '0.0.0.0', '::1', '::']).default('127.0.0.1'),
     API_PORT: integer(1, 65535, '3000'),
+    PROFILE_MEDIA_DIR: z.string().min(1).max(2048).default('.profile-media'),
     API_REQUEST_TIMEOUT_MS: integer(100, 30000, '5000'),
     API_RECEIVE_TIMEOUT_MS: integer(1000, 60000, '15000'),
     API_CORS_ORIGINS: z

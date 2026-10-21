@@ -11,6 +11,7 @@ import { AboutPage, TravelServices } from '../features/about/about-pages';
 import { PwaStatus } from '../platform/pwa';
 import { SampleTrip } from '../features/trips/sample-trip';
 import { Icon } from '../components/icon';
+import { ProfileAvatarImage } from '../features/account/profile-avatar';
 import { offlineDev } from '../platform/dev-mode';
 
 function Route({ path }: { path: string }) {
@@ -50,7 +51,7 @@ function Route({ path }: { path: string }) {
 }
 export function App() {
   const path = usePath();
-  const { session, trips, workspace } = useAccount();
+  const { session, trips, workspace, profile } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
   const publicPage = path === '/' || path === '/sample' || path === '/about';
   if (!publicPage && !offlineDev && session.phase !== 'backend-verified') return <LoginPage />;
@@ -94,7 +95,11 @@ export function App() {
               aria-label="Mở trang cá nhân"
               className="grid size-11 place-items-center rounded-full border border-line text-muted hover:bg-sand"
             >
-              <Icon name="account" />
+              {profile.value ? (
+                <ProfileAvatarImage profile={profile.value} small />
+              ) : (
+                <Icon name="account" />
+              )}
             </Link>
           </div>
         </header>
@@ -119,7 +124,7 @@ export function App() {
         </main>
         <footer className="mx-auto flex max-w-6xl flex-col gap-3 border-t border-line px-5 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-10 lg:pb-10">
           <p className="hidden text-sm text-muted lg:block">Đi cùng nhau, khám phá nhiều hơn.</p>
-          <PwaStatus showInstallHelp={path === '/account'} />
+          <PwaStatus />
         </footer>
       </div>
     </>

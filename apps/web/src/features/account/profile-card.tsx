@@ -1,42 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  PROFILE_AVATARS,
   validateProfile,
   type AccountProfile,
   type ProfileInput,
 } from '@goease/trip-client/account-profile';
 import { Button, Notice } from '../../components/ui';
 import { useLeaveGuard } from '../../app/router';
+import { ProfileAvatarImage as Avatar } from './profile-avatar';
+import { prepareProfileImage } from './profile-upload';
+import { accountSession } from './session';
 
-function Avatar({ profile, small = false }: { profile: AccountProfile; small?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  const preset = PROFILE_AVATARS.find((item) => item.id === profile.avatar);
-  const initials = profile.displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(-2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-paper bg-mint font-bold text-teal-dark shadow-sm ${small ? 'size-12 text-lg' : 'size-28 text-3xl sm:size-32'}`}
-    >
-      {profile.avatar === 'google' && profile.googleAvatarUrl && !failed ? (
-        <img
-          key={profile.googleAvatarUrl}
-          src={profile.googleAvatarUrl}
-          alt="Ảnh đại diện của bạn"
-          referrerPolicy="no-referrer"
-          className="size-full object-cover"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <span aria-label="Ảnh đại diện">{preset?.icon ?? initials}</span>
-      )}
-    </span>
-  );
-}
 export function ProfileCard({
   profile,
   busy,
@@ -54,15 +27,53 @@ export function ProfileCard({
     [draft, setDraft] = useState<ProfileInput>(profile),
     [validation, setValidation] = useState(''),
     [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const uploadController = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      uploadController.current?.abort();
+    };
+  }, []);
+  const locked = busy || uploading;
+  const shown = { ...profile, ...(editing ? draft : {}) };
+  async function upload(file: File | undefined, kind: 'avatar' | 'cover') {
+    if (!file || locked) return;
+    const controller = new AbortController();
+    uploadController.current = controller;
+    setUploading(true);
+    setValidation('');
+    setSaved(false);
+    try {
+      const jpeg = await prepareProfileImage(file, kind);
+      if (controller.signal.aborted) return;
+      const url = await accountSession.uploadProfileImage(jpeg, controller.signal);
+      if (mounted.current && !controller.signal.aborted)
+        setDraft((value) =>
+          kind === 'avatar'
+            ? { ...value, avatar: 'upload', avatarUrl: url }
+            : { ...value, coverUrl: url },
+        );
+    } catch (error) {
+      if (mounted.current && !controller.signal.aborted)
+        setValidation(error instanceof Error ? error.message : 'Chưa tải được ảnh.');
+    } finally {
+      if (mounted.current) setUploading(false);
+    }
+  }
   const dirty =
     editing &&
     (draft.displayName !== profile.displayName ||
       draft.bio !== profile.bio ||
-      draft.avatar !== profile.avatar);
-  useLeaveGuard(dirty, busy);
+      draft.avatar !== profile.avatar ||
+      draft.avatarUrl !== profile.avatarUrl ||
+      draft.coverUrl !== profile.coverUrl);
+  useLeaveGuard(dirty || uploading, locked);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (locked) return;
     setValidation('');
     setSaved(false);
     try {
@@ -82,28 +93,48 @@ export function ProfileCard({
       aria-label="Hồ sơ cá nhân"
     >
       <div className="relative h-28 overflow-hidden bg-teal-dark sm:h-36">
-        <span
-          aria-hidden="true"
-          className="absolute -top-20 right-4 size-64 rounded-full border-[28px] border-white/10"
-        />
-        <span
-          aria-hidden="true"
-          className="absolute top-14 right-40 size-48 rounded-full bg-orange/30"
-        />
-        <p className="absolute top-6 left-6 text-xs font-bold tracking-widest text-white/80 uppercase sm:left-8">
-          Đi cùng nhau, khám phá nhiều hơn.
-        </p>
+        {shown.coverUrl && (
+          <img
+            key={shown.coverUrl}
+            src={shown.coverUrl}
+            alt="Ảnh bìa của bạn"
+            className="absolute inset-0 size-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
+          />
+        )}
+        {!shown.coverUrl && (
+          <>
+            <span
+              aria-hidden="true"
+              className="absolute -top-20 right-4 size-64 rounded-full border-[28px] border-white/10"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute top-14 right-40 size-48 rounded-full bg-orange/30"
+            />
+            <p
+              className={`${shown.coverUrl ? 'hidden' : ''} absolute top-6 left-6 text-xs font-bold tracking-widest text-white/80 uppercase sm:left-8`}
+            >
+              Đi cùng nhau, khám phá nhiều hơn.
+            </p>
+          </>
+        )}
       </div>
       <div className="px-5 pb-6 sm:px-8 sm:pb-8">
         <div className="relative -mt-12 flex flex-wrap items-end justify-between gap-4">
           <Avatar
-            key={(editing ? draft.avatar : profile.avatar) + (profile.googleAvatarUrl ?? '')}
+            key={
+              (editing ? draft.avatar : profile.avatar) +
+              (shown.avatarUrl ?? profile.googleAvatarUrl ?? '')
+            }
             profile={{ ...profile, ...(editing ? draft : {}) }}
           />
           {!editing && (
             <Button
               secondary
-              disabled={busy}
+              disabled={locked}
               onClick={() => {
                 setDraft(profile);
                 setEditing(true);
@@ -138,44 +169,65 @@ export function ProfileCard({
               void submit(event);
             }}
           >
-            <fieldset disabled={busy} className="flex flex-col gap-4">
-              <legend className="mb-3 text-sm font-bold text-teal-dark">Ảnh đại diện</legend>
-              <div className="flex flex-wrap gap-3">
-                <label className="relative cursor-pointer">
+            <fieldset disabled={locked} className="grid gap-4 sm:grid-cols-2">
+              <legend className="mb-3 text-sm font-bold text-teal-dark">Ảnh của bạn</legend>
+              <div className="flex flex-col gap-2">
+                <label className="flex cursor-pointer flex-col gap-2 text-sm font-medium">
+                  Ảnh đại diện
                   <input
-                    type="radio"
-                    name="avatar"
-                    value="google"
-                    checked={draft.avatar === 'google'}
-                    onChange={() => setDraft({ ...draft, avatar: 'google' })}
-                    className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
-                    aria-label="Ảnh Google"
+                    type="file"
+                    className="text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-sand file:px-3 file:py-2 file:text-ink"
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-label="Tải ảnh đại diện"
+                    onChange={(event) => {
+                      void upload(event.target.files?.[0], 'avatar');
+                      event.target.value = '';
+                    }}
                   />
-                  <span className="flex min-h-16 items-center gap-2 rounded-2xl border border-line p-2 peer-checked:border-teal peer-checked:bg-mint peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-teal">
-                    <Avatar small profile={{ ...profile, avatar: 'google' }} />
-                    <span className="pr-2 text-xs font-bold">Google</span>
-                  </span>
                 </label>
-                {PROFILE_AVATARS.map((avatar) => (
-                  <label key={avatar.id} className="relative cursor-pointer">
-                    <input
-                      type="radio"
-                      name="avatar"
-                      value={avatar.id}
-                      checked={draft.avatar === avatar.id}
-                      onChange={() => setDraft({ ...draft, avatar: avatar.id })}
-                      className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0"
-                      aria-label={avatar.label}
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="flex size-16 items-center justify-center rounded-2xl border border-line text-3xl peer-checked:border-teal peer-checked:bg-mint peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-teal"
-                    >
-                      {avatar.icon}
-                    </span>
-                  </label>
-                ))}
+                {draft.avatar === 'upload' && (
+                  <button
+                    type="button"
+                    className="text-left text-xs text-teal"
+                    onClick={() => setDraft({ ...draft, avatar: 'google', avatarUrl: null })}
+                  >
+                    Dùng lại ảnh Google
+                  </button>
+                )}
               </div>
+              <div className="flex flex-col gap-2">
+                <label className="flex cursor-pointer flex-col gap-2 text-sm font-medium">
+                  Ảnh bìa
+                  <input
+                    type="file"
+                    className="text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-sand file:px-3 file:py-2 file:text-ink"
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-label="Tải ảnh bìa"
+                    onChange={(event) => {
+                      void upload(event.target.files?.[0], 'cover');
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+                {draft.coverUrl && (
+                  <button
+                    type="button"
+                    className="text-left text-xs text-teal"
+                    onClick={() => setDraft({ ...draft, coverUrl: null })}
+                  >
+                    Gỡ ảnh bìa
+                  </button>
+                )}
+              </div>
+              <p className="text-xs font-normal text-muted sm:col-span-2">
+                JPG, PNG hoặc WebP, tối đa 10 MB. Ảnh được cắt giữa khung; bấm Lưu hồ sơ để giữ thay
+                đổi.
+              </p>
+              {uploading && (
+                <p role="status" className="text-sm text-muted">
+                  Đang tải ảnh lên…
+                </p>
+              )}
             </fieldset>
             <div className="grid gap-5 md:grid-cols-2">
               <label className="flex min-w-0 flex-col gap-2 text-sm font-bold">
@@ -187,7 +239,7 @@ export function ProfileCard({
                   required
                   value={draft.displayName}
                   onChange={(event) => setDraft({ ...draft, displayName: event.target.value })}
-                  disabled={busy}
+                  disabled={locked}
                   className="min-h-12 w-full rounded-2xl border border-line bg-cream px-4 font-normal text-teal-dark focus:outline-2 focus:outline-teal"
                 />
               </label>
@@ -211,7 +263,7 @@ export function ProfileCard({
                 rows={3}
                 value={draft.bio}
                 onChange={(event) => setDraft({ ...draft, bio: event.target.value })}
-                disabled={busy}
+                disabled={locked}
                 placeholder="Ví dụ: Thích cà phê, săn mây và những chuyến đi cùng bạn bè."
                 className="w-full resize-y rounded-2xl border border-line bg-cream p-4 font-normal text-teal-dark focus:outline-2 focus:outline-teal"
               />
@@ -221,12 +273,12 @@ export function ProfileCard({
             </label>
             {validation && <Notice error>{validation}</Notice>}
             <div className="flex flex-wrap gap-3">
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={locked}>
                 {busy ? 'Đang lưu hồ sơ…' : 'Lưu hồ sơ'}
               </Button>
               <Button
                 secondary
-                disabled={busy}
+                disabled={locked}
                 onClick={() => {
                   setDraft(profile);
                   setEditing(false);
@@ -244,7 +296,7 @@ export function ProfileCard({
               {error}
               <Button
                 secondary
-                disabled={busy}
+                disabled={locked}
                 onClick={() => {
                   void reload();
                 }}

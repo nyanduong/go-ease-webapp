@@ -6,11 +6,13 @@ export const PROFILE_AVATARS = [
   { id: 'coffee', label: 'Cà phê', icon: '☕' },
   { id: 'palm', label: 'Biển xanh', icon: '🌴' },
 ] as const;
-export type ProfileAvatar = 'google' | (typeof PROFILE_AVATARS)[number]['id'];
+export type ProfileAvatar = 'google' | 'upload' | (typeof PROFILE_AVATARS)[number]['id'];
 export interface ProfileInput {
   displayName: string;
   bio: string;
   avatar: ProfileAvatar;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
 }
 export interface AccountProfile extends ProfileInput {
   email: string | null;
@@ -31,9 +33,40 @@ export function validateProfile(input: ProfileInput): ProfileInput {
     /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(input.bio)
   )
     throw Error('Giới thiệu ngắn tối đa 160 ký tự.');
-  if (input.avatar !== 'google' && !PROFILE_AVATARS.some((avatar) => avatar.id === input.avatar))
-    throw Error('Chọn một ảnh đại diện có sẵn.');
-  return { displayName: input.displayName.trim(), bio: input.bio.trim(), avatar: input.avatar };
+  if (
+    input.avatar !== 'google' &&
+    input.avatar !== 'upload' &&
+    !PROFILE_AVATARS.some((avatar) => avatar.id === input.avatar)
+  )
+    throw Error('Chọn ảnh đại diện hợp lệ.');
+  for (const value of [input.avatarUrl, input.coverUrl])
+    if (value !== undefined && value !== null && !profilePhotoUrl(value))
+      throw Error('Ảnh hồ sơ không hợp lệ. Hãy tải ảnh từ máy lên.');
+  if (input.avatar === 'upload' && !input.avatarUrl) throw Error('Chọn ảnh đại diện từ máy.');
+  return {
+    displayName: input.displayName.trim(),
+    bio: input.bio.trim(),
+    avatar: input.avatar,
+    ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
+    ...(input.coverUrl !== undefined ? { coverUrl: input.coverUrl } : {}),
+  };
+}
+export function profilePhotoUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    return !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      (url.protocol === 'https:' ||
+        (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) &&
+      /^\/v1\/profile-media\/[a-f0-9]{24}-[a-f0-9-]{36}\.jpg$/.test(url.pathname)
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
 }
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)

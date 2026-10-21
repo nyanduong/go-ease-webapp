@@ -231,6 +231,18 @@ async function profileRequest(input?: ProfileInput) {
   }
 }
 export const accountSession = {
+  async uploadProfileImage(jpeg: string, signal?: AbortSignal) {
+    const owner = session.userId,
+      epoch = lifecycle;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi.');
+    const url = await auth.uploadProfileImage(jpeg, signal);
+    assertSessionOwner();
+    if (owner !== session.userId || epoch !== lifecycle) throw Error('Tài khoản đã thay đổi.');
+    return url;
+  },
   async searchDestinations(query: string, signal?: AbortSignal) {
     if (offlineDev) {
       const normalize = (value: string) =>

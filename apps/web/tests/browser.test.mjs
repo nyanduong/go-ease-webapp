@@ -83,6 +83,9 @@ async function setup(options = {}) {
     lose: false,
     mapFail: false,
     profiles: new Map(),
+    media: new Map(),
+    mediaWrites: [],
+    mediaFail: false,
     profileWrites: [],
     profileFail: false,
     shortSession: false,
@@ -189,6 +192,25 @@ async function setup(options = {}) {
       method = request.method();
     if (method === 'OPTIONS') return reply(route, {});
     const owner = request.headers().authorization === 'Bearer ' + tokens.B ? 'B' : 'A';
+    if (url.pathname.startsWith('/v1/profile-media/') && method === 'GET') {
+      const bytes = state.media.get(url.pathname);
+      return route.fulfill({
+        status: bytes ? 200 : 404,
+        contentType: 'image/jpeg',
+        body: bytes ?? Buffer.from(''),
+        headers: cors,
+      });
+    }
+    if (url.pathname === '/v1/profile-media' && method === 'POST') {
+      if (state.mediaFail) return fail(route, 503, 'INTERNAL_ERROR');
+      assert.equal(request.headers().authorization, 'Bearer ' + tokens[owner]);
+      const data = request.postDataJSON();
+      const path =
+        '/v1/profile-media/' + (owner === 'A' ? 'a' : 'b').repeat(24) + '-' + randomUUID() + '.jpg';
+      state.media.set(path, Buffer.from(data.jpeg, 'base64'));
+      state.mediaWrites.push({ owner, path });
+      return reply(route, { apiVersion: '1', path }, 201);
+    }
     if (url.pathname === '/v1/auth/me' && state.backendUnavailable)
       return fail(route, 503, 'AUTH_UNAVAILABLE');
     if (url.pathname === '/v1/auth/me')
@@ -1150,7 +1172,17 @@ test('profile shows Google identity, persists edits across reload and isolates a
   assert.equal(await page.getByLabel('Email Google', { exact: true }).getAttribute('readonly'), '');
   await page.getByLabel('Tên hiển thị', { exact: true }).fill('Nyan đi Đà Lạt');
   await page.getByLabel('Giới thiệu ngắn', { exact: true }).fill('Thích săn mây và cà phê.');
-  await page.getByRole('radio', { name: 'Cắm trại', exact: true }).check();
+  assert.equal(await page.getByRole('radio').count(), 0);
+  await page
+    .getByLabel('Tải ảnh đại diện', { exact: true })
+    .setInputFiles(root + '/public/travel/da-lat.webp');
+  await page
+    .locator('section[aria-label="Hồ sơ cá nhân"] img[src*="/v1/profile-media/"]')
+    .waitFor();
+  await page
+    .getByLabel('Tải ảnh bìa', { exact: true })
+    .setInputFiles(root + '/public/travel/hoi-an.webp');
+  await page.getByRole('img', { name: 'Ảnh bìa của bạn', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Lưu hồ sơ', exact: true }).click();
   await page.getByText('Đã lưu hồ sơ của bạn.', { exact: true }).waitFor();
   assert.deepEqual(state.profileWrites[0], {
@@ -1160,7 +1192,9 @@ test('profile shows Google identity, persists edits across reload and isolates a
         goease_profile: {
           displayName: 'Nyan đi Đà Lạt',
           bio: 'Thích săn mây và cà phê.',
-          avatar: 'tent',
+          avatar: 'upload',
+          avatarUrl: 'https://api.goease.test' + state.mediaWrites[0].path,
+          coverUrl: 'https://api.goease.test' + state.mediaWrites[1].path,
         },
       },
     },
@@ -1168,6 +1202,24 @@ test('profile shows Google identity, persists edits across reload and isolates a
   await page.reload();
   await page.getByRole('heading', { name: 'Nyan đi Đà Lạt', exact: true }).waitFor();
   await page.getByText('Thích săn mây và cà phê.', { exact: true }).waitFor();
+  assert.equal(
+    await page
+      .getByRole('link', { name: 'Mở trang cá nhân', exact: true })
+      .locator('img')
+      .getAttribute('src'),
+    'https://api.goease.test' + state.mediaWrites[0].path,
+  );
+  await page.getByRole('img', { name: 'Ảnh bìa của bạn', exact: true }).waitFor();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event('beforeinstallprompt', { cancelable: true })),
+  );
+  assert.equal(await page.getByRole('button', { name: 'Cài GoEase', exact: true }).count(), 0);
+  const photoFolder = root + '/../../docs/qa/warm-refinement/after';
+  await mkdir(photoFolder, { recursive: true });
+  await page
+    .getByRole('img', { name: 'Ảnh bìa của bạn', exact: true })
+    .evaluate((img) => img.decode());
+  await page.screenshot({ path: photoFolder + '/profile-photos-mobile.png', fullPage: true });
   await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
   await page.getByLabel('Tên hiển thị', { exact: true }).fill('Tên chưa lưu');
   await page.getByRole('button', { name: 'Hủy chỉnh sửa', exact: true }).click();
@@ -1179,7 +1231,37 @@ test('profile shows Google identity, persists edits across reload and isolates a
   await page.goto(base + '/account');
   await page.getByRole('heading', { name: 'Bạn B', exact: true }).waitFor();
   assert.equal(await page.getByText('Nyan đi Đà Lạt', { exact: true }).count(), 0);
+  assert.equal(await page.locator('img[src*="/v1/profile-media/"]').count(), 0);
   await finish(f, 'profile-mobile');
+});
+
+test('profile photo upload validates files, preserves text on failure and cancels an uploaded draft', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  await login(page, '/account');
+  await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+  await page.getByLabel('Tên hiển thị', { exact: true }).fill('Tên đang sửa');
+  await page
+    .getByLabel('Tải ảnh đại diện', { exact: true })
+    .setInputFiles({ name: 'bad.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') });
+  await page.getByText('Chọn ảnh JPG, PNG hoặc WebP.', { exact: true }).waitFor();
+  assert.equal(state.mediaWrites.length, 0);
+  state.mediaFail = true;
+  await page
+    .getByLabel('Tải ảnh bìa', { exact: true })
+    .setInputFiles(root + '/public/travel/hoi-an.webp');
+  await page.getByText('Offline fixture', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel('Tên hiển thị', { exact: true }).inputValue(), 'Tên đang sửa');
+  assert.equal(state.profileWrites.length, 0);
+  state.mediaFail = false;
+  await page
+    .getByLabel('Tải ảnh bìa', { exact: true })
+    .setInputFiles(root + '/public/travel/hoi-an.webp');
+  await page.getByRole('img', { name: 'Ảnh bìa của bạn', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Hủy chỉnh sửa', exact: true }).click();
+  assert.equal(await page.getByRole('img', { name: 'Ảnh bìa của bạn', exact: true }).count(), 0);
+  assert.equal(state.profileWrites.length, 0);
+  await finish(f, 'profile-photo-cancel');
 });
 
 test('failed profile save preserves draft, requires explicit retry and fits mobile/desktop', async () => {

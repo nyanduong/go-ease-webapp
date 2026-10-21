@@ -93,9 +93,9 @@ Ngân sách phân biệt chưa có dữ liệu, tổng một phần và tổng �
 
 ## Hồ sơ cá nhân
 
-Mục Tài khoản hiển thị tên, email và ảnh đại diện Google. **Chỉnh sửa hồ sơ** cho phép đổi tên hiển thị (1–80 ký tự), giới thiệu ngắn (tối đa 160 ký tự), chọn ảnh Google hoặc 6 avatar du lịch có sẵn. Chưa hỗ trợ tải ảnh cá nhân lên. Email lấy từ danh tính Google và chỉ đọc.
+Mục Tài khoản hiển thị tên, email và ảnh đại diện Google. **Chỉnh sửa hồ sơ** cho phép đổi tên hiển thị (1–80 ký tự), giới thiệu ngắn (tối đa 160 ký tự), tải ảnh đại diện và ảnh bìa từ máy (JPG/PNG/WebP, tối đa 10 MB mỗi file), hoặc dùng lại ảnh Google. Bộ avatar có sẵn đã được bỏ. Avatar ở góc phải dùng ảnh đang lưu trong hồ sơ. Email lấy từ danh tính Google và chỉ đọc.
 
-Lưu qua endpoint user của Supabase dưới `user_metadata.goease_profile`, theo [cơ chế cập nhật metadata của Supabase](https://supabase.com/docs/reference/javascript/auth-updateuser). Đây chỉ là thông tin hiển thị, không thay Google profile, ownership, JWT subject hoặc quyền admin. Metadata Google khác được giữ nguyên; client chỉ gửi ba trường cho phép. Dữ liệu hồ sơ không lưu vào localStorage/IndexedDB và được ẩn cùng phiên riêng. Lưu lỗi giữ form, không tự gửi lại; tải lại hồ sơ để đối soát khi chưa rõ kết quả. Có Lưu/Hủy và cảnh báo rời trang khi còn thay đổi.
+Lưu qua endpoint user của Supabase dưới `user_metadata.goease_profile`, theo [cơ chế cập nhật metadata của Supabase](https://supabase.com/docs/reference/javascript/auth-updateuser). Đây chỉ là thông tin hiển thị, không thay Google profile, ownership, JWT subject hoặc quyền admin. Metadata Google khác được giữ nguyên; client chỉ gửi tên, giới thiệu, lựa chọn avatar và đường dẫn ảnh đại diện/ảnh bìa đã tải lên. File ảnh được tối ưu thành JPEG, lưu qua API; không nhúng dữ liệu ảnh vào auth metadata/JWT. Dữ liệu hồ sơ không lưu vào localStorage/IndexedDB và được ẩn cùng phiên riêng. Lưu lỗi giữ form, không tự gửi lại; tải lại hồ sơ để đối soát khi chưa rõ kết quả. Có Lưu/Hủy và cảnh báo rời trang khi còn thay đổi.
 
 Phần chuyển chuyến cũ được thu gọn trong **Dữ liệu chuyến đi cũ** bên dưới hồ sơ. Gia hạn phiên diễn ra tự động, không còn nút Khôi phục phiên.
 
@@ -121,6 +121,8 @@ Xem [Google OAuth](GOOGLE_LOGIN.md) để cấu hình provider, callback và HTT
 Giao diện AI beta PWA được tạm tắt trong lần chuyển sang tài khoản bắt buộc. Backend/Expo giữ mã hiện có; áp dụng AI vào nháp tài khoản cần triển khai và nghiệm thu riêng. Các biến `VITE_AI_*` cũ không bật UI nữa.
 
 ## Cài PWA và offline
+
+Nút “Cài GoEase” và hướng dẫn cài trong ứng dụng đã được bỏ; luồng cài đặt do landing page riêng đảm nhiệm. Service worker, cảnh báo mất mạng và cập nhật phiên bản vẫn hoạt động.
 
 ```powershell
 pnpm build:web
@@ -152,3 +154,12 @@ pnpm build
 ```
 
 Browser test build `dist-test` với URL/provider fixture, không chứa env cá nhân hay gọi cloud; production vẫn ở `dist`. API/PostgreSQL/admin có harness thật cô lập riêng. Các test mobile tiếp tục chạy qua controller dùng chung.
+
+
+## Lưu trữ ảnh hồ sơ
+
+`POST /v1/profile-media` nhận JSON `{jpeg: base64}` sau khi kiểm tra phiên Google bằng AuthVerifier. Client crop giữa khung (avatar 512×512, cover 1200×450) và giảm dung lượng; API chỉ nhận JPEG tối đa 180 KiB, kiểm tra chữ ký/kích thước tối đa 1600px. Giới hạn body riêng của endpoint là 256 KiB; các endpoint nhỏ khác vẫn giữ 8 KiB. Mỗi tài khoản có tối đa 50 file, một upload đồng thời/process. Trường chủ sở hữu do client gửi bị từ chối.
+
+Ảnh lưu tại `PROFILE_MEDIA_DIR` (mặc định `apps/api/.profile-media` khi chạy script API) với tên hash tài khoản + UUID. Đây là file công khai theo URL khó đoán để hiển thị avatar/cover, không phải kho ảnh riêng tư. `GET /v1/profile-media/:id` chỉ đọc tên file đúng định dạng, trả JPEG và nosniff. Trạng thái hồ sơ chỉ đổi sau Lưu hồ sơ; Hủy không đổi hồ sơ đã lưu. File đã upload nhưng chưa lưu/hủy có thể còn trong kho và tính vào hạn mức.
+
+Khi deploy phải gắn `PROFILE_MEDIA_DIR` vào **volume bền vững**, backup thư mục cùng dữ liệu và giữ API origin ổn định. Storage mặc định dành một API instance; triển khai nhiều instance cần storage dùng chung và quota phối hợp. Không dùng filesystem tạm của container cho dữ liệu người dùng. Metadata ảnh cũ vẫn đọc được; preset cũ được hỗ trợ ở tầng dữ liệu nhưng giao diện hiển thị ảnh Google thay preset. Không có database migration.

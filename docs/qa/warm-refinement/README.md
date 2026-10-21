@@ -152,3 +152,12 @@ Generated results now replace the creation form with a focused review step inste
 “Sửa thông tin chuyến” restores the populated form. “Xem lại lịch gợi ý” returns to the retained result without another provider request; changing inputs invalidates the old result as before. Replacements survive changing days and continue through the existing draft/save flow. Entering review scrolls to the top and focuses its heading. Ownership, cancellation, draft durability, validation and manual creation remain unchanged.
 
 Validation: web production build/lint passed; all 49 existing browser scenarios passed, plus three new four-day layout checks at 360/390/1440px. Targeted flows verify hidden form, one-day rendering, keyboard switching, retained inputs/replacements, no extra provider calls, action placement above navigation and save/reopen. Screenshots: `after/preview-360.png`, `after/preview-390.png`, `after/preview-1440.png`.
+
+
+## Personal photo uploads and install entry removal — 2026-10-21
+
+The in-app install button/help is removed; offline/update handling remains. The header uses the saved account avatar, falling back to initials when an image cannot load. Profile editing replaces preset radios with local avatar/cover file pickers, preview, restore-Google/remove-cover actions and explicit Save/Cancel. Normalized photos are uploaded to authenticated API storage; only bounded URLs are saved in Supabase display metadata. Account changes/unmount cancel pending upload results; image failures retain input.
+
+The API uses a durable local media directory configured by `PROFILE_MEDIA_DIR`; deployment/storage limits and the public-image URL contract are documented in [PWA operations](../../PWA.md#lưu-trữ-ảnh-hồ-sơ). Uploads require verified identity, reject extra fields/invalid JPEGs/oversized bodies and survive API restarts. No database migration. Verification covers avatar/cover save and reload, synchronized header avatar, account isolation, invalid files, network failure, cancellation and absence of the install button. Screenshot: `after/profile-photos-mobile.png`.
+
+Validation for this follow-up: 53 browser scenarios, 85 API tests, 39 web logic tests, workspace typechecks, changed-package lint, formatting and web build passed. The local API was restarted with the upload endpoint; unauthenticated upload returns 401 and health/catalog return 200.
