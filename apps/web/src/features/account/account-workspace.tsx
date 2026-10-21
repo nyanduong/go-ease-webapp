@@ -17,6 +17,10 @@ export function AccountWorkspace({
   id?: string;
 }) {
   const { trips, catalog } = useAccount();
+  const [cancelPath] = useState(() => {
+    const content = new URLSearchParams(location.search).get('content');
+    return content ? `/explore/${encodeURIComponent(content)}` : '/trips';
+  });
   const [creating, setCreating] = useState(mode === 'new'),
     [created, setCreated] = useState<string | null>(null),
     [deleted, setDeleted] = useState(false),
@@ -56,8 +60,8 @@ export function AccountWorkspace({
     if (created && !creating) navigate(`/trips/${encodeURIComponent(created)}`, true);
   }, [created, creating]);
   useEffect(() => {
-    if (cancelled && !creating) navigate('/trips', true);
-  }, [cancelled, creating]);
+    if (cancelled && !creating) navigate(cancelPath, true);
+  }, [cancelled, creating, cancelPath]);
   useEffect(() => {
     if (deleted && !trips.busy) navigate('/trips', true);
   }, [deleted, trips.busy]);
@@ -314,9 +318,6 @@ export function AccountWorkspace({
           <p className="max-w-md text-muted">
             Chọn một điểm đến, tạo lịch trình rồi lưu lại ở đây để mở bất cứ khi nào có kết nối.
           </p>
-          <Link href="/sample" className="text-action text-teal underline">
-            Xem thử lịch trình mẫu
-          </Link>
         </div>
       )}
       {mode === 'list' && !creating && (
@@ -332,6 +333,7 @@ export function AccountWorkspace({
       {creating && (
         <NewAccountTrip
           disabled={locked}
+          cancelDisabled={blocked || !!trips.pending}
           onCancel={() => {
             setCreating(false);
             setCancelled(true);

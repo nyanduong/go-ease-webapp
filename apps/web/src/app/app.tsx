@@ -89,7 +89,9 @@ export function App() {
         Đến nội dung chính
       </a>
       <Navigation path={path} />
-      <div className="min-w-0 lg:ml-64">
+      <div
+        className={`min-w-0 lg:ml-64 ${path === '/' || path === '/explore' ? 'discovery-shell' : ''}`}
+      >
         <header
           className={[
             path.startsWith('/trips/') || path === '/sample' ? 'hidden lg:block' : '',
@@ -97,26 +99,39 @@ export function App() {
           ].join(' ')}
         >
           <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4">
-            <div className="lg:hidden">
+            <div className={path === '/' || path === '/explore' ? '' : 'lg:hidden'}>
               <Brand />
             </div>
-            <Link
-              href="/"
-              className="hidden min-h-11 items-center text-sm text-muted lg:inline-flex"
-            >
-              Một chuyến đi, theo cách bạn thích.
-            </Link>
-            <Link
-              href="/account"
-              aria-label="Mở trang cá nhân"
-              className="grid size-11 place-items-center rounded-full border border-line text-muted hover:bg-sand"
-            >
-              {profile.value ? (
-                <ProfileAvatarImage profile={profile.value} small />
-              ) : (
-                <Icon name="account" />
+            {path !== '/' && path !== '/explore' && (
+              <Link
+                href="/"
+                className="hidden min-h-11 items-center text-sm text-muted lg:inline-flex"
+              >
+                Một chuyến đi, theo cách bạn thích.
+              </Link>
+            )}
+            <div className="flex items-center gap-2">
+              {path === '/' && (
+                <Link
+                  href="/favorites"
+                  className="favorites-shortcut"
+                  aria-label="Yêu thích của tôi"
+                >
+                  <Icon name="heart" />
+                </Link>
               )}
-            </Link>
+              <Link
+                href="/account"
+                aria-label="Mở trang cá nhân"
+                className="grid size-11 place-items-center rounded-full border border-line text-muted hover:bg-sand"
+              >
+                {profile.value ? (
+                  <ProfileAvatarImage profile={profile.value} small />
+                ) : (
+                  <Icon name="account" />
+                )}
+              </Link>
+            </div>
           </div>
         </header>
         <main

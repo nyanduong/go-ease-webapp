@@ -126,7 +126,7 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
         await contentLink().waitFor();
         await screenshot('home-real-db-auth-fixture');
         await page
-          .getByLabel('Tìm cảm hứng cho chuyến tiếp theo', { exact: true })
+          .getByLabel('Tìm điểm đến, địa điểm, món ngon…', { exact: true })
           .fill(record.entry.title);
         await page.getByRole('button', { name: 'Tìm nội dung', exact: true }).click();
         await page.waitForURL(/\/explore\?q=/);

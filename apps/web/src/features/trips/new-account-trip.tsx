@@ -40,10 +40,12 @@ const interests = [
 
 export function NewAccountTrip({
   disabled,
+  cancelDisabled = disabled,
   onCancel,
   onCreate,
 }: {
   disabled: boolean;
+  cancelDisabled?: boolean;
   onCancel: () => void;
   onCreate: (trip: Trip) => Promise<void>;
 }) {
@@ -171,13 +173,13 @@ export function NewAccountTrip({
   const controller = useRef<AbortController | null>(null);
   const confirming = useRef(false),
     mounted = useRef(true),
-    current = useRef({ form, selectedInterests, disabled, busy, destinationBusy });
-  current.current = { form, selectedInterests, disabled, busy, destinationBusy };
+    current = useRef({ form, selectedInterests, cancelDisabled, busy, destinationBusy });
+  current.current = { form, selectedInterests, cancelDisabled, busy, destinationBusy };
   const changed =
     JSON.stringify(form) !== JSON.stringify(initial) ||
     selectedInterests.length > 0 ||
     pace !== 'relaxed';
-  useLeaveGuard(changed, disabled || busy || destinationBusy);
+  useLeaveGuard(changed, cancelDisabled || busy || destinationBusy);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -186,9 +188,10 @@ export function NewAccountTrip({
     };
   }, []);
   async function cancel() {
-    if (confirming.current || disabled || busy || destinationBusy) return;
+    if (confirming.current || cancelDisabled || busy || destinationBusy) return;
     const snapshot = current.current,
-      owner = accountTrips.getSnapshot().owner;
+      accountBefore = accountTrips.getSnapshot(),
+      owner = accountBefore.owner;
     confirming.current = true;
     try {
       if (
@@ -206,7 +209,7 @@ export function NewAccountTrip({
         account = accountTrips.getSnapshot();
       if (
         !mounted.current ||
-        latest.disabled ||
+        latest.cancelDisabled ||
         latest.busy ||
         latest.destinationBusy ||
         latest.form !== snapshot.form ||
@@ -214,7 +217,7 @@ export function NewAccountTrip({
         !account.ready ||
         account.busy ||
         account.pending ||
-        account.draft ||
+        account.draft !== accountBefore.draft ||
         account.owner !== owner
       )
         return;
@@ -364,7 +367,12 @@ export function NewAccountTrip({
       aria-label="Lên kế hoạch chuyến đi"
     >
       <div>
-        <button type="button" className="text-action mb-4" onClick={() => void cancel()}>
+        <button
+          type="button"
+          className="text-action mb-4"
+          disabled={cancelDisabled || busy || destinationBusy}
+          onClick={() => void cancel()}
+        >
           <Icon name="back" /> Tạo chuyến đi
         </button>
         <h1 ref={formHeading} tabIndex={-1} className="outline-none">
@@ -479,7 +487,7 @@ export function NewAccountTrip({
           </Button>
           <Button
             secondary
-            disabled={disabled || busy || destinationBusy}
+            disabled={cancelDisabled || busy || destinationBusy}
             onClick={() => {
               void cancel();
             }}

@@ -248,10 +248,10 @@ for (const [mode, viewport] of [
     await page.getByRole('heading', { name: 'Ninh Bình', exact: true }).waitFor();
     assert.equal(await page.getByRole('heading', { name: 'Tiếp tục chuyến gần nhất' }).count(), 0);
     for (const name of [
-      'Điểm đến nổi bật',
+      'Bạn muốn đi đâu?',
       'Địa điểm đáng ghé',
-      'Ẩm thực & đặc sản',
-      'Cẩm nang du lịch',
+      'Ăn gì ở đây?',
+      'Kinh nghiệm cho chuyến đi',
     ])
       await page.getByRole('region', { name }).waitFor();
     await page.screenshot({
@@ -259,10 +259,14 @@ for (const [mode, viewport] of [
       fullPage: true,
       animations: 'disabled',
     });
-    await page.getByLabel('Tìm cảm hứng cho chuyến tiếp theo').fill('Tràng An');
+    await page.getByLabel('Tìm điểm đến, địa điểm, món ngon…').fill('Tràng An');
     await page.getByRole('button', { name: 'Tìm nội dung', exact: true }).click();
     await page.getByRole('heading', { name: 'Tràng An', exact: true }).waitFor();
     await page.getByRole('link', { name: 'Điểm đến', exact: true }).click();
+    await page.getByText('Chưa có nội dung phù hợp.', { exact: false }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('q'), 'Tràng An');
+    await page.getByLabel('Tìm nội dung du lịch').fill('Ninh Bình');
+    await page.getByRole('button', { name: 'Tìm nội dung', exact: true }).click();
     await page.getByRole('heading', { name: 'Ninh Bình', exact: true }).waitFor();
     await page.getByRole('link', { name: 'Ninh Bình', exact: true }).click();
     await page.getByRole('heading', { name: 'Ninh Bình', exact: true }).waitFor();
@@ -324,6 +328,52 @@ for (const [mode, viewport] of [
   });
 }
 
+test('editorial planning back remains available with an existing draft and preserves that draft', async () => {
+  const f = await setup({ width: 1440, height: 1000 });
+  const { page, calls } = f;
+  try {
+    await page.goto(base + '/trips/new?content=' + destination.id);
+    await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Bản nháp cần giữ');
+    await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2099-10-20');
+    await page.getByRole('button', { name: 'Tạo lịch trống', exact: true }).click();
+    await page.getByRole('button', { name: 'Giữ chuyến này', exact: true }).waitFor();
+    const draftUrl = page.url();
+    await page.goto(base + '/explore/trang-an');
+    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).click();
+    await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole('button', { name: 'Tạo lịch trống', exact: true }).isEnabled(),
+      false,
+    );
+    await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Hủy tạo chuyến đi?', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Tiếp tục nhập', exact: true }).click();
+    assert.equal(new URL(page.url()).pathname, '/trips/new');
+    await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click();
+    await page.getByRole('button', { name: 'Bỏ thông tin', exact: true }).click();
+    await page.waitForURL(base + '/explore/trang-an');
+    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).click();
+    await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
+    await page.goBack();
+    await page.getByRole('button', { name: 'Rời trang', exact: true }).click();
+    await page.waitForURL(base + '/explore/trang-an');
+    await page.goto(draftUrl);
+    await page.getByRole('button', { name: 'Giữ chuyến này', exact: true }).waitFor();
+    assert.equal(
+      await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
+      'Bản nháp cần giữ',
+    );
+    assert.equal(
+      calls.some((call) => call === 'POST /v1/trips'),
+      false,
+    );
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await f.context.close();
+  }
+});
+
 test('public discovery requires no account; unpublished/missing detail never offers a planning action', async () => {
   const f = await setup({ width: 390, height: 844 }, false),
     { page } = f;
@@ -376,5 +426,54 @@ test('editorial handoff preserves changed-destination provider preview and creat
     assert.deepEqual(f.errors, []);
   } finally {
     await f.context.close();
+  }
+});
+
+test('discovery pagination preserves keyword and topic, deduplicates records and clears old results on type change', async () => {
+  const f = await setup({ width: 390, height: 844 });
+  const { page, context } = f;
+  const pages = [];
+  const places = Array.from({ length: 19 }, (_, index) =>
+    make('page-place-' + index, 'place', 'Ninh Bình ' + index),
+  );
+  try {
+    await context.route('https://api.goease.test/v1/content?**', (route) => {
+      const params = new URL(route.request().url()).searchParams;
+      if (params.get('kind') === 'category')
+        return route.fulfill({
+          json: { apiVersion: '1', items: [records[1]], nextCursor: null },
+          headers: { 'access-control-allow-origin': base },
+        });
+      pages.push(Object.fromEntries(params));
+      const empty = params.get('kind') === 'food';
+      return route.fulfill({
+        json: {
+          apiVersion: '1',
+          items: empty ? [] : params.has('after') ? [places[17], places[18]] : places.slice(0, 18),
+          nextCursor: empty || params.has('after') ? null : 'page-place-17',
+        },
+        headers: { 'access-control-allow-origin': base },
+      });
+    });
+    await page.goto(base + '/explore?q=Ninh+B%C3%ACnh&kind=place&categoryId=nature');
+    await page.getByRole('heading', { name: 'Ninh Bình 0', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Xem thêm nội dung', exact: true }).click();
+    await page.getByRole('heading', { name: 'Ninh Bình 18', exact: true }).waitFor();
+    assert.equal(await page.locator('.discovery-card-place').count(), 19);
+    assert.equal(pages.at(-1).q, 'Ninh Bình');
+    assert.equal(pages.at(-1).categoryId, 'nature');
+    await page.getByRole('link', { name: 'Ẩm thực', exact: true }).click();
+    await page.getByText('Chưa có nội dung phù hợp.', { exact: false }).waitFor();
+    assert.equal(await page.locator('.discovery-card-place').count(), 0);
+    assert.equal(await page.getByLabel('Tìm nội dung du lịch').inputValue(), 'Ninh Bình');
+    assert.equal(new URL(page.url()).searchParams.get('categoryId'), 'nature');
+    assert.equal(new URL(page.url()).searchParams.get('q'), 'Ninh Bình');
+    assert.equal(
+      await page.getByRole('button', { name: 'Xem thêm nội dung', exact: true }).count(),
+      0,
+    );
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await context.close();
   }
 });

@@ -4,8 +4,9 @@ import { Link, navigate } from '../../app/router';
 import { Button, Notice } from '../../components/ui';
 import { Icon } from '../../components/icon';
 import { contentPage } from './content-api';
-import { ContentGrid, kindLabels } from './content-cards';
+import { DiscoveryCollection, kindLabels } from './content-cards';
 
+const kinds = ['destination', 'place', 'food', 'article'] as const;
 export function ExplorePage() {
   const query = new URLSearchParams(location.search);
   const initialSearch = query.get('q') ?? '';
@@ -14,6 +15,7 @@ export function ExplorePage() {
   const destinationId = query.get('destinationId') ?? '';
   const [search, setSearch] = useState(initialSearch);
   const [items, setItems] = useState<ContentRecord[]>([]),
+    [categories, setCategories] = useState<ContentRecord[]>([]),
     [cursor, setCursor] = useState<string | null>(null),
     [busy, setBusy] = useState(true),
     [error, setError] = useState(''),
@@ -21,8 +23,20 @@ export function ExplorePage() {
   const [after, setAfter] = useState('');
   useEffect(() => {
     const request = new AbortController();
+    void contentPage(new URLSearchParams({ kind: 'category', limit: '50' }), request.signal)
+      .then((page) => {
+        if (!request.signal.aborted) setCategories(page.items);
+      })
+      .catch(() => {
+        /* Results remain usable when optional topic shortcuts cannot load. */
+      });
+    return () => request.abort();
+  }, []);
+  useEffect(() => {
+    const request = new AbortController();
     setBusy(true);
     setError('');
+    if (!after) setItems([]);
     const params = new URLSearchParams({ limit: '18' });
     if (initialSearch) params.set('q', initialSearch);
     if (filter) params.set('kind', filter);
@@ -53,25 +67,31 @@ export function ExplorePage() {
       });
     return () => request.abort();
   }, [initialSearch, filter, categoryId, destinationId, after, attempt]);
+  const filterHref = (key: string, value: string) => {
+    const params = new URLSearchParams(location.search);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    params.delete('after');
+    return '/explore' + (params.size ? '?' + params.toString() : '');
+  };
+  const results = items.filter((item) => item.entry.kind !== 'category');
+  const topics = categories.length
+    ? categories
+    : items.filter((item) => item.entry.kind === 'category');
   return (
-    <section className="flex flex-col gap-7">
-      <header>
-        <p className="mb-2 text-sm font-semibold text-teal">GOEASE DISCOVERY</p>
-        <h1>Đi đâu cũng có điều hay</h1>
-        <p className="mt-3 max-w-xl text-muted">
-          Những điểm đến, món ngon và câu chuyện được chọn lọc để bạn bắt đầu hành trình của riêng
-          mình.
-        </p>
+    <section className="explore-page">
+      <header className="explore-heading">
+        <h1>Khám phá</h1>
+        <Link href="/favorites" className="favorites-shortcut" aria-label="Yêu thích của tôi">
+          <Icon name="heart" />
+        </Link>
       </header>
       <form
         role="search"
-        className="flex gap-2"
+        className="discovery-search"
         onSubmit={(event) => {
           event.preventDefault();
-          const params = new URLSearchParams(location.search);
-          if (search.trim()) params.set('q', search.trim());
-          else params.delete('q');
-          void navigate('/explore?' + params.toString());
+          void navigate(filterHref('q', search.trim()));
         }}
       >
         <label className="sr-only" htmlFor="explore-search">
@@ -82,31 +102,51 @@ export function ExplorePage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           maxLength={100}
-          placeholder="Bạn muốn khám phá điều gì?"
+          placeholder="Tìm điểm đến, địa điểm, món ngon…"
         />
-        <Button type="submit" aria-label="Tìm nội dung">
+        <button type="submit" aria-label="Tìm nội dung">
           <Icon name="search" />
-        </Button>
+        </button>
       </form>
-      <div className="flex flex-wrap gap-2" aria-label="Lọc nội dung">
-        {[
-          ['', 'Tất cả'],
-          ...Object.entries(kindLabels).filter(([kind]) => kind !== 'category'),
-        ].map(([kind, label]) => (
+      <div className="discovery-filters" aria-label="Lọc nội dung">
+        {[['', 'Tất cả'], ...kinds.map((kind) => [kind, kindLabels[kind]])].map(([kind, label]) => (
           <Link
-            aria-current={filter === kind ? 'page' : undefined}
             key={kind}
-            href={'/explore' + (kind ? '?kind=' + kind : '')}
-            className="inline-flex min-h-11 items-center rounded-full border border-line bg-paper px-4 py-2 text-sm font-semibold aria-[current=page]:border-teal aria-[current=page]:bg-mint aria-[current=page]:text-teal"
+            aria-current={filter === kind ? 'page' : undefined}
+            href={filterHref('kind', kind)}
           >
             {label}
           </Link>
         ))}
       </div>
-      {(categoryId || destinationId) && (
-        <Link href="/explore" className="text-action text-sm">
-          Bỏ lọc chủ đề / điểm đến
-        </Link>
+      {topics.length > 0 && (
+        <div className="discovery-topics" aria-label="Chủ đề khám phá">
+          {topics.map(({ entry }) => (
+            <Link
+              key={entry.id}
+              aria-current={categoryId === entry.id ? 'page' : undefined}
+              href={filterHref('categoryId', categoryId === entry.id ? '' : entry.id)}
+            >
+              <Icon name="compass" />
+              {entry.title}
+            </Link>
+          ))}
+        </div>
+      )}
+      {(initialSearch || categoryId || destinationId) && (
+        <div className="active-discovery-filters" aria-label="Điều kiện đang áp dụng">
+          {initialSearch && <span>Từ khóa: “{initialSearch}”</span>}
+          {categoryId && (
+            <Link href={filterHref('categoryId', '')}>
+              {topics.find((item) => item.entry.id === categoryId)?.entry.title ?? categoryId} · Bỏ
+              chủ đề ×
+            </Link>
+          )}
+          {destinationId && (
+            <Link href={filterHref('destinationId', '')}>Điểm đến: {destinationId} · Bỏ lọc ×</Link>
+          )}
+          <Link href="/explore">Xóa bộ lọc</Link>
+        </div>
       )}
       {error && (
         <Notice error>
@@ -116,21 +156,29 @@ export function ExplorePage() {
           </Button>
         </Notice>
       )}
-      {!busy && !error && !items.length && (
-        <Notice>Chưa có nội dung phù hợp. Thử tên địa phương hoặc một chủ đề khác.</Notice>
-      )}
-      <ContentGrid items={items} />
       {busy && (
-        <p role="status" className="text-muted">
+        <p role="status" className="text-sm text-muted">
           Đang tải nội dung…
         </p>
       )}
+      {!busy && !error && !results.length && (
+        <Notice>Chưa có nội dung phù hợp. Thử tên địa phương hoặc một chủ đề khác.</Notice>
+      )}
+      {kinds.map((kind) => {
+        const group = results.filter((item) => item.entry.kind === kind);
+        return group.length ? (
+          <section key={kind} className="discovery-section" aria-label={kindLabels[kind]}>
+            <h2>{kindLabels[kind]}</h2>
+            <DiscoveryCollection items={group} kind={kind} />
+          </section>
+        ) : null;
+      })}
       {!busy && cursor && (
         <Button secondary onClick={() => setAfter(cursor)}>
           Xem thêm nội dung
         </Button>
       )}
-      <Link href="/trips/new?choose=1" className="primary-link self-start">
+      <Link href="/trips/new?choose=1" className="text-action self-start">
         Tự lên kế hoạch <Icon name="arrow" />
       </Link>
     </section>

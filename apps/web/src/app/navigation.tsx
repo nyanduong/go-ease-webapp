@@ -9,9 +9,11 @@ const links: { href: string; icon: IconName; label: string }[] = [
   { href: '/account', icon: 'account', label: 'Cá nhân' },
 ];
 export function Navigation({ path }: { path: string }) {
+  const discovery = path === '/' || path === '/explore';
   return (
     <nav
       aria-label="Điều hướng chính"
+      data-discovery={discovery || undefined}
       className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-line bg-paper px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:inset-y-0 lg:right-auto lg:w-64 lg:flex-col lg:items-stretch lg:justify-start lg:gap-2 lg:border-t-0 lg:border-r lg:px-5 lg:py-8"
     >
       <div className="mb-10 hidden px-2 lg:block">
@@ -52,19 +54,25 @@ export function Navigation({ path }: { path: string }) {
         <Link href="/favorites" className="px-4 text-sm font-semibold text-teal">
           Yêu thích của tôi →
         </Link>
-        <div className="rounded-2xl bg-sand p-5">
-          <Icon name="compass" />
-          <p className="mt-3 text-sm font-bold">Một chuyến đi thật riêng.</p>
-          <p className="mt-2 text-xs leading-relaxed text-muted">
-            Từ điểm dừng chân đầu tiên đến những kỷ niệm khó quên.
-          </p>
-          <Link
-            href="/trips/new"
-            className="mt-4 inline-flex text-sm font-bold text-teal-dark underline decoration-teal/30 underline-offset-4"
-          >
-            Bắt đầu lên kế hoạch →
+        {discovery ? (
+          <Link href="/trips/new?choose=1" className="px-4 text-sm font-semibold text-teal">
+            Lên kế hoạch →
           </Link>
-        </div>
+        ) : (
+          <div className="rounded-2xl bg-sand p-5">
+            <Icon name="compass" />
+            <p className="mt-3 text-sm font-bold">Một chuyến đi thật riêng.</p>
+            <p className="mt-2 text-xs leading-relaxed text-muted">
+              Từ điểm dừng chân đầu tiên đến những kỷ niệm khó quên.
+            </p>
+            <Link
+              href="/trips/new"
+              className="mt-4 inline-flex text-sm font-bold text-teal-dark underline decoration-teal/30 underline-offset-4"
+            >
+              Bắt đầu lên kế hoạch →
+            </Link>
+          </div>
+        )}
         <Link href="/travel-services" className="px-4 text-xs text-muted hover:text-teal">
           Chỗ nghỉ & chuyến bay ↗
         </Link>

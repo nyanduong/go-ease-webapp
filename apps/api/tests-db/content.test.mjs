@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { createApi } from '../dist/bootstrap.js';
 import { contentPageSchema, contentRecordSchema, getDestination } from '@goease/contracts';
 import { isolatedUrl } from '../scripts/db-tools.mjs';
-import { initialContent, seedContent } from '../scripts/content-seed.mjs';
+import { initialContent, originalContent, seedContent } from '../scripts/content-seed.mjs';
 import { checkCmsDatabaseBrowser } from '../../web/tests/cms-db-browser.mjs';
 
 if (process.env.GOEASE_DB_TEST_ACK !== 'isolated') throw Error('Isolated real database required');
@@ -400,6 +400,17 @@ test('sourced editorial seed is repeatable and preserves admin payload, version 
       assert(value.sources.every((source) => source.url.startsWith('https://')));
     }
     await seedContent(adminUrl);
+    const legacy = originalContent.find((entry) => entry.id === 'dalat-bietthuhangnga');
+    await admin.query('UPDATE "EditorialContent" SET payload=$1::jsonb,version=1 WHERE id=$2', [
+      JSON.stringify(legacy),
+      legacy.id,
+    ]);
+    await seedContent(adminUrl);
+    const upgraded = (
+      await admin.query('SELECT payload,version FROM "EditorialContent" WHERE id=$1', [legacy.id])
+    ).rows[0];
+    assert(upgraded.payload.image, 'Untouched RC1 content receives its verified photograph');
+    assert.equal(upgraded.version, 2);
     const read = () =>
       admin.query('SELECT * FROM "EditorialContent" WHERE id=ANY($1::varchar[]) ORDER BY id', [
         ids,

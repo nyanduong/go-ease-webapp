@@ -5,6 +5,8 @@ export type IconName =
   | 'trips'
   | 'account'
   | 'compass'
+  | 'food'
+  | 'heart'
   | 'search'
   | 'arrow'
   | 'back'
@@ -19,6 +21,10 @@ export type IconName =
   | 'info'
   | 'more';
 const paths: Record<IconName, string[]> = {
+  food: ['M5 3v7a3 3 0 0 0 6 0V3', 'M8 3v18', 'M19 21V3c-4 3-4 10 0 10'],
+  heart: [
+    'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z',
+  ],
   home: ['m3 10 9-7 9 7', 'M5 9v12h5v-7h4v7h5V9'],
   trips: ['M8 6V4h8v2', 'M3 7h18v14H3z', 'M3 12c6 4 12 4 18 0', 'M10 13h4v3h-4z'],
   account: ['M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0', 'M4 21v-2a8 8 0 0 1 16 0v2'],

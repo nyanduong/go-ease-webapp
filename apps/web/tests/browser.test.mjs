@@ -1558,13 +1558,13 @@ for (const [mode, viewport] of [
     );
     await page.getByRole('link', { name: 'Quay lại', exact: true }).click();
     assert.equal(
-      await page.getByRole('link', { name: 'Tạo chuyến đi', exact: true }).getAttribute('href'),
+      await page.getByRole('link', { name: 'Lên lịch', exact: true }).getAttribute('href'),
       '/trips/new?choose=1',
     );
-    await page.getByLabel('Chọn điểm đến', { exact: true }).selectOption('da-lat');
-    await page.getByRole('link', { name: 'Tạo chuyến đi', exact: true }).click();
+    await page.getByRole('link', { name: 'Lên lịch', exact: true }).click();
     await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).click();
-    await page.waitForURL(base + '/trips/new?destination=da-lat');
+    await page.waitForURL(base + '/trips/new?choose=1');
+    await page.getByRole('button', { name: 'Đà Lạt', exact: true }).click();
     await page.getByRole('button', { name: 'Đà Lạt Việt Nam', exact: true }).waitFor();
     await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Đà Lạt cuối tuần');
     await page.getByLabel('Số ngày', { exact: true }).fill('2');

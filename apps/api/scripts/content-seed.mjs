@@ -2,12 +2,13 @@ import { Pool } from 'pg';
 import { pathToFileURL } from 'node:url';
 import { getDestination, contentInputSchema } from '@goease/contracts';
 import { additionalEditorialContent } from './content-seed-data.mjs';
+import { enrichOriginalSeed, reviewContent } from './content-seed-review.mjs';
 
 const source = {
   title: 'Vietnam Tourism — Đà Lạt (kiểm tra 21/10/2026)',
   url: 'https://vietnam.travel/places-to-go/south-central-coast-central-highlands/dalat',
 };
-export const initialContent = [
+export const originalContent = [
   {
     id: 'da-lat',
     kind: 'destination',
@@ -40,6 +41,9 @@ export const initialContent = [
   },
   ...additionalEditorialContent,
 ].map((entry) => contentInputSchema.parse(entry));
+export const initialContent = [...originalContent.map(enrichOriginalSeed), ...reviewContent].map(
+  (entry) => contentInputSchema.parse(entry),
+);
 
 export async function seedContent(databaseUrl) {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
@@ -85,6 +89,15 @@ export async function seedContent(databaseUrl) {
           JSON.stringify(entry),
         ],
       );
+      const original = originalContent.find((item) => item.id === entry.id);
+      if (!inserted.rowCount && original && JSON.stringify(original) !== JSON.stringify(entry)) {
+        // Enrich only the exact untouched RC1 seed. A single admin edit changes
+        // the version/payload and permanently wins over this seed upgrade.
+        await tx.query(
+          'UPDATE "EditorialContent" SET payload=$1::jsonb,version=version+1,"updatedAt"=now() WHERE id=$2 AND version=1 AND payload=$3::jsonb',
+          [JSON.stringify(entry), entry.id, JSON.stringify(original)],
+        );
+      }
       if (inserted.rowCount)
         for (const categoryId of entry.categoryIds)
           await tx.query(
@@ -106,6 +119,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     throw Error('Explicit MIGRATION_DATABASE_URL required; no runtime or production fallback.');
   await seedContent(process.env.MIGRATION_DATABASE_URL);
   console.info(
-    'Editorial seed inserted missing IDs only; existing edits preserved. No provider calls.',
+    'Editorial seed inserts missing IDs and enriches exact untouched RC1 rows; admin edits preserved. No provider calls.',
   );
 }

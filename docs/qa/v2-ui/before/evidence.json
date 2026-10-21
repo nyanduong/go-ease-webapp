@@ -1,0 +1,7 @@
+{
+  "source": "Live localhost:5174 + local CMS/API before UI changes; anonymous browser",
+  "baseCommit": "4b893681a51a01c2a6ccc52c7be2b6ba71b69af6",
+  "localBackFix": "preserved",
+  "viewports": ["360x800", "390x844", "1440x1000"],
+  "contentRecordsAtCapture": 9
+}
