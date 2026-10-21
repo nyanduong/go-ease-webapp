@@ -57,6 +57,17 @@ function PhotoChain({
         ref={dialog}
         aria-labelledby={titleId}
         onClose={() => setOpened(false)}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          )
+            dialog.current?.close();
+        }}
         className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl overflow-y-auto rounded-2xl border border-line bg-paper p-3 text-ink shadow-2xl backdrop:bg-ink/60 sm:p-5"
       >
         <h2 id={titleId} className="sr-only">

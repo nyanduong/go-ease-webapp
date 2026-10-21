@@ -1514,6 +1514,11 @@ for (const [mode, viewport] of [
       await photoDialog.getByRole('link', { name: 'CC BY 4.0', exact: true }).count(),
       1,
     );
+    await enlarged.click();
+    assert(await photoDialog.isVisible(), 'clicking the photo keeps its viewer open');
+    await page.mouse.click(2, 2);
+    await photoDialog.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
     await photoDialog.getByRole('button', { name: 'Đóng', exact: true }).click();
     assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
     await capture('trips');
