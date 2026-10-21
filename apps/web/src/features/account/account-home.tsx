@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { POPULAR_DESTINATIONS } from '@goease/contracts';
 import { Link } from '../../app/router';
 import { useAccount } from './session';
-import { ScenicImage } from '../../components/scenic-image';
 import { Icon } from '../../components/icon';
 
 export function AccountHome() {
@@ -10,8 +9,8 @@ export function AccountHome() {
   const [destinationId, setDestinationId] = useState('');
   const latest = trips.draft?.trip ?? trips.items[0];
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-9 py-3 sm:py-6">
-      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-9 py-3 sm:py-6">
+      <div className="min-w-0">
         <section className="flex min-w-0 flex-col items-start gap-5">
           <span className="hidden text-sm font-semibold tracking-wider text-teal lg:block">
             ĐI MỘT CHUYẾN, THÊM MỘT CÂU CHUYỆN
@@ -59,30 +58,6 @@ export function AccountHome() {
               Tạo chuyến đi <Icon name="arrow" />
             </Link>
           </div>
-        </section>
-        <section className="min-w-0" aria-labelledby="sample-heading">
-          <h2 id="sample-heading" className="mb-4 text-2xl">
-            Xem thử một chuyến
-          </h2>
-          <Link href="/sample" className="surface group block overflow-hidden shadow-sm">
-            <ScenicImage
-              priority
-              className="aspect-[16/10] w-full object-cover transition-transform duration-200 motion-safe:group-hover:scale-[1.02]"
-            />
-            <div className="flex items-center justify-between gap-3 p-5">
-              <div>
-                <p className="text-xs font-medium tracking-wider text-muted uppercase">
-                  Lịch trình mẫu
-                </p>
-                <h3 className="mt-1 text-2xl">Đà Lạt cuối tuần</h3>
-                <p className="mt-1 text-sm text-muted">2 ngày · 2 người · Đi thong thả</p>
-              </div>
-              <Icon name="chevron" className="shrink-0 text-muted" />
-            </div>
-          </Link>
-          <p className="mt-3 text-sm text-muted">
-            Xem cách GoEase sắp xếp một chuyến đi. Chưa cần tài khoản.
-          </p>
         </section>
       </div>
       {trips.ready && latest && (

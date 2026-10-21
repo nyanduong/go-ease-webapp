@@ -9,7 +9,7 @@ Working tree sạch khi bắt đầu; không có `AGENTS.md` trong repo. Stack R
 | Hiện trạng | Giao diện và điểm truy cập mới |
 | --- | --- |
 | Toàn bộ app bị chặn bởi Google login | Trang chủ, `/sample`, `/about` được xem công khai; tạo/chỉnh/lưu vẫn yêu cầu Google và backend xác minh |
-| Trang chủ chứa cả dashboard và danh sách quản lý | Trang chủ có chọn điểm đến, CTA và mẫu được ghi nhãn; chuyến gần nhất khi có. Danh sách đầy đủ tại Chuyến đi |
+| Trang chủ chứa cả dashboard và danh sách quản lý | Trang chủ có chọn điểm đến, CTA và chuyến gần nhất khi có; đã bỏ phần chuyến mẫu theo yêu cầu bổ sung. Danh sách đầy đủ tại Chuyến đi |
 | Bốn mục Trang chủ / Chuyến đi / Tài khoản / Giới thiệu | Ba mục Trang chủ / Chuyến đi / Cá nhân. Giới thiệu, trợ giúp, dữ liệu cũ và dịch vụ được giữ trong Cá nhân |
 | Form hiển thị toàn bộ trường và sở thích | Điểm đến mở rộng để tìm; ngày, số ngày, số người, nhịp đi, tên; ngân sách/sở thích tùy chọn trong disclosure |
 | Lịch trình / Ngân sách / Bản đồ / Thông tin | Lịch trình / Bản đồ / Chi phí. Thông tin chuyến ở menu; địa chỉ, nguồn, giờ mở cửa, ghi chú trong Chi tiết cạnh hoạt động |
@@ -102,4 +102,4 @@ Người dùng đã chọn tài khoản trên Google; kiểm tra tab thật xác
 
 Sửa thêm race ở nút Thử lại: lỗi Auth có thể được hiển thị trước khi tác vụ restore/connect kết thúc, khiến lần bấm ngay sau lỗi bị bỏ qua. Lần bấm chủ động giờ đợi tác vụ đang chạy rồi khôi phục lại; kiểm tra lifecycle ngăn tiếp tục nếu đã đăng xuất/đổi tài khoản trong lúc chờ. Luồng hồi quy mất kết nối/khôi phục kiểm tra trường hợp này.
 
-Theo yêu cầu bổ sung, bỏ liên kết “Xem thử một chuyến trước” khỏi màn đăng nhập. Phần mẫu trên Trang chủ được giữ. Có assertion hồi quy trong luồng private-route/login; chạy lại typecheck, lint, build web và browser suite của màn tài khoản. Để tránh mở riêng web khi thiếu API, dùng `pnpm dev` cho lần khởi động thông thường và giữ terminal này chạy.
+Theo yêu cầu bổ sung, bỏ liên kết “Xem thử một chuyến trước” khỏi màn đăng nhập. Theo yêu cầu tiếp theo, phần “Xem thử một chuyến” trên Trang chủ cũng đã được bỏ; bố cục Trang chủ chuyển sang một cột giới hạn chiều rộng. Route mẫu vẫn được giữ để không làm hỏng liên kết cũ. Có assertion hồi quy trong luồng private-route/login; chạy lại typecheck, lint, build web và browser suite của màn tài khoản. Để tránh mở riêng web khi thiếu API, dùng `pnpm dev` cho lần khởi động thông thường và giữ terminal này chạy.

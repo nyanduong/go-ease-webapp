@@ -1416,7 +1416,12 @@ for (const [mode, viewport] of [
       viewport.width < 1024 ? 3 : 6,
     );
     await capture('home');
-    await page.getByRole('link', { name: /Lịch trình mẫu Đà Lạt cuối tuần/ }).click();
+    assert.equal(
+      await page.getByRole('heading', { name: 'Xem thử một chuyến', exact: true }).count(),
+      0,
+    );
+    assert.equal(await page.locator('main a[href="/sample"]').count(), 0);
+    await page.goto(base + '/sample');
     await page.getByRole('tab', { name: 'Lịch trình', exact: true }).waitFor();
     assert.equal(state.writes.length, 0);
     assert.equal(
