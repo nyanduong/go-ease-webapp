@@ -118,3 +118,8 @@ Theo yêu cầu bổ sung, bỏ liên kết “Xem thử một chuyến trước
 ### Remove overview illustrations — 2026-10-21
 
 Per the next request, city/general illustration fallbacks and overview covers in the saved-trip list are removed. Existing provider thumbnails and exact-place curated photos remain. Missing/failed images collapse without a placeholder or unused cover gap; source credits remain for images still displayed. Build, lint and the five affected browser flows pass; screenshots refreshed.
+
+
+### Clarification: keep images, remove visible captions — 2026-10-21
+
+The user clarified that only the “Ảnh minh họa” badge and credits below the image should disappear. Overview fallbacks and list covers are restored. Image buttons open a native photo-information dialog containing the original subject, source/author, license and transformation notes. No badge or attribution caption appears in the normal trip/list layout. Browser checks cover retained images, hidden captions, source/license access, closing by button/Escape, and provider priority/failure/replacement.

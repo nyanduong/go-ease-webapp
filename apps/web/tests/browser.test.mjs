@@ -1491,7 +1491,16 @@ for (const [mode, viewport] of [
       .getByRole('navigation')
       .getByRole('link', { name: 'Chuyến đi', exact: true })
       .click();
-    assert.equal(await page.locator('main img[src="/travel/da-lat.webp"]').count(), 0);
+    await page.locator('main img[src="/travel/da-lat.webp"]').waitFor();
+    assert.equal(await page.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
+    await page.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
+    const photoDialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
+    await photoDialog.waitFor();
+    assert.equal(
+      await photoDialog.getByRole('link', { name: 'CC BY 4.0', exact: true }).count(),
+      1,
+    );
+    await photoDialog.getByRole('button', { name: 'Đóng', exact: true }).click();
     assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
     await capture('trips');
     await page

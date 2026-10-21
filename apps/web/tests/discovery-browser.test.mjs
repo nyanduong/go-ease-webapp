@@ -649,13 +649,19 @@ test('provider photos are preferred and a replaced activity resets the image fal
   assert.equal(await image.getAttribute('src'), 'https://images.example.test/unavailable.jpg');
   await page.waitForFunction(() => document.querySelector('.trip-timeline img')?.naturalWidth > 0);
   assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 0);
+  assert.equal(await row.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
+  await row.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
+  const photoDialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
   assert.equal(
-    await row.getByRole('link', { name: 'Ảnh: Nguồn địa điểm', exact: true }).getAttribute('href'),
+    await photoDialog
+      .getByRole('link', { name: 'Ảnh: Nguồn địa điểm', exact: true })
+      .getAttribute('href'),
     sourcePlaces(getDestination('da-nang'))[0].sourceUrl,
   );
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 1', exact: true }).click();
   await page.getByLabel('Địa điểm đã tìm', { exact: true }).selectOption('fixture-da-nang-1');
-  assert.equal(await row.locator('img').count(), 0);
+  await row.locator('img[src="/travel/da-nang.webp"]').waitFor();
   assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 0);
   await finish(f, 'provider-photos');
 });
@@ -671,7 +677,8 @@ test('missing prices, failed photo, long names and day/map selection preserve in
   assert.equal(state.requests[0].pace, 'balanced');
   await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
   await page.getByRole('button', { name: /Giữ chuyến này/ }).waitFor();
-  await page.waitForFunction(() => document.querySelectorAll('.trip-timeline img').length === 0);
+  await page.locator('.trip-timeline img[src="/travel/da-nang.webp"]').first().waitFor();
+  assert.equal(await page.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
   assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
   assert.equal(await page.locator('img[alt="Điểm thử nghiệm 1"]').count(), 0);
   await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
