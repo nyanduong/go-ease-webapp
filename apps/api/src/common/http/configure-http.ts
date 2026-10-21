@@ -9,6 +9,7 @@ import { attachRequestContext } from './request-context.middleware.js';
 export interface HttpOptions {
   guard?: (req: Request) => void;
 }
+const largeBody = (url: string) => /^\/v1\/(?:trips(?:\/|\?|$)|profile-media(?:\?|$))/.test(url);
 export function configureHttp(
   app: NestExpressApplication,
   config: ApiConfig,
@@ -37,7 +38,7 @@ export function configureHttp(
     }
     if (req.originalUrl.length > 2048)
       return next(new ApiFailure(414, 'URI_TOO_LONG', 'URL vượt giới hạn 2048 ký tự.'));
-    const limit = /^\/v1\/trips(?:\/|\?|$)/.test(req.originalUrl) ? 262144 : 8192;
+    const limit = largeBody(req.originalUrl) ? 262144 : 8192;
     if (Number(req.headers['content-length'] ?? 0) > limit)
       return next(new ApiFailure(413, 'PAYLOAD_TOO_LARGE', 'Body vượt giới hạn endpoint.'));
     if (
@@ -63,7 +64,7 @@ export function configureHttp(
     limit: 262144,
     inflate: false,
     verify: (req: Request, _res: unknown, buffer: Buffer) => {
-      if (!/^\/v1\/trips(?:\/|\?|$)/.test(req.originalUrl) && buffer.length > 8192)
+      if (!largeBody(req.originalUrl) && buffer.length > 8192)
         throw Object.assign(new Error('Body limit'), { code: 'GOEASE_BODY_LIMIT' });
     },
   };

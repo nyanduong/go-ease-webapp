@@ -26,7 +26,7 @@ export const discoveryPlacesRequestSchema = z.strictObject({
   }
 });
 export const discoveryPreviewRequestSchema = z.strictObject({
-  input: createTripInputSchema, interests: z.array(discoveryInterestSchema).min(1).max(8).optional(),
+  input: createTripInputSchema, pace: z.enum(['relaxed', 'balanced', 'active']).optional(), interests: z.array(discoveryInterestSchema).min(1).max(8).optional(),
 });
 export const discoveryMetadataSchema = z.strictObject({
   cacheHit: z.boolean(), providerRequests: z.number().int().min(0).max(20),

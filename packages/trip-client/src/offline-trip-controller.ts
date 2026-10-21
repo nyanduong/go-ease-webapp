@@ -62,6 +62,7 @@ export function createOfflineTripRequest(
         const items = page.map(({ trip, version, updatedAt }) => ({
           id: trip.id,
           name: trip.name,
+          destinationId: trip.destinationId,
           startDate: trip.startDate,
           durationDays: trip.durationDays,
           people: trip.people,

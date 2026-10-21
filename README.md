@@ -2,7 +2,7 @@
 
 GoEase giúp nhóm bạn chọn điểm đến tại Việt Nam, tìm địa điểm qua SerpApi, xem/chỉnh lịch trình, theo dõi ngân sách và lưu chuyến. PWA khách hàng ở `apps/web` dùng React + Vite + **Tailwind CSS**. Trang quản trị catalog ở `apps/admin`; backend NestJS ở `apps/api`. Expo được giữ tại `apps/mobile` và dùng chung logic với PWA.
 
-Phạm vi bản bàn giao được cập nhật: **bắt buộc đăng nhập Google, mọi chuyến gắn với tài khoản; bỏ chế độ khách trong sản phẩm đích**. Xem [kế hoạch MVP PWA và thứ tự triển khai](docs/MVP_PRODUCT_PLAN.md). PWA/admin đã chuyển sang Google OAuth; backend mặc định yêu cầu phiên OAuth với danh tính Google. Xem [cấu hình Google và demo HTTPS](docs/GOOGLE_LOGIN.md).
+Phạm vi hiện tại: **Trang chủ, Giới thiệu và lịch trình mẫu được xem trước khi đăng nhập. Tạo, chỉnh sửa và lưu chuyến vẫn bắt buộc đăng nhập Google, mọi chuyến thật gắn với tài khoản; không có chế độ khách tạo chuyến trong production**. Xem [kế hoạch MVP PWA và thứ tự triển khai](docs/MVP_PRODUCT_PLAN.md). PWA/admin đã chuyển sang Google OAuth; backend mặc định yêu cầu phiên OAuth với danh tính Google. Xem [cấu hình Google và demo HTTPS](docs/GOOGLE_LOGIN.md).
 
 ## Chạy nhanh
 
@@ -67,6 +67,8 @@ pnpm dev:web
 | Expo Web cũ            | URL do Metro in ra              | `pnpm dev:mobile:web`                           |
 
 Tài khoản PWA cần Supabase, API bật Auth/Trips và **HTTPS API origin** hoặc HTTP loopback local (`http://localhost:3000`) trong `VITE_API_BASE_URL`; HTTP LAN/public bị chặn. Metro tunnel không chuyển tiếp API. CORS backend cần đúng origin PWA/admin. Không đưa DB password, Gemini key, JWT, mã phiên AI hay service-role vào `VITE_*` / `EXPO_PUBLIC_*`.
+
+Bản refine giao diện ấm áp ngày 21/10/2026: [đối chiếu chức năng, thay đổi nghiệp vụ, ảnh trước/sau và nghiệm thu](docs/qa/warm-refinement/README.md).
 
 ## Chức năng hiện tại
 

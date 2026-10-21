@@ -5,7 +5,7 @@ import {
 } from '@goease/contracts';
 
 export const DISCOVERY_LABEL = 'Lịch trình đề xuất từ địa điểm tìm được — thời lượng và di chuyển là ước tính, cần kiểm tra trước khi đi.';
-export interface DiscoveryOptions { tripId: string; today: string; destination?: Destination }
+export interface DiscoveryOptions { tripId: string; today: string; destination?: Destination; pace?: 'relaxed' | 'balanced' | 'active' }
 export type DiscoveryGenerationResult = {
   ok: true; kind: 'discovery'; algorithmVersion: 1; label: string; trip: Trip;
   budget: ReturnType<typeof summarizeBudget>; warnings: string[]; explanations: string[];
@@ -61,7 +61,10 @@ export function generateDiscoveredTrip(input: unknown, placesInput: unknown, opt
     seenIds.add(place.id); seenExternal.add(`${place.provider}:${place.externalId}`); return true;
   });
   if (!candidates.length) return { ok: false, code: 'INSUFFICIENT_PLACES', message: 'Chưa có địa điểm hợp lệ trong vùng đã chọn. Hãy thử nhóm sở thích khác hoặc tạo lịch trống.' };
-  const explanations: string[] = [];
+  if (options.pace !== undefined && !['relaxed', 'balanced', 'active'].includes(options.pace)) return { ok: false, code: 'INVALID_OPTIONS', message: 'Nhịp chuyến đi không hợp lệ.' };
+  const maxVisits = options.pace === 'relaxed' ? 2 : options.pace === 'active' ? 4 : 3;
+  const restMinutes = options.pace === 'relaxed' ? 45 : options.pace === 'active' ? 10 : 15;
+  const explanations: string[] = [`Nhịp đi: tối đa ${maxVisits} địa điểm/ngày, nghỉ tối thiểu ${restMinutes} phút giữa hai điểm; vẫn tuân theo giờ mở cửa và thời lượng.`];
   const warnings: string[] = [
     'Thời gian di chuyển ước tính từ khoảng cách đường chim bay, hệ số 1,3 và tốc độ 25 km/h; chưa phải tuyến đường hoặc giao thông trực tiếp.',
     'Mỗi ngày tạm bắt đầu từ tâm điểm đến, chưa dùng vị trí khách sạn; hãy điều chỉnh khi đã chọn chỗ ở.',
@@ -75,7 +78,7 @@ export function generateDiscoveredTrip(input: unknown, placesInput: unknown, opt
     const date = addCalendarDays(request.startDate, dayIndex);
     const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
     const activities: Trip['days'][number]['activities'] = [];
-    const target = Math.min(3, Math.ceil(remaining.length / (request.durationDays - dayIndex)));
+    const target = Math.min(maxVisits, Math.ceil(remaining.length / (request.durationDays - dayIndex)));
     let cursor = 9 * 60;
     let previous = destination.center;
     while (activities.length < target && remaining.length) {
@@ -100,7 +103,7 @@ export function generateDiscoveredTrip(input: unknown, placesInput: unknown, opt
         notes: `Tham quan ước tính ${place.durationMinutes} phút. Di chuyển ước tính ${travel} phút (${km.toFixed(1)} km đường chim bay). ${hoursNote} Chi phí chưa có giá.`,
       });
       explanations.push(`Ngày ${dayIndex + 1}: ${place.name} được chọn theo khoảng cách gần nhất còn phù hợp thời gian; tham quan ${place.durationMinutes} phút, di chuyển ước tính ${travel} phút.`);
-      cursor = end + 15; previous = place.coordinates;
+      cursor = end + restMinutes; previous = place.coordinates;
     }
     days.push({ id: `day-${dayIndex + 1}`, date, activities });
   }
@@ -108,7 +111,7 @@ export function generateDiscoveredTrip(input: unknown, placesInput: unknown, opt
   const emptyDays = days.filter((day) => day.activities.length === 0).length;
   if (emptyDays) warnings.push(`${emptyDays} ngày chưa có hoạt động phù hợp; bạn có thể bổ sung thủ công trong bản xem trước.`);
   if (selected.some((place) => place.openingWindows === undefined)) warnings.push('Một số địa điểm chưa có giờ mở cửa dạng cấu trúc; giờ gợi ý cần được xác nhận lại.');
-  if (remaining.length) warnings.push(`${remaining.length} địa điểm chưa xếp vào lịch; tối đa 3 hoạt động/ngày, có giờ nghỉ và giới hạn 09:00–18:00.`);
+  if (remaining.length) warnings.push(`${remaining.length} địa điểm chưa xếp vào lịch; tối đa ${maxVisits} hoạt động/ngày, có giờ nghỉ và giới hạn 09:00–18:00.`);
   const parsedTrip = tripSchema.safeParse({
     ...request, destination, id: options.tripId, schemaVersion: SCHEMA_VERSION, generationSource: 'discovery',
     timeZone: destination.timeZone, currency: destination.currency, days,

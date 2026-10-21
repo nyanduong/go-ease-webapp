@@ -231,6 +231,18 @@ async function profileRequest(input?: ProfileInput) {
   }
 }
 export const accountSession = {
+  async uploadProfileImage(jpeg: string, signal?: AbortSignal) {
+    const owner = session.userId,
+      epoch = lifecycle;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi.');
+    const url = await auth.uploadProfileImage(jpeg, signal);
+    assertSessionOwner();
+    if (owner !== session.userId || epoch !== lifecycle) throw Error('Tài khoản đã thay đổi.');
+    return url;
+  },
   async searchDestinations(query: string, signal?: AbortSignal) {
     if (offlineDev) {
       const normalize = (value: string) =>
@@ -273,7 +285,15 @@ export const accountSession = {
       throw Error('Tài khoản đã thay đổi. Không mở lịch trình của phiên cũ.');
     return result;
   },
-  resume: () => maintainSession(true),
+  async resume() {
+    const epoch = lifecycle;
+    // Auth can publish its error before the enclosing restore/connect finishes.
+    // Queue an explicit Retry behind that work instead of dropping the click.
+    await restoring;
+    await maintaining;
+    if (epoch !== lifecycle) return;
+    return maintainSession(true);
+  },
   loadProfile: () => profileRequest(),
   saveProfile: (input: ProfileInput) => profileRequest(input),
   async importLegacy(signal: AbortSignal) {
@@ -352,7 +372,7 @@ export const accountSession = {
     session = { ...session, busy: true, message: 'Đang mở Google…' };
     publish();
     try {
-      const target = await google.begin(safeReturnPath(location.pathname));
+      const target = await google.begin(safeReturnPath(location.pathname + location.search));
       googleRedirectPending = true;
       location.assign(target);
     } catch (error) {

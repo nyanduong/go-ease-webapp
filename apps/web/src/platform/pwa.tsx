@@ -3,15 +3,9 @@ import { Button } from '../components/ui';
 import { confirmAction } from './confirmation';
 import { offlineDev } from './dev-mode';
 
-interface InstallPrompt extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: string }>;
-}
 export function PwaStatus() {
   const [offline, setOffline] = useState(!navigator.onLine),
-    [waiting, setWaiting] = useState<ServiceWorker | null>(null),
-    [install, setInstall] = useState<InstallPrompt | null>(null),
-    [message, setMessage] = useState('');
+    [waiting, setWaiting] = useState<ServiceWorker | null>(null);
   const activeWorker = useRef(waiting),
     mountedRef = useRef(true),
     updating = useRef(false);
@@ -21,16 +15,10 @@ export function PwaStatus() {
     const network = () => setOffline(!navigator.onLine);
     const beforeInstall = (event: Event) => {
       event.preventDefault();
-      setInstall(event as InstallPrompt);
-    };
-    const installed = () => {
-      setInstall(null);
-      setMessage('Đã cài GoEase.');
     };
     window.addEventListener('online', network);
     window.addEventListener('offline', network);
     window.addEventListener('beforeinstallprompt', beforeInstall);
-    window.addEventListener('appinstalled', installed);
     let mounted = true;
     if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       void navigator.serviceWorker
@@ -54,7 +42,6 @@ export function PwaStatus() {
       window.removeEventListener('online', network);
       window.removeEventListener('offline', network);
       window.removeEventListener('beforeinstallprompt', beforeInstall);
-      window.removeEventListener('appinstalled', installed);
     };
   }, []);
   async function update() {
@@ -85,7 +72,7 @@ export function PwaStatus() {
   }
   return (
     <div
-      className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-9 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
+      className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-11 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
       aria-live="polite"
     >
       {offline && (
@@ -94,19 +81,6 @@ export function PwaStatus() {
             ? 'Dev offline: vẫn tạo, sửa và lưu chuyến trên trình duyệt này.'
             : 'Bạn đang mất kết nối. Kết nối mạng để lưu chuyến đi.'}
         </span>
-      )}
-      {install && (
-        <Button
-          secondary
-          onClick={() => {
-            void install
-              .prompt()
-              .then(() => install.userChoice)
-              .then(() => setInstall(null));
-          }}
-        >
-          Cài GoEase
-        </Button>
       )}
       {waiting && (
         <Button
@@ -117,15 +91,6 @@ export function PwaStatus() {
         >
           Cập nhật GoEase
         </Button>
-      )}
-      {message && <span>{message}</span>}
-      {!install && (
-        <details>
-          <summary>Cài trên điện thoại</summary>
-          <p>
-            Android/Chrome: menu → Cài ứng dụng. iPhone/Safari: Chia sẻ → Thêm vào Màn hình chính.
-          </p>
-        </details>
       )}
     </div>
   );

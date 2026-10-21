@@ -1,16 +1,7 @@
-import type {
-  FormErrors,
-  TripFormValues,
-  TripFormField,
-} from '@goease/trip-client/create-trip-controller';
-import {
-  POPULAR_DESTINATIONS,
-  getDestination,
-  type Destination,
-  type DestinationSearchResponse,
-} from '@goease/contracts';
-import { useEffect, useRef, useState } from 'react';
-import { offlineDev } from '../../platform/dev-mode';
+import type { TripFormField } from '@goease/trip-client/create-trip-controller';
+import { Icon } from '../../components/icon';
+import type { ReactNode } from 'react';
+import { DestinationPicker, type DestinationPickerProps } from './destination-picker';
 
 export function TripForm({
   values,
@@ -19,72 +10,14 @@ export function TripForm({
   disabled = false,
   searchDestinations,
   onSearchBusyChange,
-}: {
-  values: TripFormValues;
-  onChange: (values: TripFormValues) => void;
-  errors: FormErrors;
-  disabled?: boolean;
-  searchDestinations: (query: string, signal: AbortSignal) => Promise<DestinationSearchResponse>;
-  onSearchBusyChange: (busy: boolean) => void;
+  options,
+  pace,
+  onPace,
+}: DestinationPickerProps & {
+  options?: ReactNode;
+  pace: 'relaxed' | 'balanced' | 'active';
+  onPace: (value: 'relaxed' | 'balanced' | 'active') => void;
 }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Destination[] | null>(null);
-  const [submittedQuery, setSubmittedQuery] = useState('');
-  const [searching, setSearching] = useState(false),
-    [searchMessage, setSearchMessage] = useState('');
-  const request = useRef<AbortController | null>(null);
-  useEffect(
-    () => () => {
-      request.current?.abort();
-      onSearchBusyChange(false);
-    },
-    [onSearchBusyChange],
-  );
-  const selected = values.destination ?? getDestination(values.destinationId ?? 'da-lat');
-  const destinations = results ?? (query.trim() ? [] : POPULAR_DESTINATIONS);
-  function stopSearch() {
-    request.current?.abort();
-    request.current = null;
-    setSearching(false);
-    onSearchBusyChange(false);
-  }
-  async function search() {
-    const q = query.trim();
-    if (searching || disabled) return;
-    if (q.length < 2 || q.length > 120) {
-      setSearchMessage('Nhập tên nơi muốn đến từ 2 đến 120 ký tự.');
-      return;
-    }
-    const current = new AbortController();
-    request.current = current;
-    setSearching(true);
-    onSearchBusyChange(true);
-    setResults(null);
-    setSearchMessage('');
-    try {
-      const response = await searchDestinations(q, current.signal);
-      if (!current.signal.aborted && request.current === current) {
-        setResults(response.destinations);
-        setSubmittedQuery(q);
-        setSearchMessage(
-          response.destinations.length
-            ? 'Chọn đúng điểm đến bên dưới. Địa chỉ giúp phân biệt những nơi trùng tên.'
-            : 'Chưa tìm thấy điểm đến tại Việt Nam có tọa độ phù hợp. Thử thêm tỉnh hoặc vùng vào tên.',
-        );
-      }
-    } catch (error) {
-      if (!current.signal.aborted && request.current === current)
-        setSearchMessage(
-          error instanceof Error ? error.message : 'Chưa tìm được điểm đến. Hãy thử lại.',
-        );
-    } finally {
-      if (request.current === current) {
-        request.current = null;
-        setSearching(false);
-        onSearchBusyChange(false);
-      }
-    }
-  }
   const fields: {
     key: TripFormField;
     label: string;
@@ -97,147 +30,148 @@ export function TripForm({
     { key: 'people', label: 'Số người', hint: '1–20 người' },
     {
       key: 'budgetVnd',
-      label: 'Ngân sách nhóm (VND)',
-      hint: 'Không bắt buộc · Ví dụ: 5000000',
+      label: 'Ngân sách cả nhóm (VND)',
+      hint: 'Không bắt buộc · Tổng cho cả nhóm, không phải mỗi người. Để trống nếu chưa quyết định.',
     },
   ];
   return (
-    <fieldset disabled={disabled} className="grid grid-cols-2 gap-4">
-      <div className="col-span-full min-w-0">
-        <label htmlFor="destination-search">Điểm đến</label>
-        <div className="mt-2 flex min-w-0 gap-2">
+    <fieldset disabled={disabled} className="flex min-w-0 flex-col gap-6">
+      <DestinationPicker
+        values={values}
+        onChange={onChange}
+        errors={errors}
+        disabled={disabled}
+        searchDestinations={searchDestinations}
+        onSearchBusyChange={onSearchBusyChange}
+      />
+      <div className="grid grid-cols-2 gap-4">
+        {fields
+          .filter(({ key }) => key === 'startDate' || key === 'durationDays')
+          .map(({ key, label, type, hint }) => (
+            <label key={key}>
+              {label}
+              <input
+                aria-label={label}
+                type={type ?? 'text'}
+                inputMode={key === 'durationDays' ? 'numeric' : undefined}
+                value={values[key]}
+                aria-invalid={!!errors[key]}
+                aria-describedby={errors[key] ? `error-${key}` : undefined}
+                onChange={(event) => onChange({ ...values, [key]: event.target.value })}
+              />
+              {errors[key] ? (
+                <small id={`error-${key}`} className="text-error">
+                  {errors[key]}
+                </small>
+              ) : (
+                hint && <small>{hint}</small>
+              )}
+            </label>
+          ))}
+      </div>
+      <label>
+        Số người
+        <div className="surface flex items-center justify-between gap-3 p-2">
+          <button
+            type="button"
+            aria-label="Giảm số người"
+            className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-xl"
+            disabled={Number(values.people) <= 1}
+            onClick={() =>
+              onChange({ ...values, people: String(Math.max(1, Number(values.people) - 1)) })
+            }
+          >
+            −
+          </button>
           <input
-            id="destination-search"
-            aria-label="Tìm điểm đến"
-            type="search"
-            className="min-w-0 flex-1"
-            placeholder="Địa phương hoặc địa danh bất kỳ tại Việt Nam"
-            maxLength={120}
-            value={query}
-            aria-describedby="destination-search-help"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                void search();
-              }
-            }}
-            onChange={(event) => {
-              stopSearch();
-              setQuery(event.target.value);
-              setResults(null);
-              setSubmittedQuery('');
-              setSearchMessage('');
-              onChange({ ...values, destinationId: '', destination: undefined });
-            }}
+            aria-label="Số người"
+            inputMode="numeric"
+            className="max-w-32 border-0 text-center font-semibold"
+            value={values.people}
+            aria-invalid={!!errors.people}
+            onChange={(event) => onChange({ ...values, people: event.target.value })}
           />
           <button
             type="button"
-            disabled={searching}
-            onClick={() => void search()}
-            className="shrink-0 rounded-2xl bg-teal px-4 text-sm font-semibold text-white"
+            aria-label="Tăng số người"
+            className="grid size-11 shrink-0 place-items-center rounded-full border border-teal/30 bg-mint text-teal"
+            disabled={Number(values.people) >= 20}
+            onClick={() =>
+              onChange({ ...values, people: String(Math.min(20, Number(values.people) + 1)) })
+            }
           >
-            {searching ? 'Đang tìm…' : 'Tìm điểm đến'}
+            <Icon name="plus" />
           </button>
         </div>
-        <p id="destination-search-help" className="mt-2 text-xs text-muted">
-          {offlineDev
-            ? 'Tìm trong các điểm đến có sẵn trên máy. Không truy vấn dịch vụ online.'
-            : 'Tìm địa phương và địa danh trên khắp Việt Nam qua SerpApi / Google Maps. Bấm Tìm hoặc Enter để tra cứu.'}
+        {errors.people && <small className="text-error">{errors.people}</small>}
+      </label>
+      <fieldset>
+        <legend className="mb-3 text-xl font-bold">Bạn thích đi thế nào?</legend>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Nhịp chuyến đi">
+          {(
+            [
+              ['relaxed', 'Thong thả', 'compass'],
+              ['balanced', 'Vừa phải', 'walk'],
+              ['active', 'Đi nhiều nơi', 'pin'],
+            ] as const
+          ).map(([id, label, icon]) => (
+            <button
+              type="button"
+              key={id}
+              aria-pressed={pace === id}
+              onClick={() => onPace(id)}
+              className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border border-line bg-paper px-1 py-3 text-sm aria-pressed:border-teal aria-pressed:bg-mint aria-pressed:font-semibold aria-pressed:text-teal-dark"
+            >
+              <Icon name={pace === id ? 'check' : icon} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-muted">
+          {pace === 'relaxed'
+            ? 'Tối đa 2 điểm/ngày, dành nhiều thời gian nghỉ.'
+            : pace === 'balanced'
+              ? 'Tối đa 3 điểm/ngày, cân bằng khám phá và nghỉ ngơi.'
+              : 'Tối đa 4 điểm/ngày, phù hợp khi bạn thích khám phá.'}{' '}
+          Còn tùy giờ mở cửa và thời lượng tham quan.
         </p>
-        <p className="mt-2 text-sm text-teal-dark">
-          {selected
-            ? `Đang chọn: ${selected.name}`
-            : 'Chưa chọn điểm đến. Tìm rồi chọn một kết quả hoặc gợi ý phổ biến.'}
-        </p>
-        {selected && (
-          <p className="mt-1 text-xs break-words text-muted">
-            {selected.address ? `${selected.address} · ` : ''}Múi giờ: {selected.timeZone} · Ngân
-            sách tính bằng VND
-          </p>
-        )}
-        {errors.destinationId && <small className="text-error">{errors.destinationId}</small>}
-        <p aria-live="polite" role="status" className="mt-2 text-sm text-muted">
-          {searching ? 'Đang tìm điểm đến…' : searchMessage}
-        </p>
-        {searching && (
-          <button
-            type="button"
-            onClick={stopSearch}
-            className="mt-2 text-sm font-semibold text-teal underline"
-          >
-            Dừng tìm điểm đến
-          </button>
-        )}
-      </div>
-      <div
-        className={`col-span-full ${results ? 'grid min-w-0 gap-2' : 'flex flex-wrap gap-2'}`}
-        role="group"
-        aria-label="Chọn điểm đến"
-      >
-        {!query.trim() && !results && (
-          <p className="w-full text-xs text-muted">
-            {offlineDev
-              ? 'Điểm đến có sẵn · Lịch mẫu hiện có cho Đà Lạt'
-              : 'Gợi ý phổ biến · Bạn có thể tìm nơi khác ở trên'}
-          </p>
-        )}
-        {results && (
-          <div className="mb-1">
-            <h4 className="text-sm font-semibold text-teal-dark">Kết quả cho “{submittedQuery}”</h4>
-            <p className="mt-1 text-xs text-muted">
-              Tên và địa chỉ do nguồn bản đồ cung cấp. Chọn đúng nơi bạn muốn đến bên dưới; chưa có
-              kết quả nào được tự động chọn.
-            </p>
-          </div>
-        )}
-        {destinations.map((destination) => (
-          <button
-            type="button"
-            key={destination.id}
-            aria-pressed={destination.id === selected?.id}
-            onClick={() => {
-              stopSearch();
-              onChange({ ...values, destinationId: destination.id, destination });
-              setSearchMessage('');
-            }}
-            className={`min-h-11 min-w-0 rounded-2xl border px-4 py-2 text-left text-sm font-semibold ${destination.id === selected?.id ? 'border-teal bg-teal text-white' : 'border-line bg-cream text-teal-dark'}`}
-          >
-            <span>{destination.name}</span>
-            {results && (
-              <span className="mt-1 block text-xs font-normal break-words">
-                {destination.address ||
-                  `${destination.center.latitude.toFixed(4)}, ${destination.center.longitude.toFixed(4)}`}{' '}
-                · {destination.timeZone}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-      {fields.map(({ key, label, type, hint }) => (
-        <label
-          className={key === 'durationDays' || key === 'people' ? '' : 'col-span-full'}
-          key={key}
-        >
-          {label}
-          <input
-            aria-label={label}
-            type={type ?? 'text'}
-            inputMode={key !== 'name' && key !== 'startDate' ? 'numeric' : undefined}
-            value={values[key]}
-            maxLength={key === 'name' ? 80 : 30}
-            aria-invalid={!!errors[key]}
-            aria-describedby={errors[key] ? `error-${key}` : undefined}
-            onChange={(event) => onChange({ ...values, [key]: event.target.value })}
-          />
-          {errors[key] ? (
-            <small className="text-sm text-error" id={`error-${key}`}>
-              {errors[key]}
-            </small>
-          ) : (
-            hint && <small>{hint}</small>
-          )}
-        </label>
-      ))}
+      </fieldset>
+      <label>
+        Tên chuyến đi
+        <input
+          aria-label="Tên chuyến đi"
+          value={values.name}
+          maxLength={80}
+          aria-invalid={!!errors.name}
+          onChange={(event) => onChange({ ...values, name: event.target.value })}
+        />
+        {errors.name && <small className="text-error">{errors.name}</small>}
+      </label>
+      <details className="surface p-4" open={!!errors.budgetVnd || undefined}>
+        <summary className="flex items-center gap-3">
+          <Icon name="plus" />
+          Thêm ngân sách, sở thích
+        </summary>
+        <div className="mt-4 flex flex-col gap-5">
+          {fields
+            .filter(({ key }) => key === 'budgetVnd')
+            .map(({ key, label, hint }) => (
+              <label key={key}>
+                {label}
+                <input
+                  aria-label={label}
+                  inputMode={key === 'budgetVnd' ? 'numeric' : undefined}
+                  maxLength={key === 'name' ? 80 : 30}
+                  value={values[key]}
+                  aria-invalid={!!errors[key]}
+                  onChange={(event) => onChange({ ...values, [key]: event.target.value })}
+                />
+                <small className={errors[key] ? 'text-error' : ''}>{errors[key] ?? hint}</small>
+              </label>
+            ))}
+          {options}
+        </div>
+      </details>
     </fieldset>
   );
 }

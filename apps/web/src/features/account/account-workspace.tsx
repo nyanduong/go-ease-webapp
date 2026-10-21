@@ -4,6 +4,7 @@ import { Button, Notice, dateLabel } from '../../components/ui';
 import { Link, navigate } from '../../app/router';
 import { NewAccountTrip } from '../trips/new-account-trip';
 import { TripView } from '../trips/trip-view';
+import { TripCover } from '../trips/trip-cover';
 import { accountTrips, useAccount } from './session';
 import { confirmAction } from '../../platform/confirmation';
 import { offlineDev } from '../../platform/dev-mode';
@@ -139,20 +140,22 @@ export function AccountWorkspace({
     candidate?.id ?? (trips.pending?.kind === 'create' ? trips.pending.trip.id : trips.pending?.id);
   return (
     <section className="flex min-w-0 flex-col gap-5" aria-label="Chuyến đi của bạn">
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-3">
-        <h2>Chuyến đi của bạn</h2>
-        <Button
-          secondary
-          disabled={blocked}
-          onClick={() => {
-            void work(async () => {
-              if (await accountTrips.list()) setListLoadedOwner(accountTrips.getSnapshot().owner);
-            });
-          }}
-        >
-          Tải lại chuyến
-        </Button>
-      </div>
+      {mode === 'list' && (
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-3">
+          <h1>Chuyến đi của bạn</h1>
+          <Button
+            secondary
+            disabled={blocked}
+            onClick={() => {
+              void work(async () => {
+                if (await accountTrips.list()) setListLoadedOwner(accountTrips.getSnapshot().owner);
+              });
+            }}
+          >
+            Tải lại chuyến
+          </Button>
+        </div>
+      )}
       {trips.draft && trips.draft.trip.id !== id && (
         <Link
           href={`/trips/${encodeURIComponent(trips.draft.trip.id)}`}
@@ -162,7 +165,16 @@ export function AccountWorkspace({
         </Link>
       )}
       {mode === 'detail' && !trip && (
-        <Notice>Chưa mở được chuyến đi. Hãy kiểm tra kết nối và thử lại.</Notice>
+        <Notice>
+          {trips.busy
+            ? 'Đang mở chuyến đi…'
+            : 'Chưa mở được chuyến đi. Hãy kiểm tra kết nối và thử lại.'}
+          {!trips.busy && id && (
+            <Button secondary onClick={() => void accountTrips.read(id)}>
+              Thử mở lại chuyến
+            </Button>
+          )}
+        </Notice>
       )}
       {trips.message && <Notice error={trips.conflict}>{trips.message}</Notice>}
       {message && <Notice error>{message}</Notice>}
@@ -263,6 +275,7 @@ export function AccountWorkspace({
               className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
               key={item.id}
             >
+              <TripCover destinationId={item.destinationId} />
               <h3>{item.name}</h3>
               <p>
                 {dateLabel(item.startDate)} · {item.durationDays} ngày · {item.people} người
@@ -296,7 +309,15 @@ export function AccountWorkspace({
         <p role="status">Đang tải danh sách chuyến đi…</p>
       )}
       {mode === 'list' && !trips.items.length && trips.ready && listReady && (
-        <p>Chưa có chuyến nào. Tạo hành trình đầu tiên của bạn.</p>
+        <div className="surface flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <h2>Chuyến đi đầu tiên đang chờ bạn</h2>
+          <p className="max-w-md text-muted">
+            Chọn một điểm đến, tạo lịch trình rồi lưu lại ở đây để mở bất cứ khi nào có kết nối.
+          </p>
+          <Link href="/sample" className="text-action text-teal underline">
+            Xem thử lịch trình mẫu
+          </Link>
+        </div>
       )}
       {mode === 'list' && !creating && (
         <Button

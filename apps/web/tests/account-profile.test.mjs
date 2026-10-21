@@ -94,6 +94,32 @@ test('verified profile updates only display metadata and survives a subsequent p
   await assert.rejects(auth.userProfile({ ...input, displayName: '' }));
   assert.equal(state.writes.length, 1);
 });
+
+test('uploaded avatar and cover persist as bounded URLs, rejecting data, script and untrusted paths', async () => {
+  const { auth } = await fixture();
+  const url =
+    'https://api.goease.test/v1/profile-media/' +
+    'a'.repeat(24) +
+    '-12345678-1234-4234-8234-123456789abc.jpg';
+  const fields = {
+    displayName: 'Ảnh của tôi',
+    bio: '',
+    avatar: 'upload',
+    avatarUrl: url,
+    coverUrl: url,
+  };
+  assert.equal((await auth.userProfile(fields)).avatarUrl, url);
+  assert.equal((await auth.userProfile()).coverUrl, url);
+  for (const avatarUrl of [
+    'data:image/jpeg;base64,AAAA',
+    'javascript:alert(1)',
+    'https://user:pass@api.goease.test/v1/profile-media/a.jpg',
+    'https://api.goease.test/other.jpg',
+    'http://remote.example/v1/profile-media/a.jpg',
+  ])
+    assert.throws(() => validateProfile({ ...fields, avatarUrl }));
+  assert.throws(() => validateProfile({ ...fields, avatarUrl: null }));
+});
 test('late profile response after cancelling or changing session cannot restore private data', async () => {
   const { auth, state } = await fixture();
   let release;

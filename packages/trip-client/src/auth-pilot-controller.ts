@@ -627,7 +627,9 @@ export function createAuthPilot(options: {
           fields &&
           (profile.displayName !== fields.displayName ||
             profile.bio !== fields.bio ||
-            profile.avatar !== fields.avatar)
+            profile.avatar !== fields.avatar ||
+            profile.avatarUrl !== fields.avatarUrl ||
+            profile.coverUrl !== fields.coverUrl)
         )
           throw Error('Provider chưa xác nhận đúng thay đổi hồ sơ. Hãy tải lại để đối chiếu.');
         return profile;
@@ -644,6 +646,30 @@ export function createAuthPilot(options: {
           publish({ busy: false });
         }
       }
+    },
+    async uploadProfileImage(jpeg: string, signal?: AbortSignal) {
+      return verifiedDiscovery(async (backend, access, requestSignal) => {
+        const response = await (options.fetcher ?? fetch)(backend + '/v1/profile-media', {
+          method: 'POST',
+          redirect: 'error',
+          signal: AbortSignal.any([requestSignal, AbortSignal.timeout(15000)]),
+          headers: { authorization: `Bearer ${access}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ jpeg }),
+        });
+        const data = (await response.json()) as { path?: unknown; error?: { message?: string } };
+        if (!response.ok)
+          throw new ServerTripError(
+            'UPLOAD_FAILED',
+            data.error?.message || 'Chưa tải được ảnh. Hãy thử lại.',
+            response.status,
+          );
+        if (
+          typeof data.path !== 'string' ||
+          !/^\/v1\/profile-media\/[a-f0-9]{24}-[a-f0-9-]{36}\.jpg$/.test(data.path)
+        )
+          throw Error('Phản hồi ảnh không hợp lệ.');
+        return backend + data.path;
+      }, signal);
     },
     async discoveryPreview(input: DiscoveryRequest, signal?: AbortSignal) {
       return verifiedDiscovery(

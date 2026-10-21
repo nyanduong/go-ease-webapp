@@ -72,3 +72,20 @@ test('unrequested, tampered, duplicate and replayed callbacks are consumed witho
     assert.equal(f.values.size, 0);
   }
 });
+
+test('OAuth keeps only supported destination handoff queries and rejects query redirects or malformed paths', () => {
+  for (const path of [
+    '/trips/new?destination=ha-noi',
+    '/trips/new?destination=da-lat',
+    '/trips/new?choose=1',
+  ])
+    assert.equal(safeReturnPath(path), path);
+  for (const path of [
+    '/trips/new?next=https://evil.test',
+    '/trips/new?destination=ha-noi&next=/account',
+    '/trips/new?destination=ha-noi\n',
+    '//evil.test/trips/new?choose=1',
+    '/trips/new?destination=../account',
+  ])
+    assert.equal(safeReturnPath(path), '/');
+});

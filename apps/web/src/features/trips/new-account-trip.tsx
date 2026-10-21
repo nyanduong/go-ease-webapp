@@ -16,10 +16,12 @@ import {
   validateTripForm,
   type FormErrors,
 } from '@goease/trip-client/create-trip-controller';
-import { Button, Notice, dateLabel } from '../../components/ui';
+import { Button, Notice } from '../../components/ui';
+import { Icon } from '../../components/icon';
 import { useLeaveGuard } from '../../app/router';
 import { accountSession, accountTrips, useAccount } from '../account/session';
 import { TripForm } from './trip-form';
+import { DiscoveryReview } from './discovery-review';
 import { confirmAction } from '../../platform/confirmation';
 import { offlineDev } from '../../platform/dev-mode';
 
@@ -44,22 +46,56 @@ export function NewAccountTrip({
   onCreate: (trip: Trip) => Promise<void>;
 }) {
   const { catalog } = useAccount();
-  const [initial] = useState(() => initialTripForm(new Date()));
+  const [initial] = useState(() => {
+    const base = initialTripForm(new Date());
+    const query = new URLSearchParams(location.search);
+    const destination = getDestination(query.get('destination') ?? '');
+    return {
+      ...base,
+      name: 'Chuyến đi của tôi',
+      ...(destination
+        ? { destinationId: destination.id, destination }
+        : query.has('choose') || query.has('destination')
+          ? { destinationId: '', destination: undefined }
+          : {}),
+    };
+  });
+  const [pace, setPace] = useState<'relaxed' | 'balanced' | 'active'>('relaxed');
   const [form, setForm] = useState(initial),
     [errors, setErrors] = useState<FormErrors>({});
   const [selectedInterests, setInterests] = useState<
     NonNullable<DiscoveryPreviewRequest['interests']>
   >([]);
+  const [reviewing, setReviewing] = useState(false);
   const [preview, setPreview] = useState<DiscoveryPreviewResponse | null>(null);
+  const formHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (preview && !reviewing) formHeading.current?.focus({ preventScroll: true });
+  }, [preview, reviewing]);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
   const [destinationBusy, setDestinationBusy] = useState(false);
+  const submitting = useRef(false);
+  async function createDraft(trip: Trip) {
+    if (submitting.current || disabled) return;
+    submitting.current = true;
+    setBusy(true);
+    try {
+      await onCreate(trip);
+    } finally {
+      submitting.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
   const controller = useRef<AbortController | null>(null);
   const confirming = useRef(false),
     mounted = useRef(true),
     current = useRef({ form, selectedInterests, disabled, busy, destinationBusy });
   current.current = { form, selectedInterests, disabled, busy, destinationBusy };
-  const changed = JSON.stringify(form) !== JSON.stringify(initial) || selectedInterests.length > 0;
+  const changed =
+    JSON.stringify(form) !== JSON.stringify(initial) ||
+    selectedInterests.length > 0 ||
+    pace !== 'relaxed';
   useLeaveGuard(changed, disabled || busy || destinationBusy);
   useEffect(() => {
     mounted.current = true;
@@ -126,11 +162,15 @@ export function NewAccountTrip({
       const result = await accountSession.discoverTrip(
         {
           input: parsed.input,
+          pace,
           ...(selectedInterests.length ? { interests: selectedInterests } : {}),
         },
         request.signal,
       );
-      if (!request.signal.aborted) setPreview(result);
+      if (!request.signal.aborted) {
+        setPreview(result);
+        setReviewing(true);
+      }
     } catch (error) {
       if (!request.signal.aborted)
         setMessage(
@@ -162,7 +202,7 @@ export function NewAccountTrip({
         activities: [],
       })),
     });
-    await onCreate(trip);
+    await createDraft(trip);
   }
   async function sample() {
     const parsed = validate();
@@ -183,7 +223,7 @@ export function NewAccountTrip({
       setMessage(result.message);
       return;
     }
-    await onCreate(result.trip);
+    await createDraft(result.trip);
   }
   function replacePlace(activityId: string, placeId: string) {
     if (!preview) return;
@@ -221,20 +261,37 @@ export function NewAccountTrip({
       },
     });
   }
+  if (preview && reviewing)
+    return (
+      <DiscoveryReview
+        preview={preview}
+        disabled={disabled || busy}
+        onBack={() => {
+          setReviewing(false);
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }}
+        onReplace={replacePlace}
+        onContinue={(trip) => void createDraft(trip)}
+      />
+    );
   return (
     <section
-      className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
+      className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-6"
       aria-label="Lên kế hoạch chuyến đi"
     >
       <div>
-        <p className="text-xs font-bold tracking-widest text-teal uppercase">Điểm đến của bạn</p>
-        <h3 className="mt-2 text-2xl">Một nơi mới, một hành trình mới.</h3>
-        <p className="mt-2 text-sm text-muted">
-          {offlineDev
-            ? 'Tạo lịch trống cho điểm đến có sẵn, hoặc dùng lịch mẫu Đà Lạt. Chỉnh sửa và lưu trên trình duyệt; không cần Internet.'
-            : 'Tìm nơi bạn muốn đến, chọn sở thích rồi xem gợi ý. Chỉnh sửa và chủ động lưu vào tài khoản.'}
-        </p>
+        <button type="button" className="text-action mb-4" onClick={() => void cancel()}>
+          <Icon name="back" /> Tạo chuyến đi
+        </button>
+        <h1 ref={formHeading} tabIndex={-1} className="outline-none">
+          Chuyến đi của bạn
+        </h1>
       </div>
+      {preview && (
+        <Button secondary onClick={() => setReviewing(true)} disabled={disabled || busy}>
+          Xem lại lịch gợi ý
+        </Button>
+      )}
       <form
         noValidate
         className="flex flex-col gap-5"
@@ -251,39 +308,48 @@ export function NewAccountTrip({
             setMessage('');
             setErrors({});
           }}
+          pace={pace}
+          onPace={(value) => {
+            setPace(value);
+            setPreview(null);
+          }}
           errors={errors}
           disabled={disabled || busy}
           searchDestinations={accountSession.searchDestinations}
           onSearchBusyChange={setDestinationBusy}
+          options={
+            !offlineDev && (
+              <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
+                <legend className="mb-3 font-semibold">
+                  Bạn thích trải nghiệm gì?{' '}
+                  <span className="text-sm font-normal text-muted">(tối đa 6, không bắt buộc)</span>
+                </legend>
+                {interests.map(([id, label]) => (
+                  <label
+                    key={id}
+                    className={`flex min-h-11 cursor-pointer flex-row items-center gap-2 rounded-full border px-4 py-2 text-sm ${selectedInterests.includes(id) ? 'border-teal bg-mint text-teal-dark' : 'border-line'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4 w-auto"
+                      checked={selectedInterests.includes(id)}
+                      disabled={selectedInterests.length >= 6 && !selectedInterests.includes(id)}
+                      onChange={(event) => {
+                        setInterests((value) =>
+                          event.target.checked
+                            ? [...value, id]
+                            : value.filter((item) => item !== id),
+                        );
+                        setPreview(null);
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </fieldset>
+            )
+          }
         />
-        {!offlineDev && (
-          <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
-            <legend className="mb-3 font-semibold">
-              Bạn thích trải nghiệm gì?{' '}
-              <span className="text-sm font-normal text-muted">(tối đa 6, không bắt buộc)</span>
-            </legend>
-            {interests.map(([id, label]) => (
-              <label
-                key={id}
-                className={`flex min-h-11 cursor-pointer flex-row items-center gap-2 rounded-full border px-4 py-2 text-sm ${selectedInterests.includes(id) ? 'border-teal bg-mint text-teal-dark' : 'border-line'}`}
-              >
-                <input
-                  type="checkbox"
-                  className="size-4 w-auto"
-                  checked={selectedInterests.includes(id)}
-                  disabled={selectedInterests.length >= 6 && !selectedInterests.includes(id)}
-                  onChange={(event) => {
-                    setInterests((value) =>
-                      event.target.checked ? [...value, id] : value.filter((item) => item !== id),
-                    );
-                    setPreview(null);
-                  }}
-                />
-                {label}
-              </label>
-            ))}
-          </fieldset>
-        )}
         {message && (
           <Notice error>{message} Bạn vẫn có thể tạo lịch trống và tự thêm hoạt động.</Notice>
         )}
@@ -304,10 +370,10 @@ export function NewAccountTrip({
             </Button>
           </Notice>
         )}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3">
           {!offlineDev && (
             <Button type="submit" disabled={disabled || busy || destinationBusy}>
-              Tìm địa điểm và lên lịch
+              {busy ? 'Đang tạo lịch trình…' : 'Tạo lịch trình'} <Icon name="arrow" />
             </Button>
           )}
           <Button
@@ -327,6 +393,7 @@ export function NewAccountTrip({
             Hủy tạo chuyến
           </Button>
         </div>
+        <p className="text-center text-sm text-muted">Bạn có thể chỉnh lại sau.</p>
       </form>
       {!busy && !preview && (form.destinationId ?? 'da-lat') === 'da-lat' && (
         <details className="rounded-2xl bg-cream p-4 text-sm text-muted">
@@ -334,128 +401,13 @@ export function NewAccountTrip({
             Dùng lịch mẫu Đà Lạt
           </summary>
           <p className="my-3">
-            Lịch mẫu từ bộ địa điểm GoEase đã biên tập, không truy vấn dữ liệu mới. Giá và giờ cần
-            được kiểm tra trước khi đi.
+            Lịch mẫu có 2 điểm/ngày, từ bộ địa điểm GoEase đã biên tập; không áp dụng nhịp đi hoặc
+            truy vấn dữ liệu mới. Giá và giờ cần được kiểm tra trước khi đi.
           </p>
           <Button secondary disabled={disabled || destinationBusy} onClick={() => void sample()}>
             Tạo lịch mẫu Đà Lạt
           </Button>
         </details>
-      )}
-      {preview && (
-        <section
-          aria-label="Xem trước lịch trình"
-          className="flex min-w-0 flex-col gap-4 border-t border-line pt-5"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-xl">Gợi ý cho {preview.destination.name}</h3>
-            <span className="rounded-full bg-mint px-3 py-2 text-xs font-semibold text-teal-dark">
-              Chưa lưu vào tài khoản
-            </span>
-          </div>
-          <p className="text-sm text-muted">
-            {preview.result.label} ·{' '}
-            {preview.source === 'cache'
-              ? 'Dữ liệu đã lưu tạm'
-              : preview.source === 'catalog'
-                ? 'Bộ địa điểm GoEase'
-                : 'Nguồn địa điểm: SerpApi / Google Maps'}
-          </p>
-          <p className="text-sm text-muted">
-            Giờ tham quan và di chuyển là ước tính. Khoản chưa biết giá được giữ trống, không tính
-            là miễn phí.
-          </p>
-          <div className="grid gap-3 rounded-2xl bg-mint/50 p-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs text-muted">Ngân sách cả nhóm</p>
-              <p className="mt-1 font-semibold text-teal-dark">
-                {preview.result.trip.budgetVnd === null
-                  ? 'Chưa đặt ngân sách'
-                  : `${preview.result.trip.budgetVnd.toLocaleString('vi-VN')} đ`}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted">Chi phí đã biết</p>
-              <p className="mt-1 font-semibold text-teal-dark">
-                {preview.result.budget.knownCostVnd === 0 &&
-                preview.result.budget.unknownCostCount > 0
-                  ? 'Chưa có giá để ước tính'
-                  : `${preview.result.budget.knownCostVnd.toLocaleString('vi-VN')} đ`}
-              </p>
-              {preview.result.budget.unknownCostCount > 0 && (
-                <p className="mt-1 text-xs text-muted">
-                  {preview.result.budget.unknownCostCount} hoạt động chưa có giá
-                </p>
-              )}
-            </div>
-          </div>
-          {preview.result.warnings.map((warning, index) => (
-            <Notice key={`${index}-${warning}`}>{warning}</Notice>
-          ))}
-          {!!preview.result.explanations.length && (
-            <details className="rounded-2xl bg-cream p-4">
-              <summary className="cursor-pointer text-sm font-semibold">
-                Vì sao sắp xếp lịch như vậy?
-              </summary>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
-                {preview.result.explanations.map((text, index) => (
-                  <li key={index}>{text}</li>
-                ))}
-              </ul>
-            </details>
-          )}
-          <div className="grid min-w-0 gap-4 md:grid-cols-2">
-            {preview.result.trip.days.map((day, index) => (
-              <article key={day.id} className="min-w-0 rounded-2xl border border-line p-4">
-                <h4 className="font-bold text-teal-dark">
-                  Ngày {index + 1} · {dateLabel(day.date)}
-                </h4>
-                <ol className="mt-3 flex flex-col gap-3">
-                  {day.activities.map((activity) => (
-                    <li key={activity.id} className="text-sm">
-                      <span className="mr-2 font-semibold text-teal">
-                        {activity.startTime ?? 'Chưa đặt giờ'}
-                      </span>
-                      {activity.name}
-                      {activity.location.kind === 'discovered' && (
-                        <p className="mt-1 text-xs text-muted">
-                          {activity.location.placeSnapshot.address || 'Chưa có địa chỉ'} ·{' '}
-                          {activity.costVnd === null
-                            ? 'Chưa có giá'
-                            : `${activity.costVnd.toLocaleString('vi-VN')} đ`}
-                        </p>
-                      )}
-                      {activity.location.kind === 'discovered' && preview.places.length > 1 && (
-                        <label className="mt-3 text-xs text-muted">
-                          Thay địa điểm
-                          <select
-                            aria-label={`Thay địa điểm ${activity.name}`}
-                            value={activity.location.placeId}
-                            onChange={(event) => replacePlace(activity.id, event.target.value)}
-                          >
-                            {preview.places.map((place) => (
-                              <option key={place.id} value={place.id}>
-                                {place.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-                {!day.activities.length && (
-                  <p className="mt-3 text-sm text-muted">
-                    Chưa đủ địa điểm phù hợp. Bạn có thể tự bổ sung.
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
-          <Button disabled={disabled} onClick={() => void onCreate(preview.result.trip)}>
-            Chỉnh sửa và lưu lịch này
-          </Button>
-        </section>
       )}
     </section>
   );

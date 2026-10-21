@@ -23,6 +23,7 @@ test-results/
 .discovery-runtime/
 .demo-runtime/
 .db-runtime/
+.profile-media/
 apps/api/src/generated/
 __pycache__/
 *.pyc

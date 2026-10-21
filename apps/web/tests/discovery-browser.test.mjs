@@ -1,7 +1,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
@@ -99,6 +99,7 @@ async function setup(viewport = { width: 390, height: 844 }) {
   context.setDefaultTimeout(10000);
   const errors = [],
     state = {
+      brokenPhoto: false,
       requests: [],
       searches: [],
       searchDelay: null,
@@ -204,11 +205,16 @@ async function setup(viewport = { width: 390, height: 844 }) {
       if (state.failure)
         return fail(route, 503, 'DISCOVERY_NOT_CONFIGURED', 'Chưa cấu hình nguồn địa điểm.');
       const destination = body.input.destination ?? getDestination(body.input.destinationId),
-        places = sourcePlaces(destination);
+        places = sourcePlaces(destination).map((place, index) =>
+          state.brokenPhoto && index === 0
+            ? { ...place, thumbnailUrl: 'https://images.example.test/unavailable.jpg' }
+            : place,
+        );
       const result = generateDiscoveredTrip(body.input, places, {
         tripId: randomUUID(),
         today: body.input.startDate,
         destination,
+        pace: body.pace,
       });
       assert.equal(result.ok, true);
       return reply(route, {
@@ -283,10 +289,11 @@ async function setup(viewport = { width: 390, height: 844 }) {
       headers: { 'cache-control': 'public, max-age=604800' },
     });
   });
+  await context.route('https://images.example.test/**', (route) => route.abort());
   await page.goto(base + '/trips/new');
-  await page
-    .getByRole('heading', { name: 'Một nơi mới, một hành trình mới.', exact: true })
-    .waitFor();
+  await page.getByRole('heading', { name: 'Chuyến đi của bạn', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Đà Lạt Việt Nam', exact: true }).click();
+  await page.getByText('Thêm ngân sách, sở thích', { exact: true }).click();
   return { page, context, errors, state };
 }
 async function form(page, city = 'Đà Nẵng') {
@@ -317,20 +324,55 @@ for (const [mode, viewport] of [
     await form(page);
     await page.getByLabel('Thiên nhiên', { exact: true }).check();
     await page.getByLabel('Cà phê', { exact: true }).check();
-    await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
     await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
     assert.equal(state.requests.length, 1);
     assert.equal(state.requests[0].input.destinationId, 'da-nang');
+    assert.equal(state.requests[0].pace, 'relaxed');
+    assert.equal(state.requests[0].input.budgetVnd, null);
     assert.deepEqual(state.requests[0].interests, ['nature', 'cafe']);
     assert.equal(state.writes.length, 0);
     assert.equal(await page.getByText('Chưa lưu vào tài khoản', { exact: true }).count(), 1);
+    assert.equal(await page.getByLabel('Tên chuyến đi', { exact: true }).count(), 0);
+    const reviewPanel = page.getByRole('tabpanel');
+    const firstDayName = await reviewPanel.getByRole('heading').first().innerText();
+    await page.getByRole('tab', { name: /^Ngày 2/ }).click();
+    assert.notEqual(await reviewPanel.getByRole('heading').first().innerText(), firstDayName);
+    await page.getByRole('tab', { name: /^Ngày 2/ }).press('Home');
+    assert.equal(await reviewPanel.getByRole('heading').first().innerText(), firstDayName);
+    assert.equal(await page.getByText('Ngân sách cả nhóm', { exact: true }).isVisible(), false);
+    await page.getByRole('button', { name: 'Sửa thông tin chuyến', exact: true }).click();
+    assert.equal(
+      await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
+      'Cuối tuần ở Đà Nẵng',
+    );
+    await page.getByRole('button', { name: 'Xem lại lịch gợi ý', exact: true }).click();
+    assert.equal(
+      state.requests.length,
+      1,
+      'returning to the preview does not query the provider again',
+    );
+    await page.getByText('Đổi địa điểm', { exact: true }).first().click();
     const replacement = page.getByLabel(/^Thay địa điểm /).first();
     await replacement.selectOption('fixture-da-nang-4');
+    await page.getByRole('tab', { name: /^Ngày 2/ }).click();
+    await page.getByRole('tab', { name: /^Ngày 1/ }).click();
+    await page.getByText('Đổi địa điểm', { exact: true }).first().click();
+    assert.equal(
+      await page
+        .getByLabel(/^Thay địa điểm /)
+        .first()
+        .inputValue(),
+      'fixture-da-nang-4',
+    );
     await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
     await page.waitForURL(/\/trips\/[a-f0-9-]{36}$/);
-    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).waitFor();
+    await page.getByRole('button', { name: /^(Lưu thay đổi|Giữ chuyến này)/ }).waitFor();
     assert.equal(state.writes.length, 0);
-    await page.getByRole('button', { name: 'Sửa Điểm thử nghiệm 5', exact: true }).first().click();
+    await page
+      .getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 5', exact: true })
+      .first()
+      .click();
     assert.doesNotMatch(
       await page.getByLabel('Ghi chú', { exact: true }).inputValue(),
       /Di chuyển ước tính|km đường chim bay/,
@@ -352,7 +394,7 @@ for (const [mode, viewport] of [
     state.writeDelay = new Promise((resolve) => {
       releaseSave = resolve;
     });
-    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.getByRole('button', { name: /^(Lưu thay đổi|Giữ chuyến này)/ }).click();
     await page.getByText('Đang lưu thay đổi…', { exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Thử lưu lại', exact: true }).count(), 0);
     releaseSave();
@@ -368,8 +410,9 @@ for (const [mode, viewport] of [
     await page
       .getByRole('heading', { level: 1, name: 'Cuối tuần ở Đà Nẵng', exact: true })
       .waitFor();
-    await page.getByRole('tab', { name: 'Thông tin', exact: true }).click();
-    await page.getByText('Đà Nẵng ·', { exact: false }).first().waitFor();
+    await page.locator('summary[aria-label="Tùy chọn chuyến đi"]').click();
+    await page.getByText('Đà Nẵng ·', { exact: false }).last().waitFor();
+    await page.locator('summary[aria-label="Tùy chọn chuyến đi"]').click();
     await page.getByRole('tab', { name: 'Bản đồ', exact: true }).click();
     const osm = page.getByLabel('Bản đồ OpenStreetMap', { exact: true });
     await osm.locator('.leaflet-marker-icon').first().waitFor();
@@ -439,12 +482,11 @@ for (const [mode, destination, viewport] of [
       0,
       'Enter in destination field never submits the itinerary',
     );
-    await page.getByText('Đang chọn: ' + destination.name, { exact: true }).waitFor();
-    await page.getByText(/Ngân sách tính bằng VND/).waitFor();
+    await page.getByRole('button', { name: new RegExp('^' + destination.name) }).waitFor();
     await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Khám phá ' + destination.name);
     await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2099-10-20');
     await page.getByLabel('Số ngày', { exact: true }).fill('2');
-    await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
     await page
       .getByRole('heading', { name: 'Gợi ý cho ' + destination.name, exact: true })
       .waitFor();
@@ -456,7 +498,7 @@ for (const [mode, destination, viewport] of [
     );
     await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
     await page.waitForURL(/\/trips\/[a-f0-9-]{36}$/);
-    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+    await page.getByRole('button', { name: /^(Lưu thay đổi|Giữ chuyến này)/ }).click();
     await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
     assert.deepEqual(state.writes[0].trip.destination, destination);
     assert.equal(state.writes[0].trip.timeZone, destination.timeZone);
@@ -472,6 +514,55 @@ for (const [mode, destination, viewport] of [
       .waitFor();
     assert.equal(state.searches.length, 1, 'saved trip opens without resolving destination again');
     await finish(f, `arbitrary-${mode}`);
+  });
+}
+
+for (const viewport of [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 1440, height: 1000 },
+]) {
+  test(`compact four-day review at ${viewport.width}px keeps one day visible and the action accessible`, async () => {
+    const f = await setup(viewport),
+      { page, state } = f;
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await form(page);
+    await page.getByLabel('Số ngày', { exact: true }).fill('4');
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    assert.equal(await page.getByRole('tab').count(), 4);
+    assert.equal(await page.getByRole('tabpanel').count(), 1);
+    assert.equal(await page.getByRole('tabpanel').getByRole('heading').count(), 2);
+    assert.equal(await page.getByLabel('Số ngày', { exact: true }).count(), 0);
+    const action = page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true });
+    const actionBounds = await action.boundingBox();
+    assert(
+      actionBounds.y >= 0 &&
+        actionBounds.y + actionBounds.height <= viewport.height - (viewport.width < 1024 ? 70 : 0),
+    );
+    assert.equal(
+      await page
+        .getByRole('heading', { level: 1 })
+        .evaluate((heading) => heading === document.activeElement),
+      true,
+    );
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('main img')].every((img) => img.complete),
+    );
+    const folder = root + '/../../docs/qa/warm-refinement/after';
+    await mkdir(folder, { recursive: true });
+    await page.screenshot({ path: `${folder}/preview-${viewport.width}.png`, fullPage: false });
+    await page.getByRole('tab', { name: /^Ngày 1/ }).press('End');
+    assert.equal(
+      await page.getByRole('tab', { name: /^Ngày 4/ }).getAttribute('aria-selected'),
+      'true',
+    );
+    assert((await page.getByRole('tabpanel').getByRole('heading').count()) <= 2);
+    assert.equal(state.requests.length, 1);
+    await page.getByText(/^Lưu ý & chi phí/).click();
+    assert.equal(await page.getByText('Ngân sách cả nhóm', { exact: true }).isVisible(), true);
+    assert.equal(state.writes.length, 0);
+    await finish(f, `compact-review-${viewport.width}`);
   });
 }
 
@@ -492,13 +583,13 @@ test('editing a destination query cancels stale results and requires a new selec
   state.searchDelay = null;
   release();
   await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Chưa chọn nơi');
-  await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
   await page.getByText('Tìm và chọn một điểm đến trước khi lên lịch.', { exact: true }).waitFor();
   assert.equal(state.requests.length, 0);
   assert.equal(await page.getByRole('button', { name: /^Ninh Bình/ }).count(), 0);
   await page.getByRole('button', { name: 'Tìm điểm đến', exact: true }).click();
   await page.getByRole('button', { name: /^Cần Thơ/ }).click();
-  await page.getByText('Đang chọn: Cần Thơ', { exact: true }).waitFor();
+  await page.getByRole('button', { name: /^Cần Thơ/ }).waitFor();
   assert.deepEqual(state.searches, ['Ninh Bình', 'Cần Thơ']);
   await finish(f, 'arbitrary-cancelled-search');
 });
@@ -520,7 +611,7 @@ test('a foreign destination query explains Vietnam coverage and preserves the fo
     'Chuyến mới của nhóm',
   );
   assert.equal(await page.locator('[aria-label="Chọn điểm đến"] button').count(), 0);
-  await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
   await page.getByText('Tìm và chọn một điểm đến trước khi lên lịch.', { exact: true }).waitFor();
   assert.equal(state.requests.length, 0);
   assert.equal(state.writes.length, 0);
@@ -532,7 +623,7 @@ test('missing provider keeps user input and supports an honestly empty manual pl
     { page, state } = f;
   await form(page, 'Hội An');
   state.failure = true;
-  await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
   await page.getByText(/Chưa cấu hình nguồn địa điểm\./).waitFor();
   assert.equal(await page.getByRole('region', { name: 'Xem trước lịch trình' }).count(), 0);
   assert.equal(
@@ -543,9 +634,9 @@ test('missing provider keeps user input and supports an honestly empty manual pl
   await page.getByRole('button', { name: 'Tạo lịch trống', exact: true }).click();
   await page.waitForURL(/\/trips\/[a-f0-9-]{36}$/);
   await page.getByText('Ngày này chưa có hoạt động.', { exact: true }).waitFor();
-  await page.getByRole('button', { name: '+ Thêm hoạt động', exact: true }).click();
+  await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
   await page.getByLabel('Tên hoạt động', { exact: true }).fill('Ăn tối cùng nhóm');
-  await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+  await page.getByRole('button', { name: /^(Lưu thay đổi|Giữ chuyến này)/ }).click();
   await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
   assert.equal(state.writes[0].trip.destinationId, 'hoi-an');
   assert.equal(state.writes[0].trip.days[0].activities[0].costVnd, null);
@@ -607,12 +698,115 @@ test('cancel discovery prevents a delayed preview from replacing current form va
     release = resolve;
   });
   await form(page);
-  await page.getByRole('button', { name: 'Tìm địa điểm và lên lịch', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
   await page.getByRole('button', { name: 'Dừng tìm', exact: true }).click();
+  await page.getByRole('button', { name: 'Đà Nẵng Việt Nam', exact: true }).click();
   await page.getByRole('button', { name: 'Hà Nội', exact: true }).click();
   release();
-  await page.getByText('Đang chọn: Hà Nội', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Hà Nội Việt Nam', exact: true }).waitFor();
   assert.equal(await page.getByRole('region', { name: 'Xem trước lịch trình' }).count(), 0);
   assert.equal(state.writes.length, 0);
   await finish(f, 'discovery-cancelled');
+});
+
+test('provider photos are preferred and a replaced activity resets the image fallback', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  state.brokenPhoto = true;
+  await page.context().route('https://images.example.test/**', async (route) =>
+    route.fulfill({
+      contentType: 'image/webp',
+      body: await readFile(root + '/public/travel/da-nang.webp'),
+    }),
+  );
+  await form(page);
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
+  const row = page.locator('.trip-timeline > section').first();
+  const image = row.locator('img');
+  await image.waitFor();
+  assert.equal(await image.getAttribute('src'), 'https://images.example.test/unavailable.jpg');
+  await page.waitForFunction(() => document.querySelector('.trip-timeline img')?.naturalWidth > 0);
+  assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 0);
+  assert.equal(await row.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
+  await row.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
+  const photoDialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
+  assert.equal(await photoDialog.locator('a, details').count(), 0);
+  assert.equal(
+    await photoDialog.evaluate((node) => getComputedStyle(node).animationName),
+    'photo-viewer-in',
+  );
+  await page.keyboard.press('Escape');
+  await photoDialog.waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 1', exact: true }).click();
+  await page.getByLabel('Địa điểm đã tìm', { exact: true }).selectOption('fixture-da-nang-1');
+  await row.locator('img[src="/travel/da-nang.webp"]').waitFor();
+  assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 0);
+  await finish(f, 'provider-photos');
+});
+
+test('missing prices, failed photo, long names and day/map selection preserve independent edits', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  state.brokenPhoto = true;
+  await form(page);
+  await page.getByRole('button', { name: 'Vừa phải', exact: true }).click();
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+  assert.equal(state.requests[0].pace, 'balanced');
+  await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
+  await page.getByRole('button', { name: /Giữ chuyến này/ }).waitFor();
+  await page.locator('.trip-timeline img[src="/travel/da-nang.webp"]').first().waitFor();
+  assert.equal(await page.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
+  assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
+  assert.equal(await page.locator('img[alt="Điểm thử nghiệm 1"]').count(), 0);
+  await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
+  const longName =
+    'Một địa điểm có tên rất dài để kiểm tra xuống dòng và giữ nguyên thông tin chuyến đi của cả nhóm bạn trong cuối tuần';
+  await page.getByLabel('Tên hoạt động', { exact: true }).fill(longName);
+  await page.getByLabel('Ghi chú', { exact: true }).fill('Mang theo áo khoác.');
+  await page.getByRole('button', { name: 'Thu gọn chỉnh sửa', exact: true }).click();
+  await page.getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 1', exact: true }).click();
+  await page.getByLabel('Địa điểm đã tìm', { exact: true }).selectOption('fixture-da-nang-1');
+  await page.getByRole('button', { name: 'Thu gọn chỉnh sửa', exact: true }).click();
+  await page.getByRole('button', { name: 'Đổi địa điểm ' + longName, exact: true }).click();
+  assert.equal(
+    await page.getByLabel('Ghi chú', { exact: true }).inputValue(),
+    'Mang theo áo khoác.',
+  );
+  await page.getByRole('tab', { name: 'Chi phí', exact: true }).click();
+  await page.getByText('Chưa có giá', { exact: true }).waitFor();
+  assert.equal(await page.getByText('Chưa rõ', { exact: true }).count(), 6);
+  assert.equal(await page.getByText('0 đ', { exact: true }).count(), 0);
+  await page.getByRole('tab', { name: 'Lịch trình', exact: true }).click();
+  await page.getByRole('button', { name: /^Ngày 2/ }).click();
+  await page.getByRole('tab', { name: 'Bản đồ', exact: true }).click();
+  await page.getByRole('button', { name: 'Điểm thử nghiệm 4', exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole('button', { name: 'Điểm thử nghiệm 4', exact: true })
+      .getAttribute('aria-pressed'),
+    'true',
+  );
+  await page.getByRole('tab', { name: 'Lịch trình', exact: true }).click();
+  assert.equal(
+    await page.getByRole('button', { name: /^Ngày 2/ }).getAttribute('aria-pressed'),
+    'true',
+  );
+  await page.getByRole('tab', { name: 'Bản đồ', exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole('button', { name: 'Điểm thử nghiệm 4', exact: true })
+      .getAttribute('aria-pressed'),
+    'true',
+  );
+  await page.getByRole('tab', { name: 'Lịch trình', exact: true }).click();
+  await page.getByRole('button', { name: /^Ngày 1/ }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await page.getByRole('button', { name: /Giữ chuyến này/ }).click();
+  await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
+  await page.reload();
+  await page.getByRole('heading', { name: longName, exact: true }).waitFor();
+  assert.equal(state.writes[0].trip.days[0].activities.at(-1).notes, 'Mang theo áo khoác.');
+  await finish(f, 'warm-refinement-missing-data');
 });

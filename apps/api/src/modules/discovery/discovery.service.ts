@@ -213,6 +213,7 @@ export class DiscoveryService {
     );
     const result = generateDiscoveredTrip(input.data, found.places, {
       tripId: randomUUID(),
+      ...(parsed.data.pace ? { pace: parsed.data.pace } : {}),
       today: todayAtDestination(now, destination),
       destination,
     });

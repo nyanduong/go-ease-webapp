@@ -11,10 +11,12 @@ import {
   moveActivity,
   removeActivity,
 } from '@goease/trip-client/edit-trip-controller';
-import { formatVnd } from '@goease/trip-client/budget-controller';
 import { projectDayMap } from '@goease/trip-client/map-controller';
 import { Button, dateLabel, Notice } from '../../components/ui';
-import { useLeaveGuard } from '../../app/router';
+import { Icon } from '../../components/icon';
+import { ActivityDetails, ActivityThumbnail } from './activity-details';
+import { TripCover } from './trip-cover';
+import { Link, useLeaveGuard } from '../../app/router';
 import { MotionRegion } from '../../components/motion';
 import { GoogleDayMap } from '../maps/google-map';
 import { ActivityFields, GroupFields } from './edit-fields';
@@ -25,8 +27,7 @@ import {
   sameTrip,
   type EditBuffer,
 } from './edit-buffer';
-import { Budget, BudgetSummary } from './budget';
-import { TripOverview } from './trip-overview';
+import { Budget } from './budget';
 import { confirmAction } from '../../platform/confirmation';
 import { accountTrips } from '../account/session';
 import { offlineDev } from '../../platform/dev-mode';
@@ -34,6 +35,7 @@ import { offlineDev } from '../../platform/dev-mode';
 export type SaveStatus = 'idle' | 'error' | 'unconfirmed' | 'conflict';
 interface TripViewProps {
   trip: Trip;
+  readOnly?: boolean;
   editing: boolean;
   busy?: boolean;
   locked?: boolean;
@@ -51,7 +53,7 @@ interface TripViewProps {
   initialDirty?: boolean;
   baseline?: Trip;
 }
-type Selection = { tab: string; dayId: string; activityId: string | null };
+type Selection = { tab: string; dayId: string; activityId: string | null; placeId?: string };
 export function TripView(props: TripViewProps) {
   const [selection, setSelection] = useState<Selection>({
     tab: 'itinerary',
@@ -93,6 +95,7 @@ export function TripView(props: TripViewProps) {
 }
 function TripSession({
   trip: source,
+  readOnly = false,
   editing,
   busy = false,
   locked = false,
@@ -117,9 +120,20 @@ function TripSession({
   select: (value: Selection) => void;
   replacing: boolean;
 }) {
-  const [buffer, setBuffer] = useState(() => editBuffer(source));
+  const [addedId] = useState(() =>
+    editing && selection.activityId === '__add__' ? crypto.randomUUID() : null,
+  );
+  const [buffer, setBuffer] = useState(() => {
+    const initialBuffer = editBuffer(source);
+    return addedId
+      ? appendActivity(initialBuffer, selection.dayId || source.days[0].id, addedId)
+      : initialBuffer;
+  });
   const [openActivity, setOpenActivity] = useState<string | null>(
-    editing ? selection.activityId : null,
+    editing ? (addedId ?? selection.activityId) : null,
+  );
+  const [showGroup, setShowGroup] = useState(
+    editing && selection.tab === 'budget' && !selection.activityId,
   );
   const [showErrors, setShowErrors] = useState(false),
     [message, setMessage] = useState('');
@@ -235,8 +249,10 @@ function TripSession({
     setMessage('');
     if (!projection.ok) {
       if (projection.errors.name) document.getElementById('trip-name')?.focus();
-      else if (projection.errors.group) switchTab('budget');
-      else {
+      else if (projection.errors.group) {
+        setShowGroup(true);
+        switchTab('budget');
+      } else {
         const id = Object.keys(projection.errors.activities)[0];
         const targetDay = buffer.layout.days.find((day) =>
           day.activities.some((activity) => activity.id === id),
@@ -262,14 +278,23 @@ function TripSession({
             ? 'Có thay đổi chưa lưu'
             : editing
               ? 'Chưa có thay đổi'
-              : storage === 'account' && !offlineDev
-                ? 'Đã lưu vào tài khoản'
-                : 'Đã lưu trên thiết bị';
+              : readOnly
+                ? 'Lịch trình mẫu'
+                : storage === 'account' && !offlineDev
+                  ? 'Đã lưu vào tài khoản'
+                  : 'Đã lưu trên thiết bị';
   return (
     <article className="flex min-w-0 flex-col gap-5">
-      <header className="flex flex-col gap-2 py-1">
+      <header className="relative flex flex-col gap-2 py-1 pr-10 pl-10">
+        <Link
+          href={readOnly ? '/' : '/trips'}
+          aria-label="Quay lại"
+          className="absolute top-2 left-0 grid size-11 place-items-center text-muted"
+        >
+          <Icon name="back" />
+        </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-xs font-bold tracking-widest text-teal uppercase">
+          <span className="hidden text-xs font-bold tracking-widest text-teal uppercase">
             {destinationName}
             {destination?.countryCode === 'VN' ? ' · Việt Nam' : ''}
           </span>
@@ -306,33 +331,76 @@ function TripSession({
             <span aria-hidden="true">·</span> {trip.durationDays} ngày{' '}
             <span aria-hidden="true">·</span> {trip.people} người
           </p>
-          {!editing && (
-            <div className="flex flex-wrap gap-2">
-              <Button secondary disabled={blocked} onClick={() => startEdit()}>
-                Chỉnh sửa lịch trình
-              </Button>
-              <Button secondary danger disabled={blocked} onClick={onDelete}>
-                Xóa chuyến
-              </Button>
-            </div>
+          {!editing && !readOnly && (
+            <Button secondary disabled={blocked} onClick={() => startEdit()}>
+              Chỉnh sửa lịch trình
+            </Button>
           )}
+          <details className="absolute top-1 right-0 z-30">
+            <summary
+              aria-label="Tùy chọn chuyến đi"
+              className="grid w-11 list-none place-items-center text-muted"
+            >
+              <Icon name="more" />
+            </summary>
+            <div className="surface absolute top-12 right-0 flex w-64 flex-col gap-3 p-4 shadow-lg">
+              <h2 className="text-base">Thông tin hành trình</h2>
+              <p className="text-sm">
+                {destinationName} · {trip.durationDays} ngày · {trip.people} người
+              </p>
+              <p className="text-sm text-muted">
+                {trip.generationSource === 'sample'
+                  ? 'Lịch trình mẫu GoEase'
+                  : trip.generationSource === 'discovery'
+                    ? 'Lịch trình từ địa điểm đã tìm'
+                    : 'Lịch trình của bạn'}
+              </p>
+              {!editing && !readOnly && (
+                <>
+                  <Button secondary danger disabled={blocked} onClick={onDelete}>
+                    Xóa chuyến
+                  </Button>
+                </>
+              )}
+              <Link href="/travel-services" className="text-action">
+                Chỗ nghỉ & chuyến bay ↗
+              </Link>
+            </div>
+          </details>
         </div>
       </header>
+      <TripCover trip={trip} />
       <div
         role="tablist"
         aria-label="Chi tiết chuyến"
-        className="sticky top-20 z-20 flex overflow-x-auto border-b border-line bg-cream py-1 [&>button]:min-h-11 [&>button]:flex-1 [&>button]:border-b-2 [&>button]:border-transparent [&>button]:px-2 [&>button]:py-3 [&>button]:text-sm [&>button]:font-bold [&>button]:whitespace-nowrap [&>button]:transition-colors motion-reduce:[&>button]:transition-none [&>button[aria-selected=true]]:border-teal [&>button[aria-selected=true]]:text-teal"
+        className="sticky top-0 z-20 flex overflow-x-auto border-b border-line bg-cream py-1 [&>button]:min-h-11 [&>button]:flex-1 [&>button]:border-b-2 [&>button]:border-transparent [&>button]:px-2 [&>button]:py-3 [&>button]:text-sm [&>button]:font-bold [&>button]:whitespace-nowrap [&>button]:transition-colors motion-reduce:[&>button]:transition-none [&>button[aria-selected=true]]:border-teal [&>button[aria-selected=true]]:text-teal"
       >
         {[
           ['itinerary', 'Lịch trình'],
-          ['budget', 'Ngân sách'],
           ['map', 'Bản đồ'],
-          ['info', 'Thông tin'],
+          ['budget', 'Chi phí'],
         ].map(([key, label]) => (
           <button
             key={key}
             role="tab"
+            id={`tab-${key}`}
+            aria-controls={`panel-${key}`}
+            tabIndex={tab === key ? 0 : -1}
             aria-selected={tab === key}
+            onKeyDown={(event) => {
+              const keys = ['itinerary', 'map', 'budget'];
+              if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                event.preventDefault();
+                const next =
+                  event.key === 'Home'
+                    ? 0
+                    : event.key === 'End'
+                      ? 2
+                      : (keys.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : 2)) % 3;
+                switchTab(keys[next]);
+                document.getElementById(`tab-${keys[next]}`)?.focus();
+              }
+            }}
             disabled={busy}
             onClick={() => switchTab(key)}
           >
@@ -340,10 +408,12 @@ function TripSession({
           </button>
         ))}
       </div>
-      <div className="xl:hidden">
-        <BudgetSummary trip={trip} compact disabled={busy} onBudget={() => switchTab('budget')} />
-      </div>
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <div
+        className={`min-w-0 ${tab === 'map' ? '' : 'mx-auto w-full max-w-4xl'}`}
+        role="tabpanel"
+        id={`panel-${tab}`}
+        aria-labelledby={`tab-${tab}`}
+      >
         <MotionRegion className="flex min-w-0 flex-col gap-5" motionKey={`${tab}:${day.id}`}>
           {message && <Notice error>{message}</Notice>}
           {editing && !projection.ok && (
@@ -362,32 +432,25 @@ function TripSession({
                   aria-pressed={item.id === day.id}
                   disabled={busy}
                   onClick={() => select({ ...selection, dayId: item.id })}
-                  className={`flex min-w-23 shrink-0 flex-col gap-1 rounded-2xl px-4 py-3 text-sm transition-colors motion-reduce:transition-none ${item.id === day.id ? 'bg-teal font-bold text-white' : 'bg-mint text-teal-dark hover:bg-teal/15'}`}
+                  className="day-button"
                 >
-                  <b>Ngày {index + 1}</b>
-                  <span className="text-xs">{dateLabel(item.date).slice(0, 5)}</span>
+                  <span>
+                    Ngày {index + 1} · {dateLabel(item.date).slice(0, 5)}
+                  </span>
                 </button>
               ))}
             </div>
           )}
           {tab === 'itinerary' && (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl">
-                    Ngày {trip.days.findIndex((item) => item.id === day.id) + 1} ·{' '}
-                    {dateLabel(day.date).slice(0, 5)}
-                  </h2>
-                  <p className="mt-1 text-xs text-muted">Lịch trình trong ngày</p>
-                </div>
-                <span className="rounded-xl bg-mint px-3 py-2 text-xs text-teal-dark">
-                  {day.activities.length} hoạt động
-                </span>
-              </div>
+              <p className="flex items-center gap-2 text-sm text-muted">
+                <Icon name="clock" width="18" />
+                Giờ gợi ý · {day.activities.length} hoạt động
+              </p>
               {findTimeOverlaps(day).length > 0 && (
                 <Notice error>Có hoạt động trùng giờ. Kiểm tra lại trước khi đi.</Notice>
               )}
-              <div className="flex flex-col gap-4">
+              <div className="trip-timeline flex flex-col">
                 {day.activities.map((activity, index) => {
                   const original =
                     buffer.layout.days
@@ -404,213 +467,174 @@ function TripSession({
                   return (
                     <section
                       key={activity.id}
-                      className="flex min-w-0 flex-col gap-4 rounded-3xl border border-line bg-paper p-5 sm:p-6"
+                      id={`activity-${activity.id}`}
+                      className={`activity-layout ${selection.activityId === activity.id ? 'rounded-xl bg-sand/50' : ''}`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-teal">
-                          {activity.startTime ?? 'Chưa đặt giờ'}
-                          {activity.endTime ? `–${activity.endTime}` : ''}
-                        </span>
-                        <span
-                          className={`rounded-lg px-2 py-1 text-xs font-semibold ${activity.costVnd === null ? 'bg-sand text-amber-900' : 'bg-mint text-teal-dark'}`}
-                        >
-                          {activity.costVnd === null
-                            ? 'Chưa có giá'
-                            : activity.costVnd === 0
-                              ? 'Miễn phí'
-                              : `${formatVnd(activity.costVnd)} · cả nhóm`}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg text-ink">{activity.name}</h3>
-                        <p className="mt-1 text-xs text-muted">
-                          {activity.location.kind === 'discovered'
-                            ? 'Địa điểm từ nguồn tìm kiếm'
-                            : activity.location.kind === 'catalog'
-                              ? 'Địa điểm GoEase biên tập'
-                              : 'Hoạt động của bạn'}
+                      <span className="pt-1 text-base font-bold">{activity.startTime ?? '—'}</span>
+                      <div className="activity-content">
+                        <ActivityThumbnail activity={activity} destinationId={trip.destinationId} />
+                        <h3 className="text-lg leading-snug sm:text-xl">{activity.name}</h3>
+                        <p className="mt-1 text-sm text-muted">
+                          {activity.location.kind === 'custom' ? 'Hoạt động của bạn' : 'Khám phá'}
+                          {activity.startTime && activity.endTime
+                            ? ` · ${Math.round(Number(activity.endTime.slice(0, 2)) * 60 + Number(activity.endTime.slice(3)) - (Number(activity.startTime.slice(0, 2)) * 60 + Number(activity.startTime.slice(3))))} phút`
+                            : ''}
                         </p>
-                        {activity.location.kind === 'discovered' && (
-                          <div className="mt-2 flex flex-col gap-1 text-xs text-muted">
-                            <p>{activity.location.placeSnapshot.address}</p>
-                            <p>
-                              {activity.location.placeSnapshot.durationMinutes} phút tham quan (ước
-                              tính)
-                              {activity.location.placeSnapshot.rating !== null
-                                ? ` · Đánh giá ${activity.location.placeSnapshot.rating}/5`
-                                : ''}
-                            </p>
-                            <a
-                              className="min-h-8 py-1 text-teal underline"
-                              href={activity.location.placeSnapshot.sourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              referrerPolicy="no-referrer"
+                        <div className="activity-actions">
+                          <ActivityDetails activity={activity} places={places} />
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              disabled={blocked || saveDisabled}
+                              className="text-action"
+                              aria-label={`Đổi địa điểm ${activity.name}`}
+                              onClick={() => openEditor(activity.id)}
                             >
-                              Xem nguồn địa điểm ↗
-                            </a>
-                            {activity.location.placeSnapshot.openingHours && (
-                              <p>
-                                Giờ được nguồn cung cấp:{' '}
-                                {activity.location.placeSnapshot.openingHours}
-                              </p>
-                            )}
-                            <p>
-                              Dữ liệu ngày{' '}
-                              {new Date(
-                                activity.location.placeSnapshot.fetchedAt,
-                              ).toLocaleDateString('vi-VN')}
-                              ; hãy kiểm tra lại trước khi đi.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      {activity.notes && (
-                        <details className="text-xs text-muted">
-                          <summary className="text-xs font-normal">Ghi chú hoạt động</summary>
-                          <p className="whitespace-pre-wrap">{activity.notes}</p>
-                        </details>
-                      )}
-                      {editing && openActivity === activity.id ? (
-                        <ActivityFields
-                          value={buffer.activities[activity.id] ?? activityForm(activity)}
-                          onChange={(value) =>
-                            change({
-                              ...buffer,
-                              activities: { ...buffer.activities, [activity.id]: value },
-                            })
-                          }
-                          errors={
-                            showErrors ? projection.errors.activities[activity.id] : undefined
-                          }
-                          places={available}
-                          discoveredPlaces={discoveredPlaces}
-                          disabled={blocked}
-                          onClose={() => setOpenActivity(null)}
-                        />
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          <Button
-                            secondary
-                            disabled={blocked || saveDisabled}
-                            aria-label={`Sửa ${activity.name}`}
-                            onClick={() => openEditor(activity.id)}
-                          >
-                            Sửa hoạt động
-                          </Button>
-                          {editing && (
-                            <>
-                              <Button
-                                secondary
-                                aria-label={`Đưa lên ${activity.name}`}
-                                disabled={blocked || index === 0}
-                                onClick={() =>
-                                  mutate((value) => ({
-                                    ...value,
-                                    layout: moveActivity(
-                                      value.layout,
-                                      activity.id,
-                                      day.id,
-                                      index - 1,
-                                    ),
-                                  }))
-                                }
-                              >
-                                ↑
-                              </Button>
-                              <Button
-                                secondary
-                                aria-label={`Đưa xuống ${activity.name}`}
-                                disabled={blocked || index === day.activities.length - 1}
-                                onClick={() =>
-                                  mutate((value) => ({
-                                    ...value,
-                                    layout: moveActivity(
-                                      value.layout,
-                                      activity.id,
-                                      day.id,
-                                      index + 1,
-                                    ),
-                                  }))
-                                }
-                              >
-                                ↓
-                              </Button>
-                              <Button
-                                secondary
-                                danger
-                                aria-label={`Xóa hoạt động ${activity.name}`}
-                                disabled={blocked}
-                                onClick={() => {
-                                  void confirmEdit(
-                                    {
-                                      title: 'Xóa hoạt động?',
-                                      message: `Xóa hoạt động “${activity.name}” khỏi lịch trình?`,
-                                      confirmLabel: 'Xóa hoạt động',
-                                      danger: true,
-                                    },
-                                    () =>
-                                      mutate((value) => ({
-                                        ...value,
-                                        layout: removeActivity(value.layout, activity.id),
-                                      })),
-                                  );
-                                }}
-                              >
-                                Xóa
-                              </Button>
-                              {trip.days.length > 1 && (
-                                <label className="text-xs">
-                                  Chuyển ngày
-                                  <select
-                                    aria-label={`Chuyển ngày ${activity.name}`}
-                                    value={day.id}
-                                    disabled={blocked}
-                                    onChange={(event) =>
+                              <Icon name="pin" />
+                              Đổi địa điểm <Icon name="chevron" width="16" />
+                            </button>
+                          )}
+                        </div>
+                        {editing && openActivity === activity.id ? (
+                          <ActivityFields
+                            value={buffer.activities[activity.id] ?? activityForm(activity)}
+                            onChange={(value) =>
+                              change({
+                                ...buffer,
+                                activities: { ...buffer.activities, [activity.id]: value },
+                              })
+                            }
+                            errors={
+                              showErrors ? projection.errors.activities[activity.id] : undefined
+                            }
+                            places={available}
+                            discoveredPlaces={discoveredPlaces}
+                            disabled={blocked}
+                            onClose={() => setOpenActivity(null)}
+                          />
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {editing && (
+                              <details className="ml-auto w-full">
+                                <summary className="text-action justify-end">Thao tác khác</summary>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                  <Button
+                                    secondary
+                                    aria-label={`Đưa lên ${activity.name}`}
+                                    disabled={blocked || index === 0}
+                                    onClick={() =>
                                       mutate((value) => ({
                                         ...value,
                                         layout: moveActivity(
                                           value.layout,
                                           activity.id,
-                                          event.target.value,
+                                          day.id,
+                                          index - 1,
                                         ),
                                       }))
                                     }
                                   >
-                                    {trip.days.map((target, order) => (
-                                      <option
-                                        key={target.id}
-                                        value={target.id}
-                                        disabled={
-                                          target.activities.length >= 12 && target.id !== day.id
+                                    ↑
+                                  </Button>
+                                  <Button
+                                    secondary
+                                    aria-label={`Đưa xuống ${activity.name}`}
+                                    disabled={blocked || index === day.activities.length - 1}
+                                    onClick={() =>
+                                      mutate((value) => ({
+                                        ...value,
+                                        layout: moveActivity(
+                                          value.layout,
+                                          activity.id,
+                                          day.id,
+                                          index + 1,
+                                        ),
+                                      }))
+                                    }
+                                  >
+                                    ↓
+                                  </Button>
+                                  <Button
+                                    secondary
+                                    danger
+                                    aria-label={`Xóa hoạt động ${activity.name}`}
+                                    disabled={blocked}
+                                    onClick={() => {
+                                      void confirmEdit(
+                                        {
+                                          title: 'Xóa hoạt động?',
+                                          message: `Xóa hoạt động “${activity.name}” khỏi lịch trình?`,
+                                          confirmLabel: 'Xóa hoạt động',
+                                          danger: true,
+                                        },
+                                        () =>
+                                          mutate((value) => ({
+                                            ...value,
+                                            layout: removeActivity(value.layout, activity.id),
+                                          })),
+                                      );
+                                    }}
+                                  >
+                                    Xóa
+                                  </Button>
+                                  {trip.days.length > 1 && (
+                                    <label className="text-xs">
+                                      Chuyển ngày
+                                      <select
+                                        aria-label={`Chuyển ngày ${activity.name}`}
+                                        value={day.id}
+                                        disabled={blocked}
+                                        onChange={(event) =>
+                                          mutate((value) => ({
+                                            ...value,
+                                            layout: moveActivity(
+                                              value.layout,
+                                              activity.id,
+                                              event.target.value,
+                                            ),
+                                          }))
                                         }
                                       >
-                                        Ngày {order + 1}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
+                                        {trip.days.map((target, order) => (
+                                          <option
+                                            key={target.id}
+                                            value={target.id}
+                                            disabled={
+                                              target.activities.length >= 12 && target.id !== day.id
+                                            }
+                                          >
+                                            Ngày {order + 1}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  )}
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </section>
                   );
                 })}
               </div>
               {!day.activities.length && <Notice>Ngày này chưa có hoạt động.</Notice>}
-              {editing && (
+              {!readOnly && (
                 <Button
                   secondary
                   disabled={blocked || day.activities.length >= 12}
                   onClick={() => {
+                    if (!editing) {
+                      startEdit('__add__');
+                      return;
+                    }
                     const id = crypto.randomUUID();
                     mutate((value) => appendActivity(value, day.id, id));
                     setOpenActivity(id);
                   }}
                 >
-                  + Thêm hoạt động
+                  <Icon name="plus" /> Thêm địa điểm
                 </Button>
               )}
               <p className="text-xs leading-relaxed text-muted">
@@ -621,52 +645,62 @@ function TripSession({
           )}
           {tab === 'budget' && (
             <>
-              {editing ? (
-                <GroupFields
-                  value={buffer.group}
-                  onChange={(group) => change({ ...buffer, group })}
-                  errors={showErrors ? projection.errors.group : undefined}
-                  disabled={blocked}
-                />
-              ) : (
-                <Button secondary disabled={blocked} onClick={() => startEdit(null, 'budget')}>
-                  Đổi ngân sách / số người
-                </Button>
-              )}
-              <Budget trip={trip} onEditCost={openEditor} disabled={blocked} />
+              {editing && showGroup ? (
+                <div className="flex flex-col gap-2">
+                  <GroupFields
+                    value={buffer.group}
+                    onChange={(group) => change({ ...buffer, group })}
+                    errors={showErrors ? projection.errors.group : undefined}
+                    disabled={blocked}
+                  />
+                  <Button secondary onClick={() => setShowGroup(false)}>
+                    Xong ngân sách
+                  </Button>
+                </div>
+              ) : null}
+              <Budget
+                trip={trip}
+                onEditCost={openEditor}
+                disabled={blocked || readOnly}
+                onBudget={() => (editing ? setShowGroup(true) : startEdit(null, 'budget'))}
+                onAdd={() => {
+                  if (day.activities.length >= 12) {
+                    setMessage(
+                      'Ngày này đã có 12 hoạt động. Chọn ngày khác hoặc xóa bớt một hoạt động trước khi thêm khoản chi.',
+                    );
+                    return;
+                  }
+                  if (!editing) {
+                    startEdit('__add__', 'itinerary');
+                    return;
+                  }
+                  const id = crypto.randomUUID();
+                  mutate((value) => appendActivity(value, day.id, id));
+                  openEditor(id);
+                }}
+              />
             </>
           )}
-          {tab === 'map' && <GoogleDayMap model={map} />}
-          {tab === 'info' && (
-            <div className="flex flex-col gap-4 rounded-3xl border border-line bg-paper p-5">
-              <h2>Thông tin hành trình</h2>
-              <p>
-                {destinationName} · {dateLabel(trip.startDate)} đến{' '}
-                {dateLabel(trip.days.at(-1)!.date)}
-              </p>
-              <p>
-                {trip.people} người · {trip.durationDays} ngày
-              </p>
-              <Notice>
-                {trip.generationSource === 'ai'
-                  ? 'Lịch trình do AI gợi ý'
-                  : trip.generationSource === 'discovery'
-                    ? 'Lịch trình từ địa điểm đã tìm'
-                    : trip.generationSource === 'sample'
-                      ? 'Lịch trình mẫu GoEase'
-                      : 'Lịch trình của bạn'}{' '}
-                · Hãy kiểm tra giờ mở cửa và giá trước khi đi.
-              </Notice>
-            </div>
+          {tab === 'map' && (
+            <GoogleDayMap
+              model={map}
+              selectedPlaceId={selection.placeId}
+              onSelect={(placeId) => select({ ...selection, placeId })}
+              onActivity={(activityId) => {
+                select({ ...selection, tab: 'itinerary', activityId });
+                document
+                  .getElementById(`activity-${activityId}`)
+                  ?.scrollIntoView({ block: 'center' });
+              }}
+            />
           )}
           {typeof extra === 'function'
             ? extra(locked || !projection.ok || !!openActivity || tab === 'budget')
             : extra}
         </MotionRegion>
-        <TripOverview trip={trip} disabled={busy} onBudget={() => switchTab('budget')} />
       </div>
       {editing && (
-        <div className="sticky bottom-22 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal/20 bg-paper/95 p-4 shadow-md backdrop-blur lg:bottom-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper p-4">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink">{status}</p>
           </div>
@@ -675,7 +709,7 @@ function TripSession({
               disabled={blocked || saveDisabled || (!dirty && saveStatus !== 'error')}
               onClick={save}
             >
-              Lưu thay đổi
+              {baseline ? 'Lưu thay đổi' : 'Giữ chuyến này'} <Icon name="arrow" />
             </Button>
             <Button
               secondary

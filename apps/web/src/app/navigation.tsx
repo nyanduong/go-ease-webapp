@@ -5,8 +5,7 @@ import { Link } from './router';
 const links: { href: string; icon: IconName; label: string }[] = [
   { href: '/', icon: 'home', label: 'Trang chủ' },
   { href: '/trips', icon: 'trips', label: 'Chuyến đi' },
-  { href: '/account', icon: 'account', label: 'Tài khoản' },
-  { href: '/about', icon: 'compass', label: 'Giới thiệu' },
+  { href: '/account', icon: 'account', label: 'Cá nhân' },
 ];
 export function Navigation({ path }: { path: string }) {
   return (
@@ -24,8 +23,18 @@ export function Navigation({ path }: { path: string }) {
         <Link
           href={href}
           key={href}
-          aria-current={(href === '/' ? path === '/' : path.startsWith(href)) ? 'page' : undefined}
-          className="group flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-[11px] font-semibold text-muted transition-colors duration-200 hover:bg-mint/60 aria-[current=page]:bg-mint aria-[current=page]:text-teal-dark motion-safe:active:scale-[.97] motion-reduce:transition-none lg:min-h-13 lg:flex-row lg:justify-start lg:gap-3 lg:px-4 lg:text-sm"
+          aria-current={
+            (
+              href === '/'
+                ? path === '/' || path === '/sample'
+                : href === '/account'
+                  ? path === '/account' || path === '/about' || path === '/travel-services'
+                  : path.startsWith(href)
+            )
+              ? 'page'
+              : undefined
+          }
+          className="group flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-sm font-semibold text-muted transition-colors duration-200 hover:bg-mint/60 aria-[current=page]:text-teal-dark motion-safe:active:scale-[.97] motion-reduce:transition-none lg:min-h-13 lg:flex-row lg:justify-start lg:gap-3 lg:px-4 lg:text-sm"
         >
           <Icon
             name={icon}
@@ -39,7 +48,7 @@ export function Navigation({ path }: { path: string }) {
         </Link>
       ))}
       <div className="mt-auto hidden flex-col gap-4 pt-10 lg:flex">
-        <div className="rounded-3xl bg-mint/70 p-5">
+        <div className="rounded-2xl bg-sand p-5">
           <Icon name="compass" />
           <p className="mt-3 text-sm font-bold">Một chuyến đi thật riêng.</p>
           <p className="mt-2 text-xs leading-relaxed text-muted">
