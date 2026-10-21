@@ -165,7 +165,9 @@ export function ContentDetail({ id }: { id: string }) {
             {saving
               ? 'Đang lưu yêu thích…'
               : !favoriteReady
-                ? 'Đang kiểm tra yêu thích…'
+                ? favoriteError
+                  ? 'Chưa tải được yêu thích'
+                  : 'Đang kiểm tra yêu thích…'
                 : favorite
                   ? 'Bỏ yêu thích'
                   : 'Lưu yêu thích'}

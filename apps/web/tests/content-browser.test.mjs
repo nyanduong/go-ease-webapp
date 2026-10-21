@@ -623,3 +623,33 @@ test('same-page photo credits identify the displayed photo, preserve license and
     await f.context.close();
   }
 });
+
+test('favorite lookup failure ends the loading label, blocks writes and recovers after reload', async () => {
+  const f = await setup({ width: 390, height: 844 });
+  const { page, context, calls } = f;
+  let unavailable = true;
+  try {
+    await context.route('https://api.goease.test/v1/favorites', (route) =>
+      unavailable
+        ? route.fulfill({ status: 503, json: {}, headers: { 'access-control-allow-origin': base } })
+        : route.fallback(),
+    );
+    await page.goto(base + '/explore/trang-an');
+    const failed = page.getByRole('button', { name: 'Chưa tải được yêu thích', exact: true });
+    await failed.waitFor();
+    assert.equal(await failed.isEnabled(), false);
+    await page.getByText('Chưa kiểm tra được trạng thái yêu thích.', { exact: false }).waitFor();
+    assert.equal(
+      calls.some((call) => call.startsWith('PUT /v1/favorites/')),
+      false,
+    );
+    unavailable = false;
+    await page.reload();
+    const ready = page.getByRole('button', { name: 'Lưu yêu thích', exact: true });
+    await ready.waitFor();
+    assert.equal(await ready.isEnabled(), true);
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await f.context.close();
+  }
+});
