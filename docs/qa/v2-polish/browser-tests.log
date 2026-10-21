@@ -1,0 +1,94 @@
+
+> @goease/web@0.1.0 test:e2e C:\Users\LENOVO\OneDrive\Desktop\FPT\Ky-7\EXE101\go-ease-webapp\apps\web
+> node scripts/test-browser.mjs
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 239 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-test/index.html                     1.02 kB │ gzip:   0.57 kB
+dist-test/assets/osm-map-vh-t_kPv.css   15.09 kB │ gzip:   6.36 kB
+dist-test/assets/index-LNQLrJnO.css     63.91 kB │ gzip:  12.57 kB
+dist-test/assets/osm-map-uBYTrWgQ.js   151.42 kB │ gzip:  44.76 kB
+dist-test/assets/dist-DUv6x2D9.js      214.40 kB │ gzip:  55.16 kB
+dist-test/assets/index-BB53Fhmm.js     500.77 kB │ gzip: 149.20 kB
+
+✓ built in 550ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✔ confirmation popup mobile: cancel, keyboard focus, dirty navigation and discard form (1401.5451ms)
+✔ confirmation popup mobile: destructive actions require acceptance and send one delete (4245.9207ms)
+✔ confirmation popup desktop: cancel, keyboard focus, dirty navigation and discard form (1214.2321ms)
+✔ confirmation popup desktop: destructive actions require acceptance and send one delete (2797.9161ms)
+✔ an account change closes an old confirmation without submitting its destructive action (2403.7101ms)
+✔ browser Back and Forward keep the dirty page until the popup is accepted (1162.5003ms)
+✔ confirmation conflict latest: cancel preserves the draft and approval applies only the chosen version (2099.6782ms)
+✔ confirmation conflict rebase: cancel preserves the draft and approval applies only the chosen version (2121.4299ms)
+✔ confirmation PWA update: cancel keeps the page and acceptance activates once before controller reload (925.7117ms)
+✔ all private deep links require Google; legacy local/IndexedDB bytes remain unassigned and unchanged (924.3306ms)
+✔ Cloudinary image selects responsive variants and falls back locally when CDN fails (248.0155ms)
+✔ phone login fits narrow and short screens with a visible touch-sized Google button (534.2493ms)
+✔ Back from Google without login restores an idle login page and permits another attempt (665.1128ms)
+✔ PKCE roundtrip verifies provider/backend, strips callback and never persists access/provider tokens (523.7688ms)
+✔ cancelled, missing, expired, tampered and replayed callbacks never open private app (607.3519ms)
+✔ backend identity mismatch keeps the whole app locked (500.8377ms)
+✔ account-only create/edit/budget/day movement/maps/save/reload/delete works (3449.0089ms)
+✔ raw invalid input survives tabs/days; validation blocks writes, then one Save commits and Cancel restores (3554.1096ms)
+✔ lost response uses the exact durable mutation on explicit retry without duplicate trips (1910.861ms)
+✔ logout/account switch never shows or sends another owner draft or pending mutation (3303.1425ms)
+✔ offline shell stays gated, cannot create guest trips and never caches OAuth/API data (1516.2963ms)
+✔ desktop/mobile detail and reduced-motion layouts fit 320–1440 px (2783.6923ms)
+✔ manifest icons and PWA scope are valid (1.9818ms)
+✔ legacy migration copies only after explicit Google-account action; preserves bytes and reruns without duplicates (2737.4467ms)
+✔ corrupt legacy data is not overwritten or partly imported (918.4752ms)
+✔ legacy migration stops on lost response and resumes the original mutation without duplicate copies (3183.3495ms)
+✔ profile shows Google identity, persists edits across reload and isolates accounts (1878.6437ms)
+✔ profile photo upload validates files, preserves text on failure and cancels an uploaded draft (1086.1887ms)
+✔ failed profile save preserves draft, requires explicit retry and fits mobile/desktop (1026.3963ms)
+✔ access token refresh is automatic and preserves unsaved profile input (808.8873ms)
+✔ persistent login survives closing a tab; concurrent tabs serialize refresh and logout everywhere (1797.8229ms)
+✔ a revoked refresh token requires Google login and clears persistent credentials (540.9883ms)
+✔ online backend outage preserves login, reports server failure and recovers on retry or reconnect (988.3777ms)
+✔ workspace loading stays quiet; catalog failure offers a retry without technical auth messages (733.9048ms)
+✔ customer pages use plain language and map failures keep a useful next action (2706.5703ms)
+✔ warm refinement mobile-360: public sample, destination through Google, save/reload/list and cost actions (1988.8582ms)
+✔ warm refinement mobile: public sample, destination through Google, save/reload/list and cost actions (1935.1837ms)
+✔ warm refinement desktop: public sample, destination through Google, save/reload/list and cost actions (2263.7764ms)
+✔ editorial discovery mobile: home, query filters, detail, favorite, plan save and reopen (4446.1416ms)
+✔ editorial discovery desktop: home, query filters, detail, favorite, plan save and reopen (3248.5799ms)
+✔ editorial planning back remains available with an existing draft and preserves that draft (2367.7779ms)
+✔ public discovery requires no account; unpublished/missing detail never offers a planning action (465.8883ms)
+✔ editorial handoff preserves changed-destination provider preview and creation mode across reload (1313.6722ms)
+✔ discovery pagination preserves keyword and topic, deduplicates records and clears old results on type change (704.9196ms)
+✔ polished Home limits places/articles, prioritizes photographs and keeps attribution next to each image (744.4458ms)
+✔ editorial photo failures try the exact place, matching city, then neutral without another city (1260.0512ms)
+✔ M0 mobile: creation and preview reload preserve temporary state and desktop header (1521.8228ms)
+✔ multi destination mobile: preview source, replace, edit, manual save, reopen snapshots and map (3757.1701ms)
+✔ M0 desktop: creation and preview reload preserve temporary state and desktop header (1964.408ms)
+✔ multi destination desktop: preview source, replace, edit, manual save, reopen snapshots and map (3823.1864ms)
+✔ arbitrary destination desktop: explicit search outside popular list, snapshot save and reopen (2268.6305ms)
+✔ arbitrary destination mobile: explicit search outside popular list, snapshot save and reopen (2202.4513ms)
+✔ arbitrary destination mobile-ninh-binh: explicit search outside popular list, snapshot save and reopen (2198.8252ms)
+✔ compact four-day review at 360px keeps one day visible and the action accessible (943.5289ms)
+✔ compact four-day review at 390px keeps one day visible and the action accessible (983.3493ms)
+✔ compact four-day review at 1440px keeps one day visible and the action accessible (1079.8121ms)
+✔ M0 home finds the most recently updated trip beyond the first ID cursor page (1057.8288ms)
+✔ editing a destination query cancels stale results and requires a new selection (833.6276ms)
+✔ a foreign destination query explains Vietnam coverage and preserves the form without allowing a preview (755.851ms)
+✔ missing provider keeps user input and supports an honestly empty manual plan in another city (1222.7005ms)
+✔ entering trip list after an authenticated deep link loads saved trips before claiming an empty account (805.6936ms)
+✔ cancel discovery prevents a delayed preview from replacing current form values (864.8565ms)
+✔ provider photos are preferred and a replaced activity resets the image fallback (2116.6305ms)
+✔ missing prices, failed photo, long names and day/map selection preserve independent edits (2869.3826ms)
+ℹ tests 64
+ℹ suites 0
+ℹ pass 64
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 64517.4776
