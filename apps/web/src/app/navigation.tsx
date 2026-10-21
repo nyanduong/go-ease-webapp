@@ -4,6 +4,7 @@ import { Link } from './router';
 
 const links: { href: string; icon: IconName; label: string }[] = [
   { href: '/', icon: 'home', label: 'Trang chủ' },
+  { href: '/explore', icon: 'compass', label: 'Khám phá' },
   { href: '/trips', icon: 'trips', label: 'Chuyến đi' },
   { href: '/account', icon: 'account', label: 'Cá nhân' },
 ];
@@ -48,6 +49,9 @@ export function Navigation({ path }: { path: string }) {
         </Link>
       ))}
       <div className="mt-auto hidden flex-col gap-4 pt-10 lg:flex">
+        <Link href="/favorites" className="px-4 text-sm font-semibold text-teal">
+          Yêu thích của tôi →
+        </Link>
         <div className="rounded-2xl bg-sand p-5">
           <Icon name="compass" />
           <p className="mt-3 text-sm font-bold">Một chuyến đi thật riêng.</p>

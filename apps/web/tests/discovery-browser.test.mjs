@@ -169,6 +169,8 @@ async function setup(viewport = { width: 390, height: 844 }) {
       url = new URL(request.url()),
       method = request.method();
     if (method === 'OPTIONS') return reply(route, {});
+    if (url.pathname === '/v1/content' || url.pathname === '/v1/favorites')
+      return reply(route, { apiVersion: '1', items: [], nextCursor: null });
     if (url.pathname === '/v1/catalog/places')
       return reply(route, {
         apiVersion: '1',
@@ -614,7 +616,7 @@ for (const viewport of [
     await page.waitForFunction(() =>
       [...document.querySelectorAll('main img')].every((img) => img.complete),
     );
-    const folder = root + '/../../docs/qa/warm-refinement/after';
+    const folder = root + '/test-results/warm-refinement';
     await mkdir(folder, { recursive: true });
     await page.screenshot({ path: `${folder}/preview-${viewport.width}.png`, fullPage: false });
     await page.getByRole('tab', { name: /^Ngày 1/ }).press('End');

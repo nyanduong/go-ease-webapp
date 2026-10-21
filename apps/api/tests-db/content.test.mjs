@@ -6,6 +6,7 @@ import { createApi } from '../dist/bootstrap.js';
 import { contentPageSchema, contentRecordSchema, getDestination } from '@goease/contracts';
 import { isolatedUrl } from '../scripts/db-tools.mjs';
 import { initialContent, seedContent } from '../scripts/content-seed.mjs';
+import { checkCmsDatabaseBrowser } from '../../web/tests/cms-db-browser.mjs';
 
 if (process.env.GOEASE_DB_TEST_ACK !== 'isolated') throw Error('Isolated real database required');
 const adminUrl = process.env.GOEASE_DB_TEST_ADMIN_URL;
@@ -405,6 +406,16 @@ test('sourced editorial seed is repeatable and preserves admin payload, version 
       ]);
     const before = (await read()).rows;
     assert.equal(before.length, ids.length);
+    for (const value of initialContent) {
+      const links = await admin.query(
+        'SELECT "categoryId" FROM "EditorialCategory" WHERE "contentId"=$1 ORDER BY "categoryId"',
+        [value.id],
+      );
+      assert.deepEqual(
+        links.rows.map((row) => row.categoryId),
+        [...value.categoryIds].sort(),
+      );
+    }
     await seedContent(adminUrl);
     assert.deepEqual((await read()).rows, before);
     const page = contentPageSchema.parse(
@@ -425,4 +436,34 @@ test('sourced editorial seed is repeatable and preserves admin payload, version 
     assert.equal(row.version, edited.version);
     assert.equal(row.updatedAt.toISOString(), edited.updatedAt);
     await failure(await request(null, 'GET', '/v1/content/' + original.entry.id), 404, 'NOT_FOUND');
+  }));
+
+test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved reopened manual plans at mobile and desktop widths', () =>
+  fixture(async ({ A, B, create, update, base, token, request }) => {
+    const id = 'aaa-browser-' + randomUUID();
+    const draft = await create(
+      entry(id, 'destination', {
+        title: 'Đà Lạt — Hành trình cao nguyên',
+        summary: 'Chọn một nhịp đi chậm giữa những khoảng xanh và góc phố cao nguyên.',
+        body: 'Nội dung minh họa cho kiểm thử CMS với PostgreSQL thật. Bạn có thể tự sắp xếp các điểm dừng và kiểm tra thông tin trước chuyến đi.',
+        destination: { ...getDestination('da-lat'), id, name: 'Đà Lạt — Hành trình cao nguyên' },
+      }),
+    );
+    await failure(await request(null, 'GET', '/v1/content/' + id), 404, 'NOT_FOUND');
+    const published = await update(draft, { status: 'published' });
+    const { tripIds } = await checkCmsDatabaseBrowser({ base, token, owner: A, record: published });
+    assert.equal(tripIds.length, 2);
+    const trips = await admin.query(
+      'SELECT id,"ownerSubject",destination FROM "Trip" WHERE id=ANY($1::varchar[])',
+      [tripIds],
+    );
+    assert.equal(trips.rowCount, 2);
+    for (const trip of trips.rows) {
+      assert.equal(trip.ownerSubject, A);
+      assert.equal(trip.destination.id, id);
+    }
+    assert.equal((await result(await request('A', 'GET', '/v1/favorites'))).items[0].entry.id, id);
+    assert.equal((await result(await request('B', 'GET', '/v1/favorites'))).items.length, 0);
+    await failure(await request('B', 'GET', '/v1/trips/' + tripIds[0]), 404, 'NOT_FOUND');
+    assert.notEqual(A, B);
   }));

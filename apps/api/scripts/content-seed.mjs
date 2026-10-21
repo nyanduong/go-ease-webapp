@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { pathToFileURL } from 'node:url';
 import { getDestination, contentInputSchema } from '@goease/contracts';
+import { additionalEditorialContent } from './content-seed-data.mjs';
 
 const source = {
   title: 'Vietnam Tourism — Đà Lạt (kiểm tra 21/10/2026)',
@@ -37,6 +38,7 @@ export const initialContent = [
     destination: null,
     sources: [source],
   },
+  ...additionalEditorialContent,
 ].map((entry) => contentInputSchema.parse(entry));
 
 export async function seedContent(databaseUrl) {
@@ -44,9 +46,36 @@ export async function seedContent(databaseUrl) {
   const tx = await pool.connect();
   try {
     await tx.query('BEGIN');
+    await tx.query('SELECT pg_advisory_xact_lock(781602)');
     for (const entry of initialContent) {
-      await tx.query(
-        'INSERT INTO "EditorialContent" (id,kind,status,title,"destinationId",payload) VALUES ($1,$2,$3,$4,$5,$6::jsonb) ON CONFLICT(id) DO NOTHING',
+      const dependencies = [
+        ...entry.categoryIds,
+        ...(entry.destinationId ? [entry.destinationId] : []),
+      ];
+      const refs = dependencies.length
+        ? (
+            await tx.query(
+              'SELECT id,kind,status FROM "EditorialContent" WHERE id=ANY($1::varchar[])',
+              [dependencies],
+            )
+          ).rows
+        : [];
+      // An admin may have hidden/replaced a seed parent. Preserve that decision;
+      // do not publish new descendants into an invalid reference graph.
+      if (
+        dependencies.some(
+          (id) =>
+            !refs.some(
+              (row) =>
+                row.id === id &&
+                row.kind === (id === entry.destinationId ? 'destination' : 'category') &&
+                (entry.status !== 'published' || row.status === 'published'),
+            ),
+        )
+      )
+        continue;
+      const inserted = await tx.query(
+        'INSERT INTO "EditorialContent" (id,kind,status,title,"destinationId",payload) VALUES ($1,$2,$3,$4,$5,$6::jsonb) ON CONFLICT(id) DO NOTHING RETURNING id',
         [
           entry.id,
           entry.kind,
@@ -56,6 +85,12 @@ export async function seedContent(databaseUrl) {
           JSON.stringify(entry),
         ],
       );
+      if (inserted.rowCount)
+        for (const categoryId of entry.categoryIds)
+          await tx.query(
+            'INSERT INTO "EditorialCategory" ("contentId","categoryId") VALUES ($1,$2) ON CONFLICT DO NOTHING',
+            [entry.id, categoryId],
+          );
     }
     await tx.query('COMMIT');
   } catch (error) {

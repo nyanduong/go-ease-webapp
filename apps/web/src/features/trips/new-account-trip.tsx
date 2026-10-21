@@ -24,6 +24,7 @@ import { TripForm } from './trip-form';
 import { DiscoveryReview } from './discovery-review';
 import { confirmAction } from '../../platform/confirmation';
 import { offlineDev } from '../../platform/dev-mode';
+import { contentDetail } from '../content/content-api';
 import { clearCreation, restoreCreation, saveCreation } from './creation-cache';
 
 const interests = [
@@ -48,7 +49,11 @@ export function NewAccountTrip({
 }) {
   const { catalog, trips } = useAccount();
   const owner = trips.owner!;
-  const [restored] = useState(() => restoreCreation(sessionStorage, owner));
+  const [contentId] = useState(() => new URLSearchParams(location.search).get('content'));
+  const [restored] = useState(() => {
+    const saved = restoreCreation(sessionStorage, owner);
+    return (saved?.contentId ?? null) === contentId ? saved : null;
+  });
   const [initial] = useState(() => {
     const base = initialTripForm(new Date());
     const query = new URLSearchParams(location.search);
@@ -58,7 +63,7 @@ export function NewAccountTrip({
       name: 'Chuyến đi của tôi',
       ...(destination
         ? { destinationId: destination.id, destination }
-        : query.has('choose') || query.has('destination')
+        : query.has('choose') || query.has('destination') || query.has('content')
           ? { destinationId: '', destination: undefined }
           : {}),
     };
@@ -85,6 +90,7 @@ export function NewAccountTrip({
     if (completed.current || accountTrips.getSnapshot().owner !== owner) return;
     setCacheFailed(
       !saveCreation(sessionStorage, owner, {
+        contentId,
         form,
         pace,
         interests: selectedInterests,
@@ -101,6 +107,43 @@ export function NewAccountTrip({
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
   const [destinationBusy, setDestinationBusy] = useState(false);
+  const [editorial, setEditorial] = useState(!!contentId);
+  const [editorialLoading, setEditorialLoading] = useState(!!contentId);
+  useEffect(() => {
+    if (!contentId) return;
+    const request = new AbortController();
+    setEditorialLoading(true);
+    void (async () => {
+      const selected = await contentDetail(contentId, request.signal);
+      const parent =
+        selected.entry.kind === 'destination'
+          ? selected
+          : selected.entry.destinationId
+            ? await contentDetail(selected.entry.destinationId, request.signal)
+            : null;
+      if (!parent?.entry.destination) throw Error('Nội dung chưa có điểm đến để lập kế hoạch.');
+      if (request.signal.aborted || accountTrips.getSnapshot().owner !== owner) return;
+      if (!restored)
+        setForm((current) => ({
+          ...current,
+          destinationId: parent.entry.destination!.id,
+          destination: parent.entry.destination!,
+        }));
+      setPreview(null);
+      setEditorial(true);
+      setMessage(
+        'Đã chọn điểm đến từ nội dung GoEase. Tạo lịch trống để tự thêm những địa điểm bạn muốn ghé.',
+      );
+    })()
+      .catch(() => {
+        if (!request.signal.aborted)
+          setMessage('Chưa mở được điểm đến từ nội dung này. Hãy chọn lại điểm đến để tiếp tục.');
+      })
+      .finally(() => {
+        if (!request.signal.aborted) setEditorialLoading(false);
+      });
+    return () => request.abort();
+  }, [contentId, owner, restored]);
   const submitting = useRef(false);
   async function createDraft(trip: Trip) {
     if (submitting.current || disabled) return;
@@ -183,9 +226,9 @@ export function NewAccountTrip({
     return result;
   };
   async function discover() {
-    if (offlineDev) return manual();
+    if (offlineDev || editorial) return manual();
     const parsed = validate();
-    if (!parsed.ok || busy || destinationBusy || disabled) return;
+    if (!parsed.ok || busy || destinationBusy || editorialLoading || disabled) return;
     const request = new AbortController();
     controller.current = request;
     setBusy(true);
@@ -219,7 +262,7 @@ export function NewAccountTrip({
   }
   async function manual() {
     const parsed = validate();
-    if (!parsed.ok || busy || destinationBusy || disabled) return;
+    if (!parsed.ok || busy || destinationBusy || editorialLoading || disabled) return;
     const destination = parsed.input.destination ?? getDestination(parsed.input.destinationId);
     if (!destination) return;
     const id = crypto.randomUUID();
@@ -347,6 +390,7 @@ export function NewAccountTrip({
           values={form}
           onChange={(value) => {
             setForm(value);
+            if (value.destinationId !== form.destinationId) setEditorial(false);
             setPreview(null);
             setMessage('');
             setErrors({});
@@ -357,7 +401,7 @@ export function NewAccountTrip({
             setPreview(null);
           }}
           errors={errors}
-          disabled={disabled || busy}
+          disabled={disabled || busy || editorialLoading}
           searchDestinations={accountSession.searchDestinations}
           onSearchBusyChange={setDestinationBusy}
           options={
@@ -414,7 +458,7 @@ export function NewAccountTrip({
           </Notice>
         )}
         <div className="flex flex-col gap-3">
-          {!offlineDev && (
+          {!offlineDev && !editorial && (
             <Button type="submit" disabled={disabled || busy || destinationBusy}>
               {busy ? 'Đang tạo lịch trình…' : 'Tạo lịch trình'} <Icon name="arrow" />
             </Button>

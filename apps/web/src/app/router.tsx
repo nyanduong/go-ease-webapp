@@ -169,6 +169,17 @@ export function usePath() {
     () => new URL(committedHref).pathname,
   );
 }
+export function useSearch() {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    () => new URL(committedHref).search,
+  );
+}
 export function Link({ href = '/', onClick, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
     <a

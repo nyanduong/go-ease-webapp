@@ -10,6 +10,7 @@ export const FORM_TTL = 24 * 60 * 60 * 1000;
 export const PREVIEW_TTL = 60 * 60 * 1000;
 const prefix = 'goease.creation.v1.';
 export interface CreationState {
+  contentId?: string | null;
   form: TripFormValues;
   pace: 'relaxed' | 'balanced' | 'active';
   interests: NonNullable<DiscoveryPreviewRequest['interests']>;
@@ -59,6 +60,11 @@ export function restoreCreation(
       return null;
     const form = value.form;
     if (
+      value.contentId != null &&
+      (typeof value.contentId !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(value.contentId))
+    )
+      return null;
+    if (
       !form ||
       !['name', 'startDate', 'durationDays', 'people', 'budgetVnd'].every(
         (key) => typeof form[key] === 'string' && form[key].length <= 200,
@@ -92,6 +98,7 @@ export function restoreCreation(
       now - value.previewAt < PREVIEW_TTL;
     const preview = fresh && parsed.success ? parsed.data : null;
     return {
+      ...(typeof value.contentId === 'string' ? { contentId: value.contentId } : {}),
       form,
       pace: value.pace,
       interests: value.interests,

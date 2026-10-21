@@ -203,6 +203,12 @@ export function AccountPage() {
       </div>
       <div className="surface flex flex-col divide-y divide-line px-5">
         <Link
+          href="/favorites"
+          className="flex min-h-16 items-center justify-between gap-3 font-semibold"
+        >
+          Yêu thích của tôi <span aria-hidden="true">→</span>
+        </Link>
+        <Link
           href="/about"
           className="flex min-h-16 items-center justify-between gap-3 font-semibold"
         >

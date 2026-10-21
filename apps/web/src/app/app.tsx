@@ -2,7 +2,7 @@ import { Component, useEffect, type ReactNode } from 'react';
 import { AccountGate, Brand, Notice } from '../components/ui';
 import { Navigation } from './navigation';
 import { MotionRegion } from '../components/motion';
-import { Link, usePath } from './router';
+import { Link, usePath, useSearch } from './router';
 import { AccountWorkspace } from '../features/account/account-workspace';
 import { AccountHome } from '../features/account/account-home';
 import { AccountPage, LoginPage } from '../features/account/account-page';
@@ -13,10 +13,17 @@ import { SampleTrip } from '../features/trips/sample-trip';
 import { Icon } from '../components/icon';
 import { ProfileAvatarImage } from '../features/account/profile-avatar';
 import { offlineDev } from '../platform/dev-mode';
+import { ExplorePage } from '../features/content/explore-page';
+import { ContentDetail } from '../features/content/content-detail';
+import { FavoritesPage } from '../features/content/favorites-page';
 
 function Route({ path }: { path: string }) {
   if (path === '/' || path === '/login' || path === '/auth/callback') return <AccountHome />;
   if (path === '/sample') return <SampleTrip />;
+  if (path === '/explore') return <ExplorePage />;
+  if (path === '/favorites') return <FavoritesPage />;
+  const contentMatch = /^\/explore\/([a-z0-9][a-z0-9_-]{0,79})$/.exec(path);
+  if (contentMatch) return <ContentDetail id={contentMatch[1]} />;
   if (path === '/trips') return <AccountWorkspace />;
   if (path === '/trips/new') return <AccountWorkspace mode="new" />;
   if (path === '/account')
@@ -51,9 +58,15 @@ function Route({ path }: { path: string }) {
 }
 export function App() {
   const path = usePath();
+  const search = useSearch();
   const { session, trips, workspace, profile } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
-  const publicPage = path === '/' || path === '/sample' || path === '/about';
+  const publicPage =
+    path === '/' ||
+    path === '/sample' ||
+    path === '/about' ||
+    path === '/explore' ||
+    /^\/explore\/[a-z0-9][a-z0-9_-]{0,79}$/.test(path);
   if (!publicPage && !offlineDev && session.phase !== 'backend-verified') return <LoginPage />;
   if (!publicPage && !trips.ready)
     return (
@@ -121,7 +134,10 @@ export function App() {
               </div>
             )}
             <MotionRegion key={path} motionKey={path}>
-              <Route key={`${session.userId}:${path}`} path={path} />
+              <Route
+                key={`${session.userId}:${path}:${path === '/explore' ? search : ''}`}
+                path={path}
+              />
             </MotionRegion>
           </ErrorBoundary>
         </main>

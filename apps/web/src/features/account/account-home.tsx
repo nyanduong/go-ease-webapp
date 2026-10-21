@@ -4,6 +4,7 @@ import { Link } from '../../app/router';
 import { accountTrips, useAccount } from './session';
 import { mostRecentlyUpdated } from '../trips/recent-trip';
 import { Icon } from '../../components/icon';
+import { DiscoveryHome } from '../content/discovery-home';
 
 export function AccountHome() {
   const { trips } = useAccount();
@@ -22,7 +23,7 @@ export function AccountHome() {
   const latest =
     trips.draft?.trip ?? (!trips.cursor ? mostRecentlyUpdated(trips.items) : undefined);
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-9 py-3 sm:py-6">
+    <div className="mx-auto flex w-full flex-col gap-9 py-3 sm:py-6">
       <div className="min-w-0">
         <section className="flex min-w-0 flex-col items-start gap-5">
           <span className="hidden text-sm font-semibold tracking-wider text-teal lg:block">
@@ -73,6 +74,7 @@ export function AccountHome() {
           </div>
         </section>
       </div>
+      <DiscoveryHome />
       {trips.ready && latest && (
         <section className="border-t border-line pt-6">
           <h2 className="mb-3 text-lg">Tiếp tục chuyến gần nhất</h2>

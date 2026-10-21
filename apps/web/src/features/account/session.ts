@@ -295,6 +295,20 @@ export const accountSession = {
     if (epoch !== lifecycle) return;
     return maintainSession(true);
   },
+  async contentRequest(method: 'GET' | 'PUT' | 'DELETE', path: string, signal?: AbortSignal) {
+    const owner = session.userId,
+      epoch = lifecycle;
+    if (restoring) await restoring;
+    else if (initialized) await initialized;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi.');
+    const result = await auth.contentRequest(method, path, signal);
+    assertSessionOwner();
+    if (owner !== session.userId || epoch !== lifecycle) throw Error('Tài khoản đã thay đổi.');
+    return result;
+  },
   loadProfile: () => profileRequest(),
   saveProfile: (input: ProfileInput) => profileRequest(input),
   async importLegacy(signal: AbortSignal) {

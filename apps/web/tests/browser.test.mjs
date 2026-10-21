@@ -191,6 +191,8 @@ async function setup(options = {}) {
       url = new URL(request.url()),
       method = request.method();
     if (method === 'OPTIONS') return reply(route, {});
+    if (url.pathname === '/v1/content' || url.pathname === '/v1/favorites')
+      return reply(route, { apiVersion: '1', items: [], nextCursor: null });
     const owner = request.headers().authorization === 'Bearer ' + tokens.B ? 'B' : 'A';
     if (url.pathname.startsWith('/v1/profile-media/') && method === 'GET') {
       const bytes = state.media.get(url.pathname);
@@ -1214,7 +1216,7 @@ test('profile shows Google identity, persists edits across reload and isolates a
     window.dispatchEvent(new Event('beforeinstallprompt', { cancelable: true })),
   );
   assert.equal(await page.getByRole('button', { name: 'Cài GoEase', exact: true }).count(), 0);
-  const photoFolder = root + '/../../docs/qa/warm-refinement/after';
+  const photoFolder = root + '/test-results/warm-refinement';
   await mkdir(photoFolder, { recursive: true });
   await page
     .getByRole('img', { name: 'Ảnh bìa của bạn', exact: true })
@@ -1471,7 +1473,7 @@ for (const [mode, viewport] of [
       { page, state } = f;
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.context().route('https://res.cloudinary.com/**', (route) => route.abort());
-    const folder = root + '/../../docs/qa/warm-refinement/after';
+    const folder = root + '/test-results/warm-refinement';
     await mkdir(folder, { recursive: true });
     async function capture(screen) {
       await page.evaluate(
@@ -1496,7 +1498,7 @@ for (const [mode, viewport] of [
     await page.getByRole('heading', { name: 'Bạn muốn đi đâu?', exact: true }).waitFor();
     assert.equal(
       await page.getByRole('navigation').getByRole('link').count(),
-      viewport.width < 1024 ? 3 : 6,
+      viewport.width < 1024 ? 4 : 8,
     );
     await capture('home');
     assert.equal(
