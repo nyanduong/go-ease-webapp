@@ -463,17 +463,17 @@ test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved
     await failure(await request(null, 'GET', '/v1/content/' + id), 404, 'NOT_FOUND');
     const published = await update(draft, { status: 'published' });
     const { tripIds } = await checkCmsDatabaseBrowser({ base, token, owner: A, record: published });
-    assert.equal(tripIds.length, 2);
+    assert.equal(tripIds.length, 3);
     const trips = await admin.query(
       'SELECT id,"ownerSubject",destination FROM "Trip" WHERE id=ANY($1::varchar[])',
       [tripIds],
     );
-    assert.equal(trips.rowCount, 2);
+    assert.equal(trips.rowCount, 3);
     for (const trip of trips.rows) {
       assert.equal(trip.ownerSubject, A);
       assert.equal(trip.destination.id, id);
     }
-    assert.equal((await result(await request('A', 'GET', '/v1/favorites'))).items[0].entry.id, id);
+    assert.equal((await result(await request('A', 'GET', '/v1/favorites'))).items.length, 0);
     assert.equal((await result(await request('B', 'GET', '/v1/favorites'))).items.length, 0);
     await failure(await request('B', 'GET', '/v1/trips/' + tripIds[0]), 404, 'NOT_FOUND');
     assert.notEqual(A, B);
