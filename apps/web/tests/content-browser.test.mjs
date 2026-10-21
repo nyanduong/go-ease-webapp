@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
 import { getDalatCatalog } from '@goease/catalog';
+import { getDestination } from '@goease/contracts';
+import { generateDiscoveredTrip } from '@goease/itinerary';
+import { randomUUID } from 'node:crypto';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const base = 'http://127.0.0.1:4193';
@@ -153,6 +156,50 @@ async function setup(viewport, authenticated = true) {
       else favorites.delete(id);
       return reply(route, { apiVersion: '1', saved: method === 'PUT' });
     }
+    if (url.pathname === '/v1/discovery/preview') {
+      const body = request.postDataJSON();
+      const selected = body.input.destination ?? getDestination(body.input.destinationId);
+      const places = Array.from({ length: 5 }, (_, index) => ({
+        id: `editorial-preview-${index}`,
+        provider: 'serpapi',
+        externalId: `fixture:${index}`,
+        name: `Địa điểm gợi ý ${index + 1}`,
+        destinationId: selected.id,
+        coordinates: {
+          latitude: selected.center.latitude + index * 0.003,
+          longitude: selected.center.longitude,
+        },
+        address: `Địa chỉ fixture ${index + 1}`,
+        category: 'nature',
+        rating: null,
+        priceLevel: null,
+        durationMinutes: 60,
+        durationBasis: 'estimate',
+        sourceUrl: `https://www.google.com/maps?cid=editorial${index}`,
+        fetchedAt: '2026-10-20T13:00:00Z',
+      }));
+      const result = generateDiscoveredTrip(body.input, places, {
+        tripId: randomUUID(),
+        today: body.input.startDate,
+        destination: selected,
+        pace: body.pace,
+      });
+      assert.equal(result.ok, true);
+      return reply(route, {
+        apiVersion: '1',
+        destination: selected,
+        source: 'serpapi',
+        places,
+        result,
+        metadata: {
+          cacheHit: false,
+          providerRequests: 2,
+          durationMs: 123,
+          fetchedAt: '2026-10-20T13:00:00Z',
+          missingPrices: 5,
+        },
+      });
+    }
     if (url.pathname === '/v1/trips' && method === 'GET')
       return reply(route, {
         apiVersion: '1',
@@ -292,4 +339,42 @@ test('public discovery requires no account; unpublished/missing detail never off
   );
   assert.deepEqual(f.errors, []);
   await f.context.close();
+});
+
+test('editorial handoff preserves changed-destination provider preview and creation mode across reload', async () => {
+  const f = await setup({ width: 390, height: 844 });
+  const { page, calls } = f;
+  try {
+    await page.goto(base + '/trips/new?content=' + destination.id);
+    await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
+    if (!(await page.getByLabel('Tìm điểm đến', { exact: true }).isVisible()))
+      await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).click();
+    await page.getByLabel('Tìm điểm đến', { exact: true }).fill('');
+    await page.getByRole('button', { name: 'Đà Nẵng', exact: true }).click();
+    await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Đổi điểm đến từ nội dung');
+    await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2099-10-20');
+    await page.getByLabel('Số ngày', { exact: true }).fill('2');
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    const refetched = page.waitForResponse((response) =>
+      response.url().endsWith('/v1/content/' + destination.id),
+    );
+    await page.reload();
+    await refetched;
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    // Going back also checks that a late editorial fetch did not change the restored creation mode.
+    await page.getByRole('button', { name: 'Sửa thông tin chuyến', exact: true }).click();
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Xem lại lịch gợi ý', exact: true }).click();
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    assert.equal(calls.filter((call) => call === 'POST /v1/discovery/preview').length, 1);
+    assert.equal(
+      calls.some((call) => call === 'POST /v1/trips'),
+      false,
+    );
+    assert.equal(new URL(page.url()).searchParams.get('content'), destination.id);
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await f.context.close();
+  }
 });

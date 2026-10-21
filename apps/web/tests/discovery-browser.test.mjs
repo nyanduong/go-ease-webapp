@@ -305,6 +305,54 @@ async function form(page, city = 'Đà Nẵng') {
   await page.getByLabel('Số ngày', { exact: true }).fill('2');
   await page.getByLabel('Số người', { exact: true }).fill('3');
 }
+test('editorial photo failures try the exact place, matching city, then neutral without another city', async () => {
+  const f = await setup();
+  const { page, context } = f;
+  const record = {
+    entry: {
+      id: 'photo-fixture',
+      kind: 'place',
+      title: 'Biệt thự Hằng Nga',
+      summary: 'Photo fallback fixture',
+      body: 'Fixture body',
+      status: 'published',
+      destinationId: 'da-lat',
+      categoryIds: [],
+      image: {
+        url: 'https://images.example.test/missing.jpg',
+        alt: 'Missing fixture image',
+        credit: 'Fixture',
+      },
+      address: 'Đà Lạt',
+      coordinates: { latitude: 11.934791, longitude: 108.430638 },
+      destination: null,
+      sources: [{ title: 'Fixture source', url: 'https://example.test/source' }],
+    },
+    version: 1,
+    updatedAt: '2026-10-21T00:00:00Z',
+  };
+  await context.route('https://api.goease.test/v1/content/photo-fixture', (route) =>
+    route.fulfill({ json: record, headers: { 'access-control-allow-origin': base } }),
+  );
+  const attempted = [];
+  await context.route('**/travel/dalat-crazy-house.webp', (route) => {
+    attempted.push('place');
+    return route.abort();
+  });
+  await page.goto(base + '/explore/photo-fixture');
+  await page.waitForFunction(
+    () => document.querySelector('main figure img')?.getAttribute('src') === '/travel/da-lat.webp',
+  );
+  assert(attempted.includes('place'));
+  await page.getByText('Ảnh minh họa điểm đến', { exact: false }).waitFor();
+  await context.route('**/travel/da-lat.webp', (route) => route.abort());
+  await page.reload();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('main figure img')?.getAttribute('src') === '/travel/placeholder.svg',
+  );
+  await finish(f, 'editorial-photo-fallback');
+});
 async function finish(fixture, name) {
   assert.deepEqual(fixture.errors, []);
   assert.equal(

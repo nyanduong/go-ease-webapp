@@ -1373,29 +1373,58 @@ test('a revoked refresh token requires Google login and clears persistent creden
 test('online backend outage preserves login, reports server failure and recovers on retry or reconnect', async () => {
   const f = await setup(),
     { page, context, state } = f;
-  await login(page, '/account');
-  state.backendUnavailable = true;
-  await page.reload();
-  assert.equal(await page.evaluate(() => navigator.onLine), true);
-  await page.getByText('Chưa mở được GoEase. Vui lòng thử lại.', { exact: true }).waitFor();
-  assert.equal(await page.getByRole('navigation').count(), 0);
-  assert.equal(
-    await page.evaluate(
-      () => Object.keys(localStorage).filter((key) => key.endsWith('.session')).length,
-    ),
-    1,
+  const recoveryTrace = [];
+  const recordRecovery = (event, request, status) => {
+    const url = new URL(request.url());
+    if ([authOrigin, 'https://api.goease.test'].includes(url.origin))
+      recoveryTrace.push({
+        event,
+        method: request.method(),
+        path: url.pathname,
+        ...(status ? { status } : {}),
+      });
+  };
+  page.on('request', (request) => recordRecovery('request', request));
+  page.on('response', (response) =>
+    recordRecovery('response', response.request(), response.status()),
   );
-  state.backendUnavailable = false;
-  await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
-  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
-  await context.setOffline(true);
-  await page.reload();
-  await page.getByText('Bạn đang mất kết nối.', { exact: true }).waitFor();
-  await context.setOffline(false);
-  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
-  assert.equal(state.authorize.length, 1, 'Recovery must reuse the saved session');
-  assert.equal(state.writes.length, 0);
-  await finish(f, 'server-reconnect');
+  page.on('requestfailed', (request) => recordRecovery('failed', request));
+  try {
+    await login(page, '/account');
+    state.backendUnavailable = true;
+    await page.reload();
+    assert.equal(await page.evaluate(() => navigator.onLine), true);
+    await page.getByText('Chưa mở được GoEase. Vui lòng thử lại.', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('navigation').count(), 0);
+    assert.equal(
+      await page.evaluate(
+        () => Object.keys(localStorage).filter((key) => key.endsWith('.session')).length,
+      ),
+      1,
+    );
+    state.backendUnavailable = false;
+    await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
+    await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
+    await context.setOffline(true);
+    await page.reload();
+    await page.getByText('Bạn đang mất kết nối.', { exact: true }).waitFor();
+    await context.setOffline(false);
+    await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
+    assert.equal(state.authorize.length, 1, 'Recovery must reuse the saved session');
+    assert.equal(state.writes.length, 0);
+    await finish(f, 'server-reconnect');
+  } catch (error) {
+    // Paths/status only: never log headers, credentials, query strings or bodies.
+    console.error(
+      'Session recovery diagnostics:',
+      JSON.stringify({
+        path: new URL(page.url()).pathname,
+        network: recoveryTrace,
+        pageErrors: f.errors,
+      }),
+    );
+    throw error;
+  }
 });
 
 test('workspace loading stays quiet; catalog failure offers a retry without technical auth messages', async () => {

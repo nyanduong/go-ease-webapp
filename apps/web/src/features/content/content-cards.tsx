@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import type { ContentInput, ContentRecord } from '@goease/contracts';
 import { Link } from '../../app/router';
-import { destinationPhoto, neutralPhoto, placePhoto } from '../trips/travel-photos';
+import {
+  destinationPhoto,
+  neutralPhoto,
+  placePhoto,
+  type TravelPhoto,
+} from '../trips/travel-photos';
 
 export const kindLabels: Record<ContentInput['kind'], string> = {
   destination: 'Điểm đến',
@@ -19,27 +24,41 @@ export function ContentImage({
   hero?: boolean;
   href?: string;
 }) {
-  const [failed, setFailed] = useState(false);
-  const local =
-    entry.kind === 'destination'
-      ? destinationPhoto(entry.destination?.id ?? entry.id)
-      : entry.kind === 'place' && entry.destinationId
-        ? placePhoto(entry.title, entry.destinationId)
-        : undefined;
-  const image =
-    entry.image ??
-    (local && local.src !== neutralPhoto.src
-      ? {
-          url: local.src,
-          alt: local.alt,
-          credit: `${local.author}${local.license ? ' · ' + local.license : ''}`,
-        }
-      : null);
+  const [index, setIndex] = useState(0);
+  const images: {
+    url: string;
+    alt: string;
+    credit: string;
+    sourceUrl: string;
+    licenseUrl?: string;
+    city?: boolean;
+  }[] = [];
+  if (entry.image) images.push({ ...entry.image, sourceUrl: entry.image.url });
+  const addLocal = (photo: TravelPhoto | undefined, city = false) => {
+    if (!photo || photo.src === neutralPhoto.src || images.some((image) => image.url === photo.src))
+      return;
+    images.push({
+      url: photo.src,
+      alt: photo.alt,
+      credit: `${photo.author}${photo.license ? ' · ' + photo.license : ''}`,
+      sourceUrl: photo.sourceUrl,
+      ...(photo.licenseUrl ? { licenseUrl: photo.licenseUrl } : {}),
+      city,
+    });
+  };
+  if (entry.kind === 'destination') addLocal(destinationPhoto(entry.destination?.id ?? entry.id));
+  if (entry.kind === 'place' && entry.destinationId) {
+    addLocal(placePhoto(entry.title, entry.destinationId));
+    addLocal(destinationPhoto(entry.destinationId), true);
+  }
+  const image = images[index];
   const pixels = (
     <img
-      src={!failed && image ? image.url : '/travel/placeholder.svg'}
-      alt={!failed && image ? image.alt : 'Chưa có ảnh: ' + entry.title}
-      onError={() => setFailed(true)}
+      src={image ? image.url : '/travel/placeholder.svg'}
+      alt={image ? image.alt : 'Chưa có ảnh: ' + entry.title}
+      onError={() => {
+        if (image) setIndex((value) => value + 1);
+      }}
       loading={hero ? 'eager' : 'lazy'}
       decoding="async"
       className={`w-full object-cover ${hero ? 'aspect-[16/9] max-h-[32rem]' : 'aspect-[4/3]'}`}
@@ -56,22 +75,17 @@ export function ContentImage({
       ) : (
         pixels
       )}
-      {!failed && image && (
+      {image && (
         <figcaption className="px-3 py-2 text-xs text-muted">
-          Ảnh: {image.credit} · Cắt theo khung.{' '}
-          <a
-            href={entry.image ? entry.image.url : local?.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
+          {image.city ? 'Ảnh minh họa điểm đến' : 'Ảnh'}: {image.credit} · Cắt theo khung.{' '}
+          <a href={image.sourceUrl} target="_blank" rel="noreferrer" className="underline">
             Nguồn ảnh
           </a>
-          {!entry.image && local?.licenseUrl && (
+          {image.licenseUrl && (
             <>
               {' '}
               ·{' '}
-              <a href={local.licenseUrl} target="_blank" rel="noreferrer" className="underline">
+              <a href={image.licenseUrl} target="_blank" rel="noreferrer" className="underline">
                 Giấy phép
               </a>
             </>

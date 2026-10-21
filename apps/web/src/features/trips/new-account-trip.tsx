@@ -123,12 +123,19 @@ export function NewAccountTrip({
             : null;
       if (!parent?.entry.destination) throw Error('Nội dung chưa có điểm đến để lập kế hoạch.');
       if (request.signal.aborted || accountTrips.getSnapshot().owner !== owner) return;
-      if (!restored)
-        setForm((current) => ({
-          ...current,
-          destinationId: parent.entry.destination!.id,
-          destination: parent.entry.destination!,
-        }));
+      if (restored) {
+        // Revalidate publication without reapplying the original handoff over later user edits.
+        // A provider preview proves the user already switched to discovery creation.
+        setEditorial(
+          !restored.preview && restored.form.destinationId === parent.entry.destination.id,
+        );
+        return;
+      }
+      setForm((current) => ({
+        ...current,
+        destinationId: parent.entry.destination!.id,
+        destination: parent.entry.destination!,
+      }));
       setPreview(null);
       setEditorial(true);
       setMessage(

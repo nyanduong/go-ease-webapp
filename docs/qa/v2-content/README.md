@@ -8,7 +8,7 @@ Planning from a destination/place/article fetches its published parent destinati
 
 Images use explicit editorial image/credit, existing exact-city destination artwork or exact-place artwork, then the neutral placeholder. Food never inherits a generic city illustration. Bundled licensed artwork includes author, source, license and crop attribution; card source links are outside the image/title links to preserve valid HTML.
 
-Validation: web typecheck, lint and scoped Prettier checks pass. All 59 browser tests passed after route/navigation integration; the 3 editorial browser tests passed again after attribution changes and with a direct signed-in favorite-detail reload regression. Existing web logic/unit/integration suite passes (44 tests including OAuth editorial handoff).
+Validation: web typecheck, lint and scoped Prettier checks pass. The final browser suite has 61 tests, including four editorial tests and a photo fallback regression. Coverage includes direct signed-in favorite-detail reload and preservation of a changed-destination preview after revalidating the original editorial handoff. Existing web logic/unit/integration suite passes (47 tests including OAuth editorial handoff and deterministic session recovery scheduling).
 
 Evidence in this folder uses controlled public CMS/auth/favorites/trip API fixtures. The Ninh Bình fixture intentionally has no photograph, proving that unknown cities show the neutral placeholder instead of another city. Source text uses the Vietnam tourism portal as fixture attribution; the test does not claim a live provider or database run. Mobile: 390×844; desktop: 1440×1000. Screenshots cover home, detail and reopened saved manual trip.
 
