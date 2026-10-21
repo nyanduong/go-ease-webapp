@@ -9,7 +9,8 @@ import { attachRequestContext } from './request-context.middleware.js';
 export interface HttpOptions {
   guard?: (req: Request) => void;
 }
-const largeBody = (url: string) => /^\/v1\/(?:trips(?:\/|\?|$)|profile-media(?:\?|$))/.test(url);
+const largeBody = (url: string) =>
+  /^\/v1\/(?:trips(?:\/|\?|$)|profile-media(?:\/|\?|$)|admin\/content(?:\/|\?|$))/.test(url);
 export function configureHttp(
   app: NestExpressApplication,
   config: ApiConfig,

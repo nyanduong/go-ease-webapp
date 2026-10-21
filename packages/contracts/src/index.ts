@@ -9,3 +9,4 @@ export * from './admin-catalog.js';
 export * from './destinations.js';
 export * from './discovery-place.js';
 export * from './discovery.js';
+export * from './content.js';

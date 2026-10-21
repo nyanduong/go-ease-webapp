@@ -5,6 +5,39 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+model EditorialContent {
+  id String @id @db.VarChar(80)
+  kind String @db.VarChar(16)
+  status String @default("draft") @db.VarChar(16)
+  title String @db.VarChar(120)
+  destinationId String? @db.VarChar(80)
+  parent EditorialContent? @relation("EditorialDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+  children EditorialContent[] @relation("EditorialDestination")
+  payload Json
+  version Int @default(1)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  categories EditorialCategory[] @relation("EditorialItems")
+  categoryItems EditorialCategory[] @relation("EditorialCategories")
+  favorites ContentFavorite[]
+  @@index([status, kind, id])
+  @@index([destinationId, status, id])
+}
+model EditorialCategory {
+  contentId String @db.VarChar(80)
+  categoryId String @db.VarChar(80)
+  content EditorialContent @relation("EditorialItems", fields: [contentId], references: [id], onDelete: Restrict)
+  category EditorialContent @relation("EditorialCategories", fields: [categoryId], references: [id], onDelete: Restrict)
+  @@id([contentId, categoryId])
+  @@index([categoryId, contentId])
+}
+model ContentFavorite {
+  ownerIssuer String @db.VarChar(128)
+  ownerSubject String @db.Uuid
+  contentId String @db.VarChar(80)
+  content EditorialContent @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@id([ownerIssuer, ownerSubject, contentId])
+}
 model AppUser {
   issuer String @db.VarChar(128)
   subject String @db.Uuid

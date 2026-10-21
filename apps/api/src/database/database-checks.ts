@@ -13,6 +13,10 @@ export async function checkDatabase(client: PrismaClient) {
     { safe: boolean }[]
   >`SELECT (c.relrowsecurity AND c.relforcerowsecurity) AS safe FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('Place','CatalogAdmin','PlaceRevision')`;
   if (catalogTables.length !== 3 || catalogTables.some((t) => !t.safe)) throw Error();
+  const contentTables = await client.$queryRaw<
+    { name: string; safe: boolean }[]
+  >`SELECT c.relname AS name, (c.relrowsecurity AND c.relforcerowsecurity AND (c.relname<>'ContentFavorite' OR EXISTS(SELECT 1 FROM pg_policy p WHERE p.polrelid=c.oid AND p.polname='owner_only'))) AS safe FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('EditorialContent','EditorialCategory','ContentFavorite')`;
+  if (contentTables.length !== 3 || contentTables.some((table) => !table.safe)) throw Error();
   const places = await client.place.findMany({
     orderBy: { id: 'asc' },
     take: CATALOG_LIMITS.maxEntries + 1,
