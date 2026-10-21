@@ -213,6 +213,7 @@ async function setup(options = {}) {
           .map(({ trip, version, updatedAt }) => ({
             id: trip.id,
             name: trip.name,
+            destinationId: trip.destinationId,
             startDate: trip.startDate,
             durationDays: trip.durationDays,
             people: trip.people,
@@ -1460,6 +1461,12 @@ for (const [mode, viewport] of [
     await page.getByRole('button', { name: 'Tạo lịch mẫu Đà Lạt', exact: true }).click();
     await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/);
     await page.getByRole('button', { name: /Giữ chuyến này/ }).waitFor();
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('.trip-timeline img')].some(
+        (img) => img.complete && img.naturalWidth > 0,
+      ),
+    );
+    assert(await page.locator('.trip-timeline img[src^="/travel/"]').count());
     await capture('itinerary');
     await page.getByRole('tab', { name: 'Chi phí', exact: true }).click();
     await capture('costs');
@@ -1484,6 +1491,8 @@ for (const [mode, viewport] of [
       .getByRole('navigation')
       .getByRole('link', { name: 'Chuyến đi', exact: true })
       .click();
+    await page.locator('img[src="/travel/da-lat.webp"]').first().waitFor();
+    await capture('trips');
     await page
       .getByRole('button', { name: 'Mở chuyến tài khoản: Đà Lạt cuối tuần', exact: true })
       .click();

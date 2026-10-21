@@ -43,6 +43,7 @@ export class TripsService {
         items: rows.slice(0, 20).map((r) => ({
           id: r.id,
           name: r.name,
+          destinationId: r.destinationId,
           startDate: r.startDate,
           durationDays: r.durationDays,
           people: r.people,

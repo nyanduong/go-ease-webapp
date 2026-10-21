@@ -1,7 +1,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { preview } from 'vite';
@@ -630,6 +630,36 @@ test('cancel discovery prevents a delayed preview from replacing current form va
   await finish(f, 'discovery-cancelled');
 });
 
+test('provider photos are preferred and a replaced activity resets the image fallback', async () => {
+  const f = await setup(),
+    { page, state } = f;
+  state.brokenPhoto = true;
+  await page.context().route('https://images.example.test/**', async (route) =>
+    route.fulfill({
+      contentType: 'image/webp',
+      body: await readFile(root + '/public/travel/da-nang.webp'),
+    }),
+  );
+  await form(page);
+  await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+  await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
+  const row = page.locator('.trip-timeline > section').first();
+  const image = row.locator('img');
+  await image.waitFor();
+  assert.equal(await image.getAttribute('src'), 'https://images.example.test/unavailable.jpg');
+  await page.waitForFunction(() => document.querySelector('.trip-timeline img')?.naturalWidth > 0);
+  assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 0);
+  assert.equal(
+    await row.getByRole('link', { name: 'Ảnh: Nguồn địa điểm', exact: true }).getAttribute('href'),
+    sourcePlaces(getDestination('da-nang'))[0].sourceUrl,
+  );
+  await page.getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 1', exact: true }).click();
+  await page.getByLabel('Địa điểm đã tìm', { exact: true }).selectOption('fixture-da-nang-1');
+  await row.locator('img[src="/travel/da-nang.webp"]').waitFor();
+  assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 1);
+  await finish(f, 'provider-photos');
+});
+
 test('missing prices, failed photo, long names and day/map selection preserve independent edits', async () => {
   const f = await setup(),
     { page, state } = f;
@@ -641,7 +671,13 @@ test('missing prices, failed photo, long names and day/map selection preserve in
   assert.equal(state.requests[0].pace, 'balanced');
   await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
   await page.getByRole('button', { name: /Giữ chuyến này/ }).waitFor();
-  await page.getByRole('img', { name: 'Chưa có ảnh địa điểm', exact: true }).first().waitFor();
+  await page.locator('.trip-timeline img[src="/travel/da-nang.webp"]').first().waitFor();
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('.trip-timeline img')].some(
+      (img) => img.complete && img.naturalWidth > 0,
+    ),
+  );
+  assert(await page.getByText('Ảnh minh họa', { exact: true }).count());
   assert.equal(await page.locator('img[alt="Điểm thử nghiệm 1"]').count(), 0);
   await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
   const longName =

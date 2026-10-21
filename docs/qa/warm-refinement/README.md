@@ -103,3 +103,13 @@ Người dùng đã chọn tài khoản trên Google; kiểm tra tab thật xác
 Sửa thêm race ở nút Thử lại: lỗi Auth có thể được hiển thị trước khi tác vụ restore/connect kết thúc, khiến lần bấm ngay sau lỗi bị bỏ qua. Lần bấm chủ động giờ đợi tác vụ đang chạy rồi khôi phục lại; kiểm tra lifecycle ngăn tiếp tục nếu đã đăng xuất/đổi tài khoản trong lúc chờ. Luồng hồi quy mất kết nối/khôi phục kiểm tra trường hợp này.
 
 Theo yêu cầu bổ sung, bỏ liên kết “Xem thử một chuyến trước” khỏi màn đăng nhập. Theo yêu cầu tiếp theo, phần “Xem thử một chuyến” trên Trang chủ cũng đã được bỏ; bố cục Trang chủ chuyển sang một cột giới hạn chiều rộng. Route mẫu vẫn được giữ để không làm hỏng liên kết cũ. Có assertion hồi quy trong luồng private-route/login; chạy lại typecheck, lint, build web và browser suite của màn tài khoản. Để tránh mở riêng web khi thiếu API, dùng `pnpm dev` cho lần khởi động thông thường và giữ terminal này chạy.
+
+
+## Travel imagery follow-up — 2026-10-21
+
+- Existing discovery thumbnails are preferred. Missing/failed images fall back to a locally bundled, licensed Commons photo. Source/author and license links appear below each image; overview substitutions are labeled “Ảnh minh họa”. Replacing a place resets the failure chain.
+- The initial library contains 11 photographs: the 8 popular destinations and 3 extra Đà Lạt landmarks. Exact-place matching is bound to destination + normalized name; unmatched places get a city overview. Unknown destination IDs use a labeled general illustration (Đà Lạt), not an invented photo of that place.
+- Trip details use the first provider thumbnail as the cover when available; saved-trip cards use their destination overview. List responses now include optional `destinationId`; older responses without it remain readable. No database migration or new paid photo lookup. Update strict-schema API consumers with the matching contract before deploying the API response change.
+- Local WebP assets total about 1.37 MB, are lazy loaded with fixed image slots and included in the existing PWA shell cache. Provider thumbnails/API responses remain outside that cache.
+- Photo provenance, licenses, transformations and refresh instructions: [travel photo credits](../../../apps/web/public/travel/README.md).
+- Validation: workspace typechecks and tests, web/API/trip-client lint, web production build, 49 browser scenarios, and 23 isolated PostgreSQL tests passed. Browser coverage includes provider-image priority, remote-image failure, replacement, sample/catalog imagery, saved-trip covers and mobile/desktop layouts. Screenshots refreshed below `after/`.

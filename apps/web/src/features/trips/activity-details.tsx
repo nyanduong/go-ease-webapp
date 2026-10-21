@@ -1,35 +1,17 @@
-import { useState } from 'react';
 import type { Activity, Place } from '@goease/contracts';
 import { Icon } from '../../components/icon';
+import { activityPhotos } from './travel-photos';
+import { TravelPhotoView } from './travel-photo';
 
-export function ActivityThumbnail({ activity }: { activity: Activity }) {
-  const [failed, setFailed] = useState(false);
-  const photo =
-    activity.location.kind === 'discovered'
-      ? activity.location.placeSnapshot.thumbnailUrl
-      : undefined;
-  if (!photo || failed)
-    return (
-      <span
-        className="activity-image flex! items-center justify-center bg-sand text-muted"
-        role="img"
-        aria-label="Chưa có ảnh địa điểm"
-        title="Chưa có ảnh địa điểm"
-      >
-        <Icon name="pin" width="28" height="28" />
-      </span>
-    );
+export function ActivityThumbnail({
+  activity,
+  destinationId,
+}: {
+  activity: Activity;
+  destinationId: string;
+}) {
   return (
-    <img
-      className="activity-image"
-      src={photo}
-      alt={activity.name}
-      width="160"
-      height="112"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
-    />
+    <TravelPhotoView photos={activityPhotos(activity, destinationId)} className="activity-image" />
   );
 }
 

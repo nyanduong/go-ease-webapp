@@ -111,7 +111,7 @@
     @apply absolute top-2 -left-[5px] size-[9px] rounded-full bg-teal;
   }
   .activity-image {
-    @apply float-right ml-3 h-20 w-24 rounded-xl object-cover sm:h-28 sm:w-40;
+    @apply float-right mb-2 ml-3 w-24 sm:w-40;
   }
   .activity-actions {
     @apply clear-both flex flex-wrap items-center gap-x-4 gap-y-1 pt-3;

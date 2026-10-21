@@ -945,6 +945,11 @@ test('pagination is bounded and deterministic, ledger/quota expiry fails safely 
       );
     const page = serverTripListResponseSchema.parse(await ok(await request('A', 'GET')));
     assert.equal(page.items.length, 20);
+    assert.equal(
+      page.items[0].destinationId,
+      'da-lat',
+      'trip covers use the saved destination, not the editable title',
+    );
     assert.equal(page.nextCursor, 'page-19');
     const last = await ok(await request('A', 'GET', '?cursor=' + page.nextCursor));
     assert.equal(last.items.length, 1);

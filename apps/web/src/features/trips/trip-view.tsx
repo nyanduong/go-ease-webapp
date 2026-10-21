@@ -15,6 +15,7 @@ import { projectDayMap } from '@goease/trip-client/map-controller';
 import { Button, dateLabel, Notice } from '../../components/ui';
 import { Icon } from '../../components/icon';
 import { ActivityDetails, ActivityThumbnail } from './activity-details';
+import { TripCover } from './trip-cover';
 import { Link, useLeaveGuard } from '../../app/router';
 import { MotionRegion } from '../../components/motion';
 import { GoogleDayMap } from '../maps/google-map';
@@ -368,6 +369,9 @@ function TripSession({
           </details>
         </div>
       </header>
+      <div className="mx-auto w-full max-w-4xl">
+        <TripCover trip={trip} />
+      </div>
       <div
         role="tablist"
         aria-label="Chi tiết chuyến"
@@ -470,7 +474,7 @@ function TripSession({
                     >
                       <span className="pt-1 text-base font-bold">{activity.startTime ?? '—'}</span>
                       <div className="activity-content">
-                        <ActivityThumbnail activity={activity} />
+                        <ActivityThumbnail activity={activity} destinationId={trip.destinationId} />
                         <h3 className="text-lg leading-snug sm:text-xl">{activity.name}</h3>
                         <p className="mt-1 text-sm text-muted">
                           {activity.location.kind === 'custom' ? 'Hoạt động của bạn' : 'Khám phá'}
