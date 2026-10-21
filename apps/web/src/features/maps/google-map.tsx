@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { DayMap } from '@goease/trip-client/map-controller';
 import { Button, Notice } from '../../components/ui';
+import { offlineDev } from '../../platform/dev-mode';
 
 const OsmDayMap = lazy(() => import('./osm-map'));
 
@@ -59,7 +60,7 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
     [attempt, retry] = useState(0);
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   useEffect(() => {
-    if (!key || useOsm || !model.region || !container.current) return;
+    if (offlineDev || !key || useOsm || !model.region || !container.current) return;
     let disposed = false,
       map: google.maps.Map | undefined;
     const markers: google.maps.marker.AdvancedMarkerElement[] = [];
@@ -134,7 +135,12 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
   }, [model, key, attempt, useOsm]);
   return (
     <section className="flex min-w-0 flex-col gap-5" aria-label="Bản đồ theo ngày">
-      {!model.pins.length ? (
+      {offlineDev ? (
+        <Notice>
+          Dev offline: không tải bản đồ nền hoặc chỉ đường online. Danh sách địa điểm và tọa độ có
+          sẵn vẫn được giữ trong chuyến.
+        </Notice>
+      ) : !model.pins.length ? (
         <Notice>Chưa có địa điểm để hiển thị trên bản đồ ngày này.</Notice>
       ) : key && !useOsm ? (
         <>
@@ -185,15 +191,22 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
                 {activity.order}. {activity.name}
               </p>
             ))}
-            <a
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-mint px-5 py-3 text-center text-sm font-bold text-teal-dark hover:bg-teal/15"
-              target="_blank"
-              rel="noopener noreferrer"
-              referrerPolicy="no-referrer"
-              href={directionsUrl(pin.coordinates.latitude, pin.coordinates.longitude)}
-            >
-              Mở chỉ đường Google Maps ↗
-            </a>
+            {!offlineDev && (
+              <a
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-mint px-5 py-3 text-center text-sm font-bold text-teal-dark hover:bg-teal/15"
+                target="_blank"
+                rel="noopener noreferrer"
+                referrerPolicy="no-referrer"
+                href={directionsUrl(pin.coordinates.latitude, pin.coordinates.longitude)}
+              >
+                Mở chỉ đường Google Maps ↗
+              </a>
+            )}
+            {offlineDev && (
+              <p className="text-sm text-muted">
+                {pin.coordinates.latitude}, {pin.coordinates.longitude}
+              </p>
+            )}
           </div>
         ))}
       </div>

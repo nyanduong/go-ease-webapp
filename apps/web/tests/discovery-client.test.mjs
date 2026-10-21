@@ -243,7 +243,7 @@ test('discovery sends auth only to configured GoEase origin and rejects invalid/
   assert.equal(calls[0].init.headers.authorization, 'Bearer access.token.signature');
   assert.equal(JSON.stringify(calls).includes('api_key'), false);
   await assert.rejects(
-    callDiscoveryApi('http://127.0.0.1:3000', 'access.token.signature', { input }),
+    callDiscoveryApi('http://192.168.1.5:3000', 'access.token.signature', { input }),
     /cấu hình/,
   );
   await assert.rejects(

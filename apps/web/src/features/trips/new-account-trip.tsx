@@ -21,6 +21,7 @@ import { useLeaveGuard } from '../../app/router';
 import { accountSession, accountTrips, useAccount } from '../account/session';
 import { TripForm } from './trip-form';
 import { confirmAction } from '../../platform/confirmation';
+import { offlineDev } from '../../platform/dev-mode';
 
 const interests = [
   ['heritage', 'Di sản'],
@@ -113,6 +114,7 @@ export function NewAccountTrip({
     return result;
   };
   async function discover() {
+    if (offlineDev) return manual();
     const parsed = validate();
     if (!parsed.ok || busy || destinationBusy || disabled) return;
     const request = new AbortController();
@@ -228,8 +230,9 @@ export function NewAccountTrip({
         <p className="text-xs font-bold tracking-widest text-teal uppercase">Điểm đến của bạn</p>
         <h3 className="mt-2 text-2xl">Một nơi mới, một hành trình mới.</h3>
         <p className="mt-2 text-sm text-muted">
-          Tìm nơi bạn muốn đến, chọn sở thích rồi xem gợi ý. Chỉnh sửa và chủ động lưu vào tài
-          khoản.
+          {offlineDev
+            ? 'Tạo lịch trống cho điểm đến có sẵn, hoặc dùng lịch mẫu Đà Lạt. Chỉnh sửa và lưu trên trình duyệt; không cần Internet.'
+            : 'Tìm nơi bạn muốn đến, chọn sở thích rồi xem gợi ý. Chỉnh sửa và chủ động lưu vào tài khoản.'}
         </p>
       </div>
       <form
@@ -253,32 +256,34 @@ export function NewAccountTrip({
           searchDestinations={accountSession.searchDestinations}
           onSearchBusyChange={setDestinationBusy}
         />
-        <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
-          <legend className="mb-3 font-semibold">
-            Bạn thích trải nghiệm gì?{' '}
-            <span className="text-sm font-normal text-muted">(tối đa 6, không bắt buộc)</span>
-          </legend>
-          {interests.map(([id, label]) => (
-            <label
-              key={id}
-              className={`flex min-h-11 cursor-pointer flex-row items-center gap-2 rounded-full border px-4 py-2 text-sm ${selectedInterests.includes(id) ? 'border-teal bg-mint text-teal-dark' : 'border-line'}`}
-            >
-              <input
-                type="checkbox"
-                className="size-4 w-auto"
-                checked={selectedInterests.includes(id)}
-                disabled={selectedInterests.length >= 6 && !selectedInterests.includes(id)}
-                onChange={(event) => {
-                  setInterests((value) =>
-                    event.target.checked ? [...value, id] : value.filter((item) => item !== id),
-                  );
-                  setPreview(null);
-                }}
-              />
-              {label}
-            </label>
-          ))}
-        </fieldset>
+        {!offlineDev && (
+          <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
+            <legend className="mb-3 font-semibold">
+              Bạn thích trải nghiệm gì?{' '}
+              <span className="text-sm font-normal text-muted">(tối đa 6, không bắt buộc)</span>
+            </legend>
+            {interests.map(([id, label]) => (
+              <label
+                key={id}
+                className={`flex min-h-11 cursor-pointer flex-row items-center gap-2 rounded-full border px-4 py-2 text-sm ${selectedInterests.includes(id) ? 'border-teal bg-mint text-teal-dark' : 'border-line'}`}
+              >
+                <input
+                  type="checkbox"
+                  className="size-4 w-auto"
+                  checked={selectedInterests.includes(id)}
+                  disabled={selectedInterests.length >= 6 && !selectedInterests.includes(id)}
+                  onChange={(event) => {
+                    setInterests((value) =>
+                      event.target.checked ? [...value, id] : value.filter((item) => item !== id),
+                    );
+                    setPreview(null);
+                  }}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        )}
         {message && (
           <Notice error>{message} Bạn vẫn có thể tạo lịch trống và tự thêm hoạt động.</Notice>
         )}
@@ -300,9 +305,11 @@ export function NewAccountTrip({
           </Notice>
         )}
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={disabled || busy || destinationBusy}>
-            Tìm địa điểm và lên lịch
-          </Button>
+          {!offlineDev && (
+            <Button type="submit" disabled={disabled || busy || destinationBusy}>
+              Tìm địa điểm và lên lịch
+            </Button>
+          )}
           <Button
             secondary
             disabled={disabled || busy || destinationBusy}

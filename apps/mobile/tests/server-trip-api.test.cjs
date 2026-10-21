@@ -14,7 +14,7 @@ test('conflict/auth/network/timeout/cancel are explicit, raw remote errors redac
  const c=new AbortController();c.abort();await assert.rejects(callServerTripApi(base,token,{kind:'get',id:t.id},{signal:c.signal,fetcher:async()=>assert.fail('cancelled')}),{code:'CANCELLED'});
 });
 test('HTTP LAN, invalid mutation, owner injection and forged/mismatched wire result cannot be accepted',async()=>{
- await assert.rejects(callServerTripApi('http://127.0.0.1:3000',token,{kind:'get',id:t.id}),{code:'CONFIG'});
+ await assert.rejects(callServerTripApi('http://192.168.1.5:3000',token,{kind:'get',id:t.id}),{code:'CONFIG'});
  await assert.rejects(callServerTripApi(base,token,{kind:'create',mutationId,trip:{...t,ownerId:'other'}},{fetcher:async()=>assert.fail('invalid')}),{code:'INVALID'});
  for(const bad of [{...receipt(),mutationId:'b5aa7f8a-1711-4c09-b432-bcf075c57b5f'},{...receipt(),result:{...receipt().result,version:2}},{...receipt(),result:{...receipt().result,trip:{...t,id:'other'}}}])await assert.rejects(callServerTripApi(base,token,{kind:'create',mutationId,trip:t},{fetcher:async()=>new Response(JSON.stringify(bad))}),{code:'INVALID_RESPONSE'});
 });

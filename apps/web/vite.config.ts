@@ -37,8 +37,23 @@ function customerPwa(): Plugin {
     },
   };
 }
+function offlineDevAssets(): Plugin {
+  return {
+    name: 'offline-dev-assets',
+    apply: 'serve',
+    transformIndexHtml(html) {
+      return process.env.VITE_DEV_OFFLINE === 'true'
+        ? html.replace(
+            /\s*<link rel="preconnect" href="https:\/\/res\.cloudinary\.com" crossorigin\s*\/>/,
+            '',
+          )
+        : html;
+    },
+  };
+}
 export default defineConfig({
-  plugins: [react(), tailwindcss(), customerPwa()],
-  server: { host: '127.0.0.1', port: 5174, strictPort: true },
-  preview: { host: '127.0.0.1', port: 4174, strictPort: true },
+  plugins: [react(), tailwindcss(), customerPwa(), offlineDevAssets()],
+  // Keep the IPv4 loopback listener so both localhost and 127.0.0.1 work.
+  server: { host: '127.0.0.1', port: 5174, strictPort: true, open: 'http://localhost:5174' },
+  preview: { host: '127.0.0.1', port: 4174, strictPort: true, open: 'http://localhost:4174' },
 });

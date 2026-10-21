@@ -10,6 +10,7 @@ import {
   tripMutationResponseSchema,
   type Trip,
 } from '@goease/contracts';
+import { isAccountApiOrigin } from './api-origin.js';
 export type ServerTripRequest =
   | { kind: 'list'; cursor?: string }
   | { kind: 'get'; id: string }
@@ -43,12 +44,8 @@ export async function callServerTripApi(
   } = {},
 ) {
   try {
-    const u = new URL(base);
     if (
-      u.protocol !== 'https:' ||
-      u.origin !== base ||
-      u.username ||
-      u.password ||
+      !isAccountApiOrigin(base) ||
       token.length > 4096 ||
       !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)
     )
@@ -56,7 +53,7 @@ export async function callServerTripApi(
   } catch {
     throw new ServerTripError(
       'CONFIG',
-      'Cần HTTPS backend và phiên user đã xác minh, không dùng URL LAN/QR Metro.',
+      'Cần HTTPS backend hoặc HTTP loopback local và phiên user đã xác minh.',
     );
   }
   let path = '/v1/trips',

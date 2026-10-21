@@ -10,9 +10,26 @@ if (-not (Test-Path apps/web/.env.local)) { Copy-Item apps/web/.env.example apps
 pnpm dev:web
 ```
 
-PWA ở http://127.0.0.1:5174; admin ở 5173; API ở 3000. Mọi route sử dụng yêu cầu Google login. Cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, **HTTPS origin chính xác** ở `VITE_API_BASE_URL`; API phải bật Auth/Trips, có DB và dùng cùng Supabase project.
+PWA ở http://127.0.0.1:5174; admin ở 5173; API ở 3000. Mọi route sử dụng yêu cầu Google login. Cần `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, **HTTPS origin chính xác** hoặc HTTP loopback local (`http://127.0.0.1:3000`) ở `VITE_API_BASE_URL`; API phải bật Auth/Trips, có DB và dùng cùng Supabase project.
 
-`API_CORS_ORIGINS` phải có origin mở PWA, ví dụ `http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:4174`. Giữ origins admin/Expo hiện có. Metro tunnel không chuyển tiếp API; dùng HTTPS proxy/tunnel được vận hành. Không hạ HTTPS guard để gửi JWT qua HTTP LAN.
+`API_CORS_ORIGINS` phải có origin mở PWA, ví dụ `http://127.0.0.1:5174,http://localhost:5174,http://127.0.0.1:4174`. Giữ origins admin/Expo hiện có. `pnpm dev` chạy database/API/web trên cùng máy và cấu hình URL API loopback, không dùng tunnel. Đăng nhập Google/Supabase, tìm địa điểm và bản đồ vẫn cần Internet. Khi dùng thiết bị khác, Metro tunnel không chuyển tiếp API; cần HTTPS proxy/tunnel được vận hành. Không hạ HTTPS guard để gửi JWT qua HTTP LAN.
+
+
+### Dev hoàn toàn offline
+
+Sau khi đã cài dependencies bằng `pnpm install --frozen-lockfile`, chạy:
+
+```powershell
+pnpm dev:offline
+```
+
+Mở **http://localhost:5175**. Không cần cấu hình Supabase, đăng nhập, API, PostgreSQL hoặc Internet. Lệnh build packages local rồi chạy Vite; Ctrl+C dừng web offline. `pnpm dev` vẫn chạy luồng tài khoản ở cổng 5174 như trước.
+
+Chế độ này cho phép tạo lịch trống, tạo lịch mẫu Đà Lạt từ bộ 15 địa điểm có sẵn, sửa hoạt động/chi phí, lưu và mở lại chuyến trong IndexedDB. Có thể chọn các điểm đến phổ biến để tạo lịch trống và tự thêm hoạt động. Không gọi tìm kiếm online, tải bản đồ nền hoặc đồng bộ tài khoản. Ảnh dùng file local.
+
+Kho dev offline, bản nháp và biên nhận lưu được tách riêng với chuyến tài khoản và dữ liệu khách cũ; không tự nhập hoặc đồng bộ chúng. Dữ liệu gắn với trình duyệt và origin đang mở (`localhost:5175` hoặc `127.0.0.1:5175`); xóa dữ liệu trang/đổi trình duyệt sẽ không thấy các chuyến này. Mặc định mở `localhost`; `127.0.0.1` vẫn hỗ trợ nhưng có kho trình duyệt riêng. Luôn giữ cùng địa chỉ khi mở lại. Đây là công cụ dev: chỉ bật khi Vite chạy development và `VITE_DEV_OFFLINE=true`; production build luôn loại bỏ nhánh bỏ đăng nhập, kể cả khi cờ này được đặt nhầm.
+
+Kiểm tra kho local và guard production: `pnpm --filter @goease/web test:offline`.
 
 ## Giao diện desktop/mobile và chuyển động
 

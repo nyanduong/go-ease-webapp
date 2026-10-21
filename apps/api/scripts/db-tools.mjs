@@ -85,6 +85,19 @@ export function migrateDatabase(adminUrl) {
 }
 export function pgControl(meta, operation) {
   if (!/^goease_(dev|test)_[a-z0-9_]+$/.test(meta.database)) throw Error('Dedicated DB required');
+  if (operation === 'stop') {
+    try {
+      execFileSync(
+        join(meta.pgBin, process.platform === 'win32' ? 'pg_ctl.exe' : 'pg_ctl'),
+        ['-D', meta.dataDir, 'status'],
+        { stdio: 'ignore' },
+      );
+    } catch (error) {
+      // pg_ctl status 3 means this cluster is already stopped; other errors must surface.
+      if (error.status === 3) return;
+      throw error;
+    }
+  }
   const args = ['-D', meta.dataDir, '-l', join(meta.root, 'postgres.log'), '-w', '-t', '20'];
   if (operation === 'start') args.push('-o', `-h 127.0.0.1 -p ${meta.port}`, 'start');
   else if (operation === 'stop') args.push('-m', 'fast', 'stop');

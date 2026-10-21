@@ -1,5 +1,6 @@
 import { readAccountProfile, validateProfile, type ProfileInput } from './account-profile.js';
 import { authIdentityResponseSchema } from '@goease/contracts';
+import { isAccountApiOrigin } from './api-origin.js';
 import {
   callDiscoveryApi,
   callDestinationSearchApi,
@@ -548,15 +549,10 @@ export function createAuthPilot(options: {
         try {
           origin = new URL(base ?? '');
         } catch {
-          return fail('Chưa cấu hình HTTPS auth backend được cấp phép.');
+          return fail('Chưa cấu hình auth backend HTTPS hoặc HTTP loopback local.');
         }
-        if (
-          origin.protocol !== 'https:' ||
-          origin.origin !== base ||
-          origin.username ||
-          origin.password
-        )
-          fail('Auth backend phải là HTTPS origin chính xác, không dùng HTTP LAN/QR Metro.');
+        if (!isAccountApiOrigin(base))
+          fail('Auth backend cần HTTPS hoặc HTTP loopback local, không dùng HTTP LAN/QR Metro.');
         const body = await request(
           origin.origin + '/v1/auth/me',
           {

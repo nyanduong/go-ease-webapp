@@ -10,6 +10,7 @@ import {
   type DestinationSearchResponse,
 } from '@goease/contracts';
 import { useEffect, useRef, useState } from 'react';
+import { offlineDev } from '../../platform/dev-mode';
 
 export function TripForm({
   values,
@@ -139,8 +140,9 @@ export function TripForm({
           </button>
         </div>
         <p id="destination-search-help" className="mt-2 text-xs text-muted">
-          Tìm địa phương và địa danh trên khắp Việt Nam qua SerpApi / Google Maps. Bấm Tìm hoặc
-          Enter để tra cứu.
+          {offlineDev
+            ? 'Tìm trong các điểm đến có sẵn trên máy. Không truy vấn dịch vụ online.'
+            : 'Tìm địa phương và địa danh trên khắp Việt Nam qua SerpApi / Google Maps. Bấm Tìm hoặc Enter để tra cứu.'}
         </p>
         <p className="mt-2 text-sm text-teal-dark">
           {selected
@@ -174,7 +176,9 @@ export function TripForm({
       >
         {!query.trim() && !results && (
           <p className="w-full text-xs text-muted">
-            Gợi ý phổ biến · Bạn có thể tìm nơi khác ở trên
+            {offlineDev
+              ? 'Điểm đến có sẵn · Lịch mẫu hiện có cho Đà Lạt'
+              : 'Gợi ý phổ biến · Bạn có thể tìm nơi khác ở trên'}
           </p>
         )}
         {results && (

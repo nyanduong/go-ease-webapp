@@ -11,6 +11,14 @@ import type { DiscoveryRequest } from '@goease/trip-client/discovery-api-control
 import { readLegacyTrips, browserStorage } from '../../platform/browser-storage';
 import { navigate } from '../../app/router';
 import { cancelConfirmations } from '../../platform/confirmation';
+import { offlineDev } from '../../platform/dev-mode';
+import { getDalatCatalog } from '@goease/catalog';
+import { POPULAR_DESTINATIONS } from '@goease/contracts';
+import {
+  createOfflineTripRequest,
+  OFFLINE_WORKSPACE_OWNER,
+} from '@goease/trip-client/offline-trip-controller';
+import { transaction } from '../../platform/browser-storage';
 
 const project = import.meta.env.VITE_SUPABASE_URL?.match(
   /^https:\/\/([a-z0-9]{20})\.supabase\.co$/,
@@ -62,9 +70,15 @@ let catalog: ManagedPlace[] = [],
 let workspace = { busy: false, error: '' };
 const publish = () => listeners.forEach((listener) => listener());
 export const accountTrips = createAccountTrips({
-  storage: browserStorage,
+  storage: offlineDev
+    ? {
+        get: (key) => browserStorage.get('goease.dev-offline.workspace.' + key),
+        set: (key, value) => browserStorage.set('goease.dev-offline.workspace.' + key, value),
+      }
+    : browserStorage,
   newId: () => crypto.randomUUID(),
   request: async (operation) => {
+    if (offlineDev) return offlineRequest(operation);
     const owner = session.userId;
     await maintainSession();
     assertSessionOwner();
@@ -73,6 +87,7 @@ export const accountTrips = createAccountTrips({
     return auth.serverTrips(operation);
   },
 });
+const offlineRequest = createOfflineTripRequest(transaction);
 const google = createBrowserGoogleAuth({
   url: import.meta.env.VITE_SUPABASE_URL,
   key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -149,6 +164,7 @@ let maintaining: Promise<void> | null = null,
   nextRefreshAttempt = 0,
   refreshFailures = 0;
 async function maintainSession(force = false) {
+  if (offlineDev) return;
   if (restoring) return;
   if (maintaining) return maintaining;
   try {
@@ -188,6 +204,7 @@ let restoring: Promise<void> | null = null,
   initialized: Promise<void> | null = null;
 let googleRedirectPending = false;
 async function profileRequest(input?: ProfileInput) {
+  if (offlineDev) return false;
   if (profileState.busy) return false;
   const owner = session.userId,
     epoch = lifecycle;
@@ -215,6 +232,20 @@ async function profileRequest(input?: ProfileInput) {
 }
 export const accountSession = {
   async searchDestinations(query: string, signal?: AbortSignal) {
+    if (offlineDev) {
+      const normalize = (value: string) =>
+        value
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .toLowerCase();
+      return {
+        apiVersion: '1' as const,
+        destinations: POPULAR_DESTINATIONS.filter((item) =>
+          normalize(item.name).includes(normalize(query)),
+        ),
+      };
+    }
     const owner = session.userId,
       epoch = lifecycle;
     await maintainSession();
@@ -228,6 +259,8 @@ export const accountSession = {
     return result;
   },
   async discoverTrip(input: DiscoveryRequest, signal?: AbortSignal) {
+    if (offlineDev)
+      throw Error('Dev offline không gọi tìm kiếm online. Dùng lịch trống hoặc lịch mẫu có sẵn.');
     const owner = session.userId,
       epoch = lifecycle;
     await maintainSession();
@@ -244,6 +277,8 @@ export const accountSession = {
   loadProfile: () => profileRequest(),
   saveProfile: (input: ProfileInput) => profileRequest(input),
   async importLegacy(signal: AbortSignal) {
+    if (offlineDev)
+      throw Error('Kho dev offline tách riêng; không nhập dữ liệu tài khoản hoặc dữ liệu cũ.');
     if (importing) throw Error('Đang chuyển dữ liệu cũ.');
     const owner = accountTrips.getSnapshot().owner,
       epoch = lifecycle;
@@ -312,6 +347,7 @@ export const accountSession = {
     }
   },
   async loginGoogle() {
+    if (offlineDev) return;
     if (session.busy) return;
     session = { ...session, busy: true, message: 'Đang mở Google…' };
     publish();
@@ -331,6 +367,28 @@ export const accountSession = {
   },
   initialize() {
     initialized ??= (async () => {
+      if (offlineDev) {
+        workspace = { busy: true, error: '' };
+        publish();
+        try {
+          catalog = getDalatCatalog().map((entry) => ({ entry, enabled: true, version: 1 }));
+          if (await accountTrips.activate(OFFLINE_WORKSPACE_OWNER)) await accountTrips.list();
+        } catch {
+          workspace = {
+            busy: false,
+            error: 'Chưa mở được kho dev offline. Dữ liệu được giữ nguyên; hãy thử lại.',
+          };
+        } finally {
+          workspace = {
+            busy: false,
+            error: accountTrips.getSnapshot().ready
+              ? ''
+              : 'Chưa mở được kho dev offline. Hãy thử lại.',
+          };
+        }
+        publish();
+        return;
+      }
       if (location.pathname !== '/auth/callback') {
         if (!refreshStorage.exists()) {
           google.clear();
@@ -376,6 +434,10 @@ export const accountSession = {
     return initialized;
   },
   restore() {
+    if (offlineDev) {
+      initialized = null;
+      return accountSession.initialize();
+    }
     restoring ??= (async () => {
       await auth.restore();
       await connect();
@@ -387,6 +449,7 @@ export const accountSession = {
     return restoring;
   },
   async logout() {
+    if (offlineDev) return;
     cancelConfirmations();
     lifecycle++;
     google.clear();
@@ -438,6 +501,10 @@ export function useAccount() {
   };
 }
 export function startAccountLifecycle() {
+  if (offlineDev) {
+    void accountSession.initialize();
+    return () => {};
+  }
   let ready = false;
   const returnedFromGoogle = () => {
     if (!googleRedirectPending || location.pathname === '/auth/callback') return;

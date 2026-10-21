@@ -7,29 +7,50 @@ PWA bắt buộc Google login trước khi hiển thị dữ liệu. Luồng: PW
 1. Trong Google Cloud, chọn đúng project, cấu hình OAuth consent cho ứng dụng và người dùng thử nếu Audience còn Testing. Chỉ yêu cầu danh tính cơ bản/email/profile.
 2. Tạo OAuth client loại **Web application**. Redirect URI là `https://<project-ref>.supabase.co/auth/v1/callback`, lấy chính xác từ trang Google provider của Supabase. Authorized JavaScript origins dùng origin PWA/admin, không kèm path.
 3. Trong Supabase → Authentication → Sign In / Providers → Google: bật provider, chuyển Client ID/Secret từ Google vào đây rồi lưu. Secret chỉ ở cấu hình provider; không đặt vào VITE, repository hoặc script.
-4. Supabase → URL Configuration: Site URL là origin PWA. Allowlist callback của PWA/admin/preview, kèm query flow. Local đang dùng:
+4. Supabase → URL Configuration: Site URL mặc định là `http://localhost:5174`. Allowlist callback của PWA/admin/preview, kèm query flow. Local đang dùng:
 
 ```text
 http://127.0.0.1:5174/auth/callback**
 http://127.0.0.1:5173/auth/callback**
 http://127.0.0.1:4174/auth/callback**
+http://localhost:5174/auth/callback**
+http://localhost:5173/auth/callback**
+http://localhost:4174/auth/callback**
 ```
 
-Không đổi qua `localhost` khi chỉ cấu hình `127.0.0.1`. Deploy cần thêm đúng domain HTTPS; tránh wildcard toàn domain/path. Code kiểm tra exact origin/path, marker một lần, TTL 10 phút và PKCE.
+Dev mặc định mở `localhost`, đồng thời giữ hỗ trợ `127.0.0.1`; Supabase phải có callback cho cả hai tên như trên. Deploy cần thêm đúng domain HTTPS; tránh wildcard toàn domain/path. Code kiểm tra exact origin/path, marker một lần, TTL 10 phút và PKCE.
 
 GoEase hiện cấu hình Google là OAuth provider duy nhất. Backend yêu cầu JWT có phương thức `oauth` và danh tính Google đã được Supabase xác minh; không coi trường metadata tự khai là bằng chứng Google. Không bật thêm OAuth provider khác trên cùng project mà chưa bổ sung kiểm tra phương thức tương ứng. Email provider có thể còn phục vụ Expo cũ nhưng phiên password bị API Google-only từ chối.
 
 ## Cấu hình local
+
+### Khởi động toàn bộ bằng một lệnh
+
+Sau khi cấu hình Supabase trong các file env bên dưới, chạy từ root:
+
+```powershell
+pnpm dev
+```
+
+Lệnh build packages, khởi động PostgreSQL local và migrate/seed bằng `db:local`, build/chạy API cùng TypeScript watch, tự đặt `VITE_API_BASE_URL=http://localhost:3000` trong `apps/web/.env.local` rồi chạy web. Mở http://localhost:5174 (vẫn hỗ trợ http://127.0.0.1:5174). Web tự mở localhost; API chỉ bind loopback và không dùng gateway/tunnel/cloudflared. Các dòng env khác được giữ nguyên. Database dùng lại dữ liệu đã lưu. Admin không nằm trong lệnh này.
+
+Giữ terminal mở suốt phiên; Ctrl+C dừng API/watch/web, sau đó dừng PostgreSQL local bằng pg_ctl; dữ liệu được giữ nguyên. Khi khởi động lỗi, lệnh cũng dọn các tiến trình và dừng database nếu đã bắt đầu bước chuẩn bị database. Nếu port 3000/5174 đang được dùng, dừng terminal cũ trước. Database/API/web chạy local; đăng nhập Google/Supabase, xác minh phiên, tìm địa điểm và bản đồ vẫn cần Internet. HTTPS vẫn bắt buộc ngoài loopback; HTTP LAN/public không được phép.
+
+Kiểm tra phần cập nhật env/port: `node --test scripts/dev-utils.test.mjs`.
+
+Để làm giao diện/lịch trình hoàn toàn offline mà không đăng nhập, dùng `pnpm dev:offline` ở cổng 5175 với kho local tách riêng; xem [dev offline](PWA.md). API và bản production vẫn yêu cầu tài khoản như bình thường.
+
+### Cấu hình và các lệnh riêng
 
 Giữ các file env riêng đang có; chỉ copy `.env.example` khi chưa có file. Cùng một Supabase project cho cả ba phần:
 
 | File                    | Giá trị cần có                                                                                                                                                                           |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/api/.env`         | `AUTH_ENABLED=true`, `AUTH_GOOGLE_ONLY=true`, `TRIPS_ENABLED=true`, `SUPABASE_AUTH_URL`, `SUPABASE_PUBLISHABLE_KEY`, runtime `DATABASE_URL`; `CATALOG_ADMIN_ENABLED=true` nếu dùng admin |
-| `apps/web/.env.local`   | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_BASE_URL` là exact HTTPS origin; Maps key public tùy chọn                                                                |
-| `apps/admin/.env.local` | Cùng URL/key Supabase, API HTTPS; admin cũng chấp nhận HTTP loopback local                                                                                                               |
+| `apps/web/.env.local`   | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_BASE_URL` là exact HTTPS origin hoặc HTTP loopback (mặc định `http://localhost:3000`); Maps key public tùy chọn                                                                |
+| `apps/admin/.env.local` | Cùng URL/key Supabase, API HTTPS hoặc HTTP loopback local                                                                                                               |
 
-PWA giữ HTTPS guard cho API tài khoản. Bổ sung exact origins 127.0.0.1:5174, 5173, 4174 vào `API_CORS_ORIGINS`. Với trips bật, `API_REQUEST_TIMEOUT_MS` cần lớn hơn hoặc bằng `AUTH_TIMEOUT_MS + TRIPS_DB_TIMEOUT_MS + 500`.
+API tài khoản chấp nhận HTTPS hoặc HTTP loopback (`localhost`, `127.0.0.1`, `[::1]`) với origin chính xác; chặn HTTP LAN/public. Bổ sung exact origins cho cả localhost và 127.0.0.1 ở các port 5174, 5173, 4174 vào `API_CORS_ORIGINS`. Với trips bật, `API_REQUEST_TIMEOUT_MS` cần lớn hơn hoặc bằng `AUTH_TIMEOUT_MS + TRIPS_DB_TIMEOUT_MS + 500`.
 
 ```powershell
 pnpm install --frozen-lockfile
@@ -40,7 +61,7 @@ pnpm dev:web
 pnpm dev:admin
 ```
 
-Mở PWA http://127.0.0.1:5174 và bấm **Tiếp tục với Google**. Google Audience Testing chỉ cho test users được cấu hình. Admin ở http://127.0.0.1:5173; xem [cấp quyền catalog](ADMIN_CATALOG.md), không tự cấp quyền theo email/UI.
+Mở PWA http://localhost:5174 và bấm **Tiếp tục với Google**. Google Audience Testing chỉ cho test users được cấu hình. Admin ở http://127.0.0.1:5173; xem [cấp quyền catalog](ADMIN_CATALOG.md), không tự cấp quyền theo email/UI.
 
 ## HTTPS tạm cho demo được chủ dự án cho phép
 

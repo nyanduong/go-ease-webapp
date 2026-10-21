@@ -36,7 +36,9 @@ function result<T>(request: IDBRequest<T>): Promise<T> {
   });
 }
 // One transaction spans read/check/write. IndexedDB serializes it across tabs, preventing lost revisions.
-async function transaction<T>(work: (transport: StorageTransport) => Promise<T>): Promise<T> {
+export async function transaction<T>(
+  work: (transport: StorageTransport) => Promise<T>,
+): Promise<T> {
   const db = await openDatabase(),
     tx = db.transaction('values', 'readwrite'),
     store = tx.objectStore('values');

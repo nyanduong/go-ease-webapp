@@ -57,6 +57,8 @@ jobs:
         run: pnpm lint
       - name: Kiểm thử packages, mobile và HTTP API thật
         run: pnpm test
+      - name: Dev offline và kiểm tra production vẫn yêu cầu đăng nhập
+        run: pnpm --filter @goease/web test:offline
       - name: Cài Chromium cho PWA và admin
         run: pnpm --filter @goease/admin exec playwright install --with-deps chromium
       - name: PWA trên Chromium — CRUD, offline, nhiều tab và tài khoản

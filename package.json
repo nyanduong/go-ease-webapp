@@ -6,10 +6,12 @@
     "node": ">=24.15.0 <25"
   },
   "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:offline": "node scripts/dev.mjs --offline",
     "dev:mobile": "pnpm build:packages && pnpm --filter @goease/mobile start",
     "dev:mobile:tunnel": "pnpm build:packages && pnpm --filter @goease/mobile start --tunnel",
     "dev:web": "pnpm build:packages && pnpm --filter @goease/web dev",
-    "dev:api": "pnpm build:packages && pnpm --filter @goease/api dev",
+    "dev:api": "pnpm db:local && pnpm --filter @goease/api dev",
     "test:api": "pnpm build:packages && pnpm --filter @goease/api test",
     "test:gemini:live": "pnpm build:api && pnpm --filter @goease/api test:gemini:live",
     "build:api": "pnpm build:packages && pnpm --filter @goease/api build",
@@ -17,7 +19,7 @@
     "check:expo": "node .github/scripts/check-expo.cjs",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
-    "test": "pnpm build:packages && pnpm -r --if-present test && node --test tests/*.test.mjs",
+    "test": "pnpm build:packages && pnpm -r --if-present test && node --test tests/*.test.mjs scripts/*.test.mjs",
     "build": "pnpm build:packages && pnpm --filter @goease/api build && pnpm --filter @goease/mobile build && pnpm --filter @goease/web build && pnpm --filter @goease/admin build",
     "build:packages": "pnpm --filter @goease/contracts build && pnpm --filter @goease/catalog --filter @goease/trip-storage --filter @goease/itinerary build && pnpm --filter @goease/trip-client build",
     "demo:api": "pnpm build:api && pnpm --filter @goease/api demo",

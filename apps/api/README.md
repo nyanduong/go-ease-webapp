@@ -23,7 +23,7 @@ if (-not (Test-Path apps/api/.env)) { Copy-Item apps/api/.env.example apps/api/.
 pnpm dev:api
 ```
 
-Chỉ copy mẫu khi chưa có `.env`, không ghi đè cấu hình của member. `.env` không commit. Mặc định listen `127.0.0.1:3000`. Node đọc `apps/api/.env`; env đã đặt được ưu tiên. Dev build packages/API rồi chạy TypeScript watch + Node watch; Ctrl+C dừng cả hai. Sửa contracts/catalog thì chạy `pnpm build:packages` ở terminal khác để cập nhật package dist.
+Chỉ copy mẫu khi chưa có `.env`, không ghi đè cấu hình của member. `.env` không commit. Mặc định listen `127.0.0.1:3000`. Node đọc `apps/api/.env`; env đã đặt được ưu tiên. `pnpm dev:api` chạy `pnpm db:local` trước để build packages, bật PostgreSQL local, migrate/seed và cấu hình database trong `apps/api/.env`, rồi build API và chạy TypeScript watch + Node watch. Database dùng lại dữ liệu đã lưu; nếu bước chuẩn bị database lỗi thì API không chạy. Ctrl+C dừng hai tiến trình watch; database vẫn chạy, dùng `pnpm db:stop` khi cần dừng. Để chạy API với cấu hình database tự quản lý, dùng `pnpm build:packages` rồi `pnpm --filter @goease/api dev`. Sửa contracts/catalog thì chạy `pnpm build:packages` ở terminal khác để cập nhật package dist.
 
 Terminal khác:
 

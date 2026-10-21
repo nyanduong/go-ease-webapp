@@ -6,6 +6,7 @@ import {
   type DiscoveryPreviewRequest,
 } from '@goease/contracts';
 import { ServerTripError } from './server-trip-controller.js';
+import { isAccountApiOrigin } from './api-origin.js';
 
 export type DiscoveryRequest = DiscoveryPreviewRequest;
 type RequestOptions = { fetcher?: typeof fetch; signal?: AbortSignal };
@@ -18,12 +19,8 @@ async function requestDiscovery(
   body: unknown | undefined,
   options: RequestOptions,
 ) {
-  const url = new URL(base);
   if (
-    url.protocol !== 'https:' ||
-    url.origin !== base ||
-    url.username ||
-    url.password ||
+    !isAccountApiOrigin(base) ||
     !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token) ||
     token.length > 4096
   )

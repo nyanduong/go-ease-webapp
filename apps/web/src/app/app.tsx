@@ -9,14 +9,31 @@ import { AccountPage, LoginPage } from '../features/account/account-page';
 import { startAccountLifecycle, useAccount, accountSession } from '../features/account/session';
 import { AboutPage, TravelServices } from '../features/about/about-pages';
 import { PwaStatus } from '../platform/pwa';
+import { offlineDev } from '../platform/dev-mode';
 
 function Route({ path }: { path: string }) {
   if (path === '/' || path === '/login' || path === '/auth/callback') return <AccountHome />;
   if (path === '/trips') return <AccountWorkspace />;
   if (path === '/trips/new') return <AccountWorkspace mode="new" />;
-  if (path === '/account') return <AccountPage />;
+  if (path === '/account')
+    return offlineDev ? (
+      <Notice>
+        Dev offline: chuyến được lưu trong trình duyệt này, không đăng nhập và không đồng bộ tài
+        khoản. Dữ liệu dev tách riêng với chuyến tài khoản và chuyến cũ.
+      </Notice>
+    ) : (
+      <AccountPage />
+    );
   if (path === '/about') return <AboutPage />;
-  if (path === '/travel-services') return <TravelServices />;
+  if (path === '/travel-services')
+    return offlineDev ? (
+      <Notice>
+        Chế độ dev offline không mở dịch vụ đặt phòng hoặc vé máy bay. Bạn vẫn có thể thêm chi phí
+        dự kiến vào chuyến trên máy.
+      </Notice>
+    ) : (
+      <TravelServices />
+    );
   const match = /^\/trips\/([A-Za-z0-9_-]{1,80})$/.exec(path);
   if (match) return <AccountWorkspace mode="detail" id={match[1]} />;
   return (
@@ -29,7 +46,7 @@ export function App() {
   const path = usePath();
   const { session, trips, workspace } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
-  if (session.phase !== 'backend-verified') return <LoginPage />;
+  if (!offlineDev && session.phase !== 'backend-verified') return <LoginPage />;
   if (!trips.ready)
     return (
       <AccountGate
@@ -85,6 +102,14 @@ export function App() {
           className="mx-auto min-h-[60vh] w-full max-w-7xl px-4 py-6 outline-none sm:px-8 sm:py-8 [&_h1]:wrap-anywhere [&_h3]:wrap-anywhere"
         >
           <ErrorBoundary key={path}>
+            {offlineDev && (
+              <div
+                role="status"
+                className="mb-5 rounded-2xl border border-line bg-sand p-4 text-sm font-semibold text-teal-dark"
+              >
+                DEV OFFLINE · Lưu trên trình duyệt này · Không đồng bộ tài khoản
+              </div>
+            )}
             <MotionRegion key={path} motionKey={path}>
               <Route key={`${session.userId}:${path}`} path={path} />
             </MotionRegion>

@@ -4,6 +4,7 @@ import {
   managedCatalogSchema,
   type CatalogResponse,
 } from '@goease/contracts';
+import { isAccountApiOrigin } from './api-origin.js';
 
 export class CatalogApiError extends Error {
   constructor(
@@ -15,8 +16,8 @@ export class CatalogApiError extends Error {
 }
 export async function fetchManagedCatalog(base: string, fetcher: typeof fetch = fetch) {
   const origin = apiOrigin(base);
-  if (!origin.startsWith('https://'))
-    throw new CatalogApiError('CONFIG', 'Catalog tài khoản cần HTTPS.');
+  if (!isAccountApiOrigin(origin))
+    throw new CatalogApiError('CONFIG', 'Catalog tài khoản cần HTTPS hoặc HTTP loopback local.');
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {

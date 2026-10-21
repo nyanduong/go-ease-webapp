@@ -6,6 +6,7 @@ import { NewAccountTrip } from '../trips/new-account-trip';
 import { TripView } from '../trips/trip-view';
 import { accountTrips, useAccount } from './session';
 import { confirmAction } from '../../platform/confirmation';
+import { offlineDev } from '../../platform/dev-mode';
 
 export function AccountWorkspace({
   mode = 'list',
@@ -268,7 +269,7 @@ export function AccountWorkspace({
               </p>
               <Button
                 secondary
-                aria-label={`Mở chuyến tài khoản: ${item.name}`}
+                aria-label={`Mở chuyến ${offlineDev ? 'local' : 'tài khoản'}: ${item.name}`}
                 disabled={blocked}
                 onClick={() => {
                   navigate(`/trips/${encodeURIComponent(item.id)}`);
@@ -400,7 +401,7 @@ export function AccountWorkspace({
               void confirmWork(
                 {
                   title: 'Xóa chuyến đi?',
-                  message: `Xóa chuyến “${selected.trip.name}” khỏi tài khoản của bạn? Bạn không thể hoàn tác thao tác này.`,
+                  message: `Xóa chuyến “${selected.trip.name}” khỏi ${offlineDev ? 'kho dev trên trình duyệt này' : 'tài khoản của bạn'}? Bạn không thể hoàn tác thao tác này.`,
                   confirmLabel: 'Xóa chuyến',
                   danger: true,
                 },
