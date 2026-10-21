@@ -83,7 +83,7 @@ Kết quả kiểm tra trước commit. Logs đầy đủ nằm ở `apps/web/te
 - Chưa có Chưa chốt ngày: Trip và API yêu cầu ngày cụ thể, nên không tạo ngày giả. Có thêm tên chuyến và số ngày để phù hợp dữ liệu hiện tại.
 - Chi phí theo từng hoạt động thay nhóm ăn uống/di chuyển/chỗ nghỉ; chưa có model phân loại chi phí. Không thêm schema mới chỉ để khớp dữ liệu minh họa.
 - Google là phương thức đăng nhập duy nhất đang hỗ trợ. Không có đăng ký/password giả. Production vẫn cần Supabase/API đã cấu hình, key/quota SerpApi và mạng.
-- Chưa nghiệm thu OAuth Google, SerpApi và Google Maps với tài khoản/key live trong đợt này; tests dùng provider fixtures và có lỗi mạng có kiểm soát. Chưa kiểm tra cài PWA trên iPhone/Android thật.
+- Đợt refine ban đầu chưa nghiệm thu OAuth Google, SerpApi và Google Maps với tài khoản/key live; bản sửa sau đó đã xác nhận Google login thật ở local (xem bổ sung bên dưới). SerpApi/Google Maps live vẫn chưa được nghiệm thu; tests dùng provider fixtures và có lỗi mạng có kiểm soát. Chưa kiểm tra cài PWA trên iPhone/Android thật.
 - Không thêm đổi ngày/số ngày cho chuyến đã tạo, cộng tác, tự lưu lên tài khoản, dẫn đường trực tiếp hoặc offline toàn bộ chuyến. Những chức năng này chưa có trong luồng hiện tại.
 
 ## Mở bản mới
@@ -93,3 +93,13 @@ Trong checkout branch này, server Vite đang mở tại [http://localhost:5174]
 Không cần dịch vụ ngoài để xem và thử chỉnh/lưu trên máy: `pnpm dev:offline` → [http://localhost:5175](http://localhost:5175). Chế độ này có banner dev, dùng lịch trống hoặc mẫu Đà Lạt và lưu trên thiết bị; không phải luồng tài khoản production.
 
 Production PWA preview: `pnpm build:web`, `pnpm preview:web` → [http://localhost:4174](http://localhost:4174). Nếu đã cài bản cũ, lưu công việc rồi chọn Cập nhật GoEase khi được thông báo. Không xóa site data nếu còn bản nháp.
+
+## Bổ sung: đăng nhập Google và màn đăng nhập
+
+Sau bàn giao, kiểm tra thực tế phát hiện API local tại cổng 3000 không chạy (`ECONNREFUSED`), trong khi Vite cổng 5174 vẫn chạy. Đã khởi động lại database/API và xác nhận health/catalog trả 200. Giữ phiên đăng nhập và dữ liệu chuyến; không bỏ xác thực hoặc thay cấu hình OAuth.
+
+Người dùng đã chọn tài khoản trên Google; kiểm tra tab thật xác nhận quay lại GoEase và mở được chuyến đã lưu trong tài khoản. Đây là kiểm tra Google login live tại local, không xác nhận toàn bộ provider/bản đồ live hoặc cài PWA trên thiết bị thật.
+
+Sửa thêm race ở nút Thử lại: lỗi Auth có thể được hiển thị trước khi tác vụ restore/connect kết thúc, khiến lần bấm ngay sau lỗi bị bỏ qua. Lần bấm chủ động giờ đợi tác vụ đang chạy rồi khôi phục lại; kiểm tra lifecycle ngăn tiếp tục nếu đã đăng xuất/đổi tài khoản trong lúc chờ. Luồng hồi quy mất kết nối/khôi phục kiểm tra trường hợp này.
+
+Theo yêu cầu bổ sung, bỏ liên kết “Xem thử một chuyến trước” khỏi màn đăng nhập. Phần mẫu trên Trang chủ được giữ. Có assertion hồi quy trong luồng private-route/login; chạy lại typecheck, lint, build web và browser suite của màn tài khoản. Để tránh mở riêng web khi thiếu API, dùng `pnpm dev` cho lần khởi động thông thường và giữ terminal này chạy.

@@ -638,6 +638,10 @@ test('all private deep links require Google; legacy local/IndexedDB bytes remain
     assert.equal(await page.getByText('Chưa đăng nhập được. Vui lòng thử lại.').count(), 0);
     assert.equal(await page.getByRole('navigation', { name: 'Điều hướng chính' }).count(), 0);
     assert.equal(await page.locator('input[type=password]').count(), 0);
+    assert.equal(
+      await page.getByRole('link', { name: 'Xem thử một chuyến trước', exact: true }).count(),
+      0,
+    );
   }
   await login(page);
   assert.equal(state.records.size, 0);

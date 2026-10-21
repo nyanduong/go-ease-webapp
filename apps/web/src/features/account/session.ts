@@ -273,7 +273,15 @@ export const accountSession = {
       throw Error('Tài khoản đã thay đổi. Không mở lịch trình của phiên cũ.');
     return result;
   },
-  resume: () => maintainSession(true),
+  async resume() {
+    const epoch = lifecycle;
+    // Auth can publish its error before the enclosing restore/connect finishes.
+    // Queue an explicit Retry behind that work instead of dropping the click.
+    await restoring;
+    await maintaining;
+    if (epoch !== lifecycle) return;
+    return maintainSession(true);
+  },
   loadProfile: () => profileRequest(),
   saveProfile: (input: ProfileInput) => profileRequest(input),
   async importLegacy(signal: AbortSignal) {

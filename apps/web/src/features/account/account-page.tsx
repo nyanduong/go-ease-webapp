@@ -86,12 +86,6 @@ export function LoginPage() {
               Thử lại kết nối
             </Button>
           )}
-          <Link
-            href="/sample"
-            className="text-action justify-center text-teal underline underline-offset-4"
-          >
-            Xem thử một chuyến trước
-          </Link>
         </section>
       </div>
     </main>
