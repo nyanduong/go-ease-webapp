@@ -16,6 +16,7 @@ function App() {
     [],
   );
   const [places, setPlaces] = useState<ManagedPlace[]>([]),
+    [nextCursor, setNextCursor] = useState<string | null>(null),
     [authed, setAuthed] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -45,6 +46,7 @@ function App() {
           const data = await client.acceptOAuth(result.session);
           if (!cancelled) {
             setPlaces(data.places);
+            setNextCursor(data.nextCursor);
             setAuthed(true);
           }
         })
@@ -55,16 +57,15 @@ function App() {
           if (!cancelled) setBusy(false);
         });
     }
-    const hide = () => {
-      if (document.hidden) {
-        cancelled = true;
-        client.logout();
+    const checkExpiry = () => {
+      // Tab switches preserve RAM auth and unsaved edits; expiry is checked immediately on return.
+      if (!client.valid()) {
         setAuthed(false);
         setPlaces([]);
         setEditing(undefined);
       }
     };
-    document.addEventListener('visibilitychange', hide);
+    document.addEventListener('visibilitychange', checkExpiry);
     const timer = setInterval(() => {
       if (!client.valid()) {
         setAuthed(false);
@@ -76,7 +77,7 @@ function App() {
       cancelled = true;
       client.logout();
       clearInterval(timer);
-      document.removeEventListener('visibilitychange', hide);
+      document.removeEventListener('visibilitychange', checkExpiry);
     };
   }, [client, google]);
   const working = useRef(false);
@@ -142,21 +143,23 @@ function App() {
             {busy ? 'Đang xác minh…' : 'Tiếp tục với Google'}
           </button>
           <p>
-            Phiên chỉ ở RAM. Refresh trang hoặc xuống nền cần đăng nhập lại. Không lưu credential
-            trong trình duyệt.
+            Phiên chỉ ở RAM và giữ khi đổi tab đến lúc hết hạn. Refresh trang cần đăng nhập lại.
+            Không lưu credential trong trình duyệt.
           </p>
         </section>
       ) : (
         <>
           <nav>
             <span>
-              {places.filter((p) => p.enabled).length} hoạt động / {places.length} địa điểm
+              {places.filter((p) => p.enabled).length} hoạt động / {places.length} địa điểm đã tải
             </span>
             <button
               disabled={busy}
               onClick={() =>
                 void work(async () => {
-                  setPlaces((await client.list()).places);
+                  const data = await client.list();
+                  setPlaces(data.places);
+                  setNextCursor(data.nextCursor);
                 })
               }
             >
@@ -213,6 +216,25 @@ function App() {
               </article>
             ))}
           </section>
+          {nextCursor && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                void work(async () => {
+                  const data = await client.list(nextCursor);
+                  setPlaces((old) => [
+                    ...old,
+                    ...data.places.filter(
+                      (place) => !old.some((existing) => existing.entry.id === place.entry.id),
+                    ),
+                  ]);
+                  setNextCursor(data.nextCursor);
+                })
+              }
+            >
+              Tải thêm địa điểm
+            </button>
+          )}
         </>
       )}
       <footer>

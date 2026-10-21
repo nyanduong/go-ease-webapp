@@ -1478,3 +1478,51 @@ test('web browser login/edit/disable/refresh/deep-link uses real Nest/PostgreSQL
     },
     { CATALOG_ADMIN_ENABLED: 'true', API_CORS_ORIGINS: 'http://127.0.0.1:5178' },
   ));
+
+test('admin creates beyond 20 and cursor pages read every sourced Place through real PostgreSQL', () =>
+  fixture(
+    async ({ A, tokens, http }) => {
+      await admin.query('INSERT INTO "CatalogAdmin" (issuer,subject) VALUES ($1,$2::uuid)', [
+        issuer,
+        A,
+      ]);
+      const headers = { authorization: 'Bearer ' + tokens.A, 'content-type': 'application/json' };
+      const prefix = 'pagination-' + randomUUID();
+      const ids = [];
+      for (let i = 0; i < 23; i++) {
+        const entry = { ...getDalatCatalog()[0], id: prefix + '-' + String(i).padStart(2, '0') };
+        await ok(
+          await http('/v1/admin/catalog', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ entry }),
+          }),
+          201,
+        );
+        ids.push(entry.id);
+      }
+      const full = await ok(await http('/v1/catalog/places'));
+      assert.ok(full.places.length > 20);
+      assert.ok(ids.every((id) => full.places.some((place) => place.entry.id === id)));
+      const seen = [];
+      let cursor = null;
+      do {
+        const page = await ok(
+          await http('/v1/admin/catalog?limit=7' + (cursor ? '&after=' + cursor : ''), { headers }),
+        );
+        assert.ok(page.places.length <= 7);
+        seen.push(...page.places.map((place) => place.entry.id));
+        cursor = page.nextCursor;
+      } while (cursor);
+      assert.deepEqual(
+        seen,
+        full.places.map((place) => place.entry.id),
+      );
+      assert.equal(new Set(seen).size, seen.length);
+      await error(await http('/v1/admin/catalog?limit=51', { headers }), 400, 'BAD_REQUEST');
+      await error(await http('/v1/admin/catalog?limit=7&limit=8', { headers }), 400, 'BAD_REQUEST');
+      await admin.query('UPDATE "CatalogAdmin" SET enabled=false WHERE subject=$1::uuid', [A]);
+      await error(await http('/v1/admin/catalog?limit=7', { headers }), 403, 'ADMIN_FORBIDDEN');
+    },
+    { CATALOG_ADMIN_ENABLED: 'true' },
+  ));

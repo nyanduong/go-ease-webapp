@@ -317,6 +317,71 @@ for (const [mode, viewport] of [
   ['mobile', { width: 390, height: 844 }],
   ['desktop', { width: 1440, height: 1000 }],
 ]) {
+  test(`M0 ${mode}: creation and preview reload preserve temporary state and desktop header`, async () => {
+    const f = await setup(viewport),
+      { page, state } = f;
+    await form(page);
+    await page.getByRole('button', { name: 'Vừa phải', exact: true }).click();
+    await page.getByLabel('Thiên nhiên', { exact: true }).check();
+    await page.reload();
+    await page.getByLabel('Tên chuyến đi', { exact: true }).waitFor();
+    assert.equal(
+      await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
+      'Cuối tuần ở Đà Nẵng',
+    );
+    assert.equal(await page.getByLabel('Số người', { exact: true }).inputValue(), '3');
+    assert.equal(
+      await page
+        .getByRole('button', { name: 'Vừa phải', exact: true })
+        .getAttribute('aria-pressed'),
+      'true',
+    );
+    assert.equal(await page.getByLabel('Thiên nhiên', { exact: true }).isChecked(), true);
+    const header = page.locator('header').first();
+    assert.equal(
+      await header.evaluate((node) => getComputedStyle(node).display),
+      mode === 'desktop' ? 'block' : 'none',
+    );
+    await page.screenshot({
+      path: root + `/test-results/m0-form-${mode}.png`,
+      animations: 'disabled',
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    await page.reload();
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    assert.equal(
+      state.requests.length,
+      1,
+      'reload restores preview without a new provider request',
+    );
+    assert.equal(state.writes.length, 0, 'temporary state never silently saves an account trip');
+    await page.screenshot({
+      path: root + `/test-results/m0-preview-${mode}.png`,
+      animations: 'disabled',
+      fullPage: true,
+    });
+    await page.goto(base + '/sample');
+    await page.getByRole('heading').first().waitFor();
+    assert.equal(
+      await page
+        .locator('header')
+        .first()
+        .evaluate((node) => getComputedStyle(node).display),
+      mode === 'desktop' ? 'block' : 'none',
+    );
+    await page.goto(base + '/trips');
+    await page.getByRole('heading', { name: 'Chuyến đi của bạn', exact: true }).waitFor();
+    assert.notEqual(
+      await page
+        .locator('header')
+        .first()
+        .evaluate((node) => getComputedStyle(node).display),
+      'none',
+    );
+    await finish(f, `m0-routes-${mode}`);
+  });
   test(`multi destination ${mode}: preview source, replace, edit, manual save, reopen snapshots and map`, async () => {
     const f = await setup(viewport),
       { page, state } = f;
@@ -565,6 +630,56 @@ for (const viewport of [
     await finish(f, `compact-review-${viewport.width}`);
   });
 }
+
+test('M0 home finds the most recently updated trip beyond the first ID cursor page', async () => {
+  const f = await setup(),
+    { page } = f;
+  let requests = 0;
+  const summary = (id, updatedAt) => ({
+    id,
+    name: id,
+    startDate: '2099-10-20',
+    durationDays: 1,
+    people: 2,
+    version: 1,
+    updatedAt,
+  });
+  await page.route(/https:\/\/api\.goease\.test\/v1\/trips(?:\?.*)?$/, async (route) => {
+    requests++;
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    await route.fulfill({
+      json: {
+        apiVersion: '1',
+        nextCursor: cursor ? null : 'z-19',
+        items: cursor
+          ? [summary('a-newest', '2026-10-21T12:00:00Z')]
+          : Array.from({ length: 20 }, (_, index) =>
+              summary('z-' + String(index).padStart(2, '0'), '2026-10-20T12:00:00Z'),
+            ),
+      },
+      headers: {
+        'access-control-allow-origin': base,
+        'access-control-allow-headers': 'authorization,content-type',
+        'access-control-allow-methods': 'GET,OPTIONS',
+      },
+    });
+  });
+  await page.goto(base + '/');
+  await page.getByRole('link', { name: /a-newest/ }).waitFor();
+  assert.equal(
+    await page.getByRole('link', { name: /a-newest/ }).getAttribute('href'),
+    '/trips/a-newest',
+  );
+  assert.equal(requests, 2);
+  await page.getByRole('link', { name: 'Chuyến đi', exact: true }).click();
+  await page.getByRole('heading', { name: 'z-00', exact: true }).waitFor();
+  assert.equal(
+    await page.locator('main h3').first().innerText(),
+    'z-00',
+    'ordinary list retains original ID/cursor order',
+  );
+  await finish(f, 'm0-recent-paginated');
+});
 
 test('editing a destination query cancels stale results and requires a new selection', async () => {
   const f = await setup(),

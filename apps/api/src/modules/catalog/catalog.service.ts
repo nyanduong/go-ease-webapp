@@ -1,4 +1,9 @@
-import { API_VERSION, catalogResponseSchema, managedCatalogSchema } from '@goease/contracts';
+import {
+  API_VERSION,
+  CATALOG_LIMITS,
+  catalogResponseSchema,
+  managedCatalogSchema,
+} from '@goease/contracts';
 import { CATALOG_INFO, getDalatCatalog } from '@goease/catalog';
 import { ApiFailure } from '../../common/errors/api-failure.js';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -18,15 +23,23 @@ export class CatalogService {
         places: getDalatCatalog().map((entry) => ({ entry, enabled: true, version: 1 })),
       });
     try {
+      const rows = await this.repository.list();
+      if (rows.length > CATALOG_LIMITS.maxEntries)
+        throw new ApiFailure(
+          503,
+          'CATALOG_LIMIT',
+          'Catalog vượt giới hạn vận hành; cần phân vùng dữ liệu.',
+        );
       return managedCatalogSchema.parse({
         apiVersion: '1',
-        places: (await this.repository.list()).map((p) => ({
+        places: rows.map((p) => ({
           entry: p.snapshot,
           version: p.version,
           enabled: p.enabled,
         })),
       });
-    } catch {
+    } catch (cause) {
+      if (cause instanceof ApiFailure) throw cause;
       throw new ApiFailure(503, 'DB_UNAVAILABLE', 'Catalog database chưa đáp ứng.');
     }
   }

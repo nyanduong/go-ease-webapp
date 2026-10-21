@@ -1,3 +1,4 @@
+import { adminCatalogPageQuerySchema } from '@goease/contracts';
 import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { ApiFailure } from '../../../common/errors/api-failure.js';
@@ -11,7 +12,15 @@ const queryCheck = (query: unknown) => {
 export class AdminCatalogController {
   constructor(@Inject(AdminCatalogService) private readonly catalog: AdminCatalogService) {}
   @Get() list(@Req() req: Request, @Query() query: unknown) {
-    queryCheck(query);
+    const parsed = adminCatalogPageQuerySchema.safeParse(query);
+    if (!parsed.success)
+      throw new ApiFailure(
+        400,
+        'BAD_REQUEST',
+        'Query phân trang không hợp lệ (limit 1–50, after ID).',
+      );
+    if (Object.keys(query as object).length)
+      return this.catalog.page(req.headers.authorization, requestSignal(req), parsed.data);
     return this.catalog.list(req.headers.authorization, requestSignal(req));
   }
   @Post() create(@Req() req: Request, @Body() body: unknown, @Query() query: unknown) {

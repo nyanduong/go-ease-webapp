@@ -24,6 +24,7 @@ import { TripForm } from './trip-form';
 import { DiscoveryReview } from './discovery-review';
 import { confirmAction } from '../../platform/confirmation';
 import { offlineDev } from '../../platform/dev-mode';
+import { clearCreation, restoreCreation, saveCreation } from './creation-cache';
 
 const interests = [
   ['heritage', 'Di sản'],
@@ -45,7 +46,9 @@ export function NewAccountTrip({
   onCancel: () => void;
   onCreate: (trip: Trip) => Promise<void>;
 }) {
-  const { catalog } = useAccount();
+  const { catalog, trips } = useAccount();
+  const owner = trips.owner!;
+  const [restored] = useState(() => restoreCreation(sessionStorage, owner));
   const [initial] = useState(() => {
     const base = initialTripForm(new Date());
     const query = new URLSearchParams(location.search);
@@ -60,14 +63,37 @@ export function NewAccountTrip({
           : {}),
     };
   });
-  const [pace, setPace] = useState<'relaxed' | 'balanced' | 'active'>('relaxed');
-  const [form, setForm] = useState(initial),
+  const [pace, setPace] = useState<'relaxed' | 'balanced' | 'active'>(restored?.pace ?? 'relaxed');
+  const [form, setForm] = useState(restored?.form ?? initial),
     [errors, setErrors] = useState<FormErrors>({});
   const [selectedInterests, setInterests] = useState<
     NonNullable<DiscoveryPreviewRequest['interests']>
-  >([]);
-  const [reviewing, setReviewing] = useState(false);
-  const [preview, setPreview] = useState<DiscoveryPreviewResponse | null>(null);
+  >(restored?.interests ?? []);
+  const [reviewing, setReviewing] = useState(restored?.reviewing ?? false);
+  const [preview, setPreview] = useState<DiscoveryPreviewResponse | null>(
+    restored?.preview ?? null,
+  );
+  const [previewAt, setPreviewAt] = useState<number | null>(restored?.previewAt ?? null);
+  const [cacheFailed, setCacheFailed] = useState(false);
+  const completed = useRef(false);
+  const cacheMounted = useRef(false);
+  useEffect(() => {
+    if (!cacheMounted.current) {
+      cacheMounted.current = true;
+      if (restored) return; // A reload must not extend the last edit's lifetime.
+    }
+    if (completed.current || accountTrips.getSnapshot().owner !== owner) return;
+    setCacheFailed(
+      !saveCreation(sessionStorage, owner, {
+        form,
+        pace,
+        interests: selectedInterests,
+        preview,
+        previewAt,
+        reviewing,
+      }),
+    );
+  }, [owner, form, pace, selectedInterests, preview, previewAt, reviewing, restored]);
   const formHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (preview && !reviewing) formHeading.current?.focus({ preventScroll: true });
@@ -82,6 +108,11 @@ export function NewAccountTrip({
     setBusy(true);
     try {
       await onCreate(trip);
+      const current = accountTrips.getSnapshot();
+      if (current.owner === owner && current.draft?.trip.id === trip.id) {
+        completed.current = true;
+        clearCreation(sessionStorage, owner);
+      }
     } finally {
       submitting.current = false;
       if (mounted.current) setBusy(false);
@@ -138,6 +169,8 @@ export function NewAccountTrip({
       )
         return;
       onCancel();
+      completed.current = true;
+      clearCreation(sessionStorage, owner);
     } finally {
       confirming.current = false;
     }
@@ -169,6 +202,7 @@ export function NewAccountTrip({
       );
       if (!request.signal.aborted) {
         setPreview(result);
+        setPreviewAt(Date.now());
         setReviewing(true);
       }
     } catch (error) {
@@ -291,6 +325,15 @@ export function NewAccountTrip({
         <Button secondary onClick={() => setReviewing(true)} disabled={disabled || busy}>
           Xem lại lịch gợi ý
         </Button>
+      )}
+      <p className="text-sm text-muted">
+        Thông tin đang nhập được giữ trong tab này tối đa 24 giờ sau lần sửa cuối; lịch gợi ý tối đa
+        1 giờ. Chỉ chuyến đã lưu mới đồng bộ tài khoản. Đăng xuất hoặc đóng tab sẽ bỏ dữ liệu tạm.
+      </p>
+      {cacheFailed && (
+        <Notice error>
+          Trình duyệt chưa giữ được thông tin tạm. Hãy hoàn tất chuyến trước khi tải lại trang.
+        </Notice>
       )}
       <form
         noValidate

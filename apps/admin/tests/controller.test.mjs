@@ -23,7 +23,9 @@ test('web admin needs backend grant, retains only access in RAM, validates write
         );
       if (deny) return new Response('{}', { status: 403 });
       return new Response(
-        JSON.stringify(init.method === 'POST' ? places[0] : { apiVersion: '1', places }),
+        JSON.stringify(
+          init.method === 'POST' ? places[0] : { apiVersion: '1', places, nextCursor: null },
+        ),
       );
     },
   });
@@ -49,4 +51,34 @@ test('web admin refuses remote HTTP bearer destinations and caller role injectio
   });
   await assert.rejects(client.login('a@example.test', 'p'));
   assert.equal(client.valid(), false);
+});
+
+test('admin paginates requests and expires RAM access before issuing an authenticated request', async () => {
+  let clock = 1_000_000;
+  const calls = [];
+  const client = createAdminClient({
+    base: 'http://127.0.0.1:3000',
+    url: 'https://abcdefghijklmnopqrst.supabase.co',
+    key: 'sb_publishable_offline_fixture_00000000',
+    now: () => clock,
+    fetcher: async (url) => {
+      calls.push(url);
+      if (url.includes('/token?'))
+        return Response.json({
+          token_type: 'bearer',
+          access_token: 'offline.fixture.signature',
+          expires_at: 1100,
+        });
+      return Response.json({ apiVersion: '1', places: [], nextCursor: null });
+    },
+  });
+  await client.login('admin@example.test', 'fixture');
+  assert.match(calls.at(-1), /limit=20$/);
+  await client.list('place-020');
+  assert.match(calls.at(-1), /limit=20&after=place-020$/);
+  const count = calls.length;
+  clock = 1_100_000;
+  assert.equal(client.valid(), false);
+  await assert.rejects(client.list(), /hết hạn/);
+  assert.equal(calls.length, count);
 });

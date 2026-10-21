@@ -4,6 +4,9 @@ import {
   managedPlaceSchema,
   managedCatalogSchema,
   catalogEntrySchema,
+  CATALOG_LIMITS,
+  adminCatalogPageSchema,
+  type AdminCatalogPageQuery,
 } from '@goease/contracts';
 import type { ApiConfig } from '../../../config/env.js';
 import { ApiFailure } from '../../../common/errors/api-failure.js';
@@ -40,16 +43,33 @@ export class AdminCatalogService {
     });
   }
   list(authorization: string | undefined, signal: AbortSignal) {
-    return this.run(authorization, signal, async (tx) =>
-      managedCatalogSchema.parse({
+    return this.run(authorization, signal, async (tx) => {
+      const rows = await this.repository.list(tx);
+      if (rows.length > CATALOG_LIMITS.maxEntries)
+        throw new ApiFailure(
+          503,
+          'CATALOG_LIMIT',
+          'Catalog vượt giới hạn vận hành; dùng API phân trang.',
+        );
+      return managedCatalogSchema.parse({
         apiVersion: '1',
-        places: (await this.repository.list(tx)).map((p) => ({
-          entry: p.snapshot,
-          version: p.version,
-          enabled: p.enabled,
-        })),
-      }),
-    );
+        places: rows.map((p) => ({ entry: p.snapshot, version: p.version, enabled: p.enabled })),
+      });
+    });
+  }
+  page(authorization: string | undefined, signal: AbortSignal, query: AdminCatalogPageQuery) {
+    return this.run(authorization, signal, async (tx) => {
+      const limit = query.limit ?? CATALOG_LIMITS.defaultPageSize;
+      const rows = await this.repository.page(tx, query);
+      const places = rows
+        .slice(0, limit)
+        .map((p) => ({ entry: p.snapshot, version: p.version, enabled: p.enabled }));
+      return adminCatalogPageSchema.parse({
+        apiVersion: '1',
+        places,
+        nextCursor: rows.length > limit ? rows[limit - 1]!.id : null,
+      });
+    });
   }
   createPlace(authorization: string | undefined, signal: AbortSignal, body: unknown) {
     return this.run(authorization, signal, async (tx, owner) => {
@@ -61,8 +81,12 @@ export class AdminCatalogService {
           'Place/nguồn không hợp lệ; không nhận role/owner.',
         );
       await this.repository.lock(tx);
-      if ((await this.repository.count(tx)) >= 20)
-        throw new ApiFailure(409, 'CATALOG_LIMIT', 'MVP tối đa 20 Place, kể cả địa điểm đã tắt.');
+      if ((await this.repository.count(tx)) >= CATALOG_LIMITS.maxEntries)
+        throw new ApiFailure(
+          409,
+          'CATALOG_LIMIT',
+          'Catalog đạt giới hạn vận hành 1000 Place; cần phân vùng API/lập kế hoạch trước khi mở rộng.',
+        );
       if (await this.repository.find(tx, parsed.data.entry.id))
         throw new ApiFailure(409, 'CATALOG_CONFLICT', 'ID Place đã được sử dụng; không tạo lại.');
       await this.repository.create(tx, owner, parsed.data.entry);
