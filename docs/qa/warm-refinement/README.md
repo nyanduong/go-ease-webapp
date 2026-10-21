@@ -113,3 +113,8 @@ Theo yêu cầu bổ sung, bỏ liên kết “Xem thử một chuyến trước
 - Local WebP assets total about 1.37 MB, are lazy loaded with fixed image slots and included in the existing PWA shell cache. Provider thumbnails/API responses remain outside that cache.
 - Photo provenance, licenses, transformations and refresh instructions: [travel photo credits](../../../apps/web/public/travel/README.md).
 - Validation: workspace typechecks and tests, web/API/trip-client lint, web production build, 49 browser scenarios, and 23 isolated PostgreSQL tests passed. Browser coverage includes provider-image priority, remote-image failure, replacement, sample/catalog imagery, saved-trip covers and mobile/desktop layouts. Screenshots refreshed below `after/`.
+
+
+### Remove overview illustrations — 2026-10-21
+
+Per the next request, city/general illustration fallbacks and overview covers in the saved-trip list are removed. Existing provider thumbnails and exact-place curated photos remain. Missing/failed images collapse without a placeholder or unused cover gap; source credits remain for images still displayed. Build, lint and the five affected browser flows pass; screenshots refreshed.

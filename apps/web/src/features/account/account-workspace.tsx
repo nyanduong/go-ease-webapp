@@ -4,7 +4,6 @@ import { Button, Notice, dateLabel } from '../../components/ui';
 import { Link, navigate } from '../../app/router';
 import { NewAccountTrip } from '../trips/new-account-trip';
 import { TripView } from '../trips/trip-view';
-import { TripCover } from '../trips/trip-cover';
 import { accountTrips, useAccount } from './session';
 import { confirmAction } from '../../platform/confirmation';
 import { offlineDev } from '../../platform/dev-mode';
@@ -275,7 +274,6 @@ export function AccountWorkspace({
               className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
               key={item.id}
             >
-              <TripCover destinationId={item.destinationId} />
               <h3>{item.name}</h3>
               <p>
                 {dateLabel(item.startDate)} · {item.durationDays} ngày · {item.people} người

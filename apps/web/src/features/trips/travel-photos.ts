@@ -8,7 +8,6 @@ export interface TravelPhoto {
   author: string;
   license?: string;
   licenseUrl?: string;
-  illustrative: boolean;
 }
 
 function normalize(value: string) {
@@ -21,11 +20,6 @@ function normalize(value: string) {
     .trim();
 }
 
-export function destinationPhoto(destinationId?: string): TravelPhoto {
-  const photo = curated.find((item) => item.id === destinationId) ?? curated[0];
-  return { ...photo, illustrative: true };
-}
-
 export function activityPhotos(activity: Activity, destinationId: string): TravelPhoto[] {
   const name = normalize(activity.name);
   const exact = curated.find(
@@ -33,7 +27,7 @@ export function activityPhotos(activity: Activity, destinationId: string): Trave
       photo.destinationId === destinationId &&
       photo.aliases.some((alias) => name === normalize(alias)),
   );
-  const fallback = exact ? { ...exact, illustrative: false } : destinationPhoto(destinationId);
+  const fallback: TravelPhoto[] = exact ? [exact] : [];
   const snapshot = activity.location.kind === 'discovered' ? activity.location.placeSnapshot : null;
   // Read-only selection: do not change saved snapshots or call discovery for imagery.
   if (snapshot?.thumbnailUrl?.startsWith('https://')) {
@@ -43,10 +37,9 @@ export function activityPhotos(activity: Activity, destinationId: string): Trave
         alt: activity.name,
         sourceUrl: snapshot.sourceUrl,
         author: 'Nguồn địa điểm',
-        illustrative: false,
       },
-      fallback,
+      ...fallback,
     ];
   }
-  return [fallback];
+  return fallback;
 }

@@ -1491,7 +1491,8 @@ for (const [mode, viewport] of [
       .getByRole('navigation')
       .getByRole('link', { name: 'Chuyến đi', exact: true })
       .click();
-    await page.locator('img[src="/travel/da-lat.webp"]').first().waitFor();
+    assert.equal(await page.locator('main img[src="/travel/da-lat.webp"]').count(), 0);
+    assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
     await capture('trips');
     await page
       .getByRole('button', { name: 'Mở chuyến tài khoản: Đà Lạt cuối tuần', exact: true })

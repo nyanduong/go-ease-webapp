@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Icon } from '../../components/icon';
 import type { TravelPhoto } from './travel-photos';
 
 export function TravelPhotoView({
@@ -27,6 +26,7 @@ function PhotoChain({
 }) {
   const [index, setIndex] = useState(0);
   const photo = photos[index];
+  if (!photo) return null;
   return (
     <figure className={`${className} min-w-0`} data-travel-photo>
       <div
@@ -45,21 +45,8 @@ function PhotoChain({
               referrerPolicy="no-referrer"
               onError={() => setIndex((value) => value + 1)}
             />
-            {photo.illustrative && (
-              <span className="absolute bottom-1 left-1 rounded bg-paper/95 px-1.5 py-0.5 text-[10px] text-muted">
-                Ảnh minh họa
-              </span>
-            )}
           </>
-        ) : (
-          <span
-            className="grid h-full place-items-center text-muted"
-            role="img"
-            aria-label="Chưa có ảnh địa điểm"
-          >
-            <Icon name="pin" />
-          </span>
-        )}
+        ) : null}
       </div>
       {photo && (
         <figcaption className="mt-1 min-w-0 text-[10px] leading-tight text-muted">

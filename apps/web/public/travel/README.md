@@ -22,6 +22,6 @@ Provider thumbnails remain remote, are preferred for discovered places, and link
 
 `apps/web/scripts/import-travel-photos.py` records the reviewed file names and exact-place aliases. Run it with Python + Pillow to import those files and regenerate `src/features/trips/curated-photos.json`. Review the source, license, metadata and appearance whenever changing a selection. Existing matching local files are reused; delete an individual WebP first if intentionally refreshing the same source.
 
-Exact matching is scoped to the destination and normalized place name. A city overview used for a different place is labeled **Ảnh minh họa**, with the actual subject in its alt text. Unknown destination IDs use the Đà Lạt overview as a clearly labeled general illustration, never infer a city from the user-editable trip title.
+Exact matching is scoped to the destination and normalized place name. Following the request to remove illustrative images, city/general overview substitutions are no longer displayed. Only matching place photos and existing provider thumbnails are used; missing or failed imagery collapses without an empty image slot. Saved-trip list cards have no overview cover.
 
 Verified metadata and downloaded files: 2026-10-21.

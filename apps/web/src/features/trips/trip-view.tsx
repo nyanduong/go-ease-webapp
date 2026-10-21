@@ -369,9 +369,7 @@ function TripSession({
           </details>
         </div>
       </header>
-      <div className="mx-auto w-full max-w-4xl">
-        <TripCover trip={trip} />
-      </div>
+      <TripCover trip={trip} />
       <div
         role="tablist"
         aria-label="Chi tiết chuyến"

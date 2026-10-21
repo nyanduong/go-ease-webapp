@@ -655,8 +655,8 @@ test('provider photos are preferred and a replaced activity resets the image fal
   );
   await page.getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 1', exact: true }).click();
   await page.getByLabel('Địa điểm đã tìm', { exact: true }).selectOption('fixture-da-nang-1');
-  await row.locator('img[src="/travel/da-nang.webp"]').waitFor();
-  assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 1);
+  assert.equal(await row.locator('img').count(), 0);
+  assert.equal(await row.getByText('Ảnh minh họa', { exact: true }).count(), 0);
   await finish(f, 'provider-photos');
 });
 
@@ -671,13 +671,8 @@ test('missing prices, failed photo, long names and day/map selection preserve in
   assert.equal(state.requests[0].pace, 'balanced');
   await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
   await page.getByRole('button', { name: /Giữ chuyến này/ }).waitFor();
-  await page.locator('.trip-timeline img[src="/travel/da-nang.webp"]').first().waitFor();
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('.trip-timeline img')].some(
-      (img) => img.complete && img.naturalWidth > 0,
-    ),
-  );
-  assert(await page.getByText('Ảnh minh họa', { exact: true }).count());
+  await page.waitForFunction(() => document.querySelectorAll('.trip-timeline img').length === 0);
+  assert.equal(await page.getByText('Ảnh minh họa', { exact: true }).count(), 0);
   assert.equal(await page.locator('img[alt="Điểm thử nghiệm 1"]').count(), 0);
   await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
   const longName =
