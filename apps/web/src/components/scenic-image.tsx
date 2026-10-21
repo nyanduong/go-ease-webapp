@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { publicMedia } from '../platform/public-media';
+import { offlineDev } from '../platform/dev-mode';
 
 // Delivery URLs are public. Upload credentials never belong in the browser bundle.
 const configuredUrl =
@@ -29,6 +30,7 @@ export function ScenicImage({
 }) {
   const [failed, setFailed] = useState(false);
   const deliveryUrl =
+    !offlineDev &&
     /^https:\/\/res\.cloudinary\.com\/[a-z0-9_-]+\/image\/upload\/(?:v\d+\/)?[a-zA-Z0-9_\-/]+\.(png|jpg|jpeg|webp)$/.test(
       source,
     )

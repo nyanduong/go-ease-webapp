@@ -21,7 +21,7 @@ try {
   if (meta.database !== 'goease_dev_local') throw Error();
   if (operation === 'stop') {
     pgControl(meta, 'stop');
-    console.info('Dedicated GoEase dev Postgres stopped; data retained.');
+    console.info('Dedicated GoEase dev Postgres stopped (or already stopped); data retained.');
   } else {
     let alive = false;
     const pool = new Pool({

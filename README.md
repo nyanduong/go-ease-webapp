@@ -10,10 +10,27 @@ Yêu cầu Node **24.15.x** và pnpm **10.34.6**.
 
 ```powershell
 pnpm install --frozen-lockfile
-pnpm dev:web
+pnpm dev
 ```
 
-Mở **http://127.0.0.1:5174**. Cần Supabase Google provider, API và PostgreSQL để vào kho chuyến; cấu hình theo phần bên dưới. Vite dev không đăng ký service worker.
+Mở **http://localhost:5174**. Sau khi cấu hình Supabase theo [hướng dẫn local](docs/GOOGLE_LOGIN.md), `pnpm dev` tự bật database, API và web; web gọi trực tiếp API tại `http://localhost:3000`, không cần gateway/tunnel hoặc cloudflared. Cả `localhost` và `127.0.0.1` đều được hỗ trợ; trình duyệt mặc định mở `localhost`. Giữ terminal mở; Ctrl+C dừng API, web và database; dữ liệu được giữ nguyên. Dừng các terminal API/web cũ trước khi dùng lệnh này. `pnpm dev:web` vẫn dùng để chỉ chạy web riêng. Vite dev không đăng ký service worker.
+
+
+### Dev hoàn toàn offline
+
+Sau khi đã cài dependencies bằng `pnpm install --frozen-lockfile`, chạy:
+
+```powershell
+pnpm dev:offline
+```
+
+Mở **http://localhost:5175**. Không cần cấu hình Supabase, đăng nhập, API, PostgreSQL hoặc Internet. Lệnh build packages local rồi chạy Vite; Ctrl+C dừng web offline. `pnpm dev` vẫn chạy luồng tài khoản ở cổng 5174 như trước.
+
+Chế độ này cho phép tạo lịch trống, tạo lịch mẫu Đà Lạt từ bộ 15 địa điểm có sẵn, sửa hoạt động/chi phí, lưu và mở lại chuyến trong IndexedDB. Có thể chọn các điểm đến phổ biến để tạo lịch trống và tự thêm hoạt động. Không gọi tìm kiếm online, tải bản đồ nền hoặc đồng bộ tài khoản. Ảnh dùng file local.
+
+Kho dev offline, bản nháp và biên nhận lưu được tách riêng với chuyến tài khoản và dữ liệu khách cũ; không tự nhập hoặc đồng bộ chúng. Dữ liệu gắn với trình duyệt và origin đang mở (`localhost:5175` hoặc `127.0.0.1:5175`); xóa dữ liệu trang/đổi trình duyệt sẽ không thấy các chuyến này. Hai origin có kho riêng; dữ liệu cũ ở `127.0.0.1` vẫn còn nguyên. Luôn giữ cùng địa chỉ khi mở lại. Đây là công cụ dev: chỉ bật khi Vite chạy development và `VITE_DEV_OFFLINE=true`; production build luôn loại bỏ nhánh bỏ đăng nhập, kể cả khi cờ này được đặt nhầm.
+
+Kiểm tra kho local và guard production: `pnpm --filter @goease/web test:offline`.
 
 Để thử PWA có thể cài và mở lại ngoại tuyến:
 
@@ -22,7 +39,7 @@ pnpm build:web
 pnpm preview:web
 ```
 
-Mở **http://127.0.0.1:4174**, chờ service worker sẵn sàng. Offline chỉ mở được giao diện; dữ liệu tài khoản cần mạng và xác minh phiên. Android/Chrome: menu Cài ứng dụng. iPhone/Safari: Chia sẻ → Thêm vào Màn hình chính. Triển khai ngoài máy cần HTTPS và rewrite route về `index.html`.
+Mở **http://localhost:4174**, chờ service worker sẵn sàng. Offline chỉ mở được giao diện; dữ liệu tài khoản cần mạng và xác minh phiên. Android/Chrome: menu Cài ứng dụng. iPhone/Safari: Chia sẻ → Thêm vào Màn hình chính. Triển khai ngoài máy cần HTTPS và rewrite route về `index.html`.
 
 ## Chạy API và admin
 
@@ -42,14 +59,14 @@ pnpm dev:web
 
 | Phần                   | Địa chỉ mặc định                | Lệnh                                            |
 | ---------------------- | ------------------------------- | ----------------------------------------------- |
-| PWA khách              | http://127.0.0.1:5174           | `pnpm dev:web`                                  |
+| PWA khách              | http://localhost:5174           | `pnpm dev:web`                                  |
 | Admin                  | http://127.0.0.1:5173           | `pnpm dev:admin`                                |
-| API                    | http://127.0.0.1:3000/v1/health | `pnpm dev:api`                                  |
-| PWA production preview | http://127.0.0.1:4174           | `pnpm build:web` rồi `pnpm preview:web`         |
+| API                    | http://localhost:3000/v1/health | `pnpm dev:api`                                  |
+| PWA production preview | http://localhost:4174           | `pnpm build:web` rồi `pnpm preview:web`         |
 | Expo Go                | QR do Metro in ra               | `pnpm dev:mobile` hoặc `pnpm dev:mobile:tunnel` |
 | Expo Web cũ            | URL do Metro in ra              | `pnpm dev:mobile:web`                           |
 
-Tài khoản PWA cần Supabase, API bật Auth/Trips và **HTTPS API origin** trong `VITE_API_BASE_URL`. Giữ chính sách HTTPS hiện có; Metro tunnel không chuyển tiếp API. CORS backend cần đúng origin PWA/admin. Không đưa DB password, Gemini key, JWT, mã phiên AI hay service-role vào `VITE_*` / `EXPO_PUBLIC_*`.
+Tài khoản PWA cần Supabase, API bật Auth/Trips và **HTTPS API origin** hoặc HTTP loopback local (`http://localhost:3000`) trong `VITE_API_BASE_URL`; HTTP LAN/public bị chặn. Metro tunnel không chuyển tiếp API. CORS backend cần đúng origin PWA/admin. Không đưa DB password, Gemini key, JWT, mã phiên AI hay service-role vào `VITE_*` / `EXPO_PUBLIC_*`.
 
 ## Chức năng hiện tại
 

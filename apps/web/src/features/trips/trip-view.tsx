@@ -29,6 +29,7 @@ import { Budget, BudgetSummary } from './budget';
 import { TripOverview } from './trip-overview';
 import { confirmAction } from '../../platform/confirmation';
 import { accountTrips } from '../account/session';
+import { offlineDev } from '../../platform/dev-mode';
 
 export type SaveStatus = 'idle' | 'error' | 'unconfirmed' | 'conflict';
 interface TripViewProps {
@@ -261,7 +262,7 @@ function TripSession({
             ? 'Có thay đổi chưa lưu'
             : editing
               ? 'Chưa có thay đổi'
-              : storage === 'account'
+              : storage === 'account' && !offlineDev
                 ? 'Đã lưu vào tài khoản'
                 : 'Đã lưu trên thiết bị';
   return (

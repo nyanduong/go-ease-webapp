@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/ui';
 import { confirmAction } from './confirmation';
+import { offlineDev } from './dev-mode';
 
 interface InstallPrompt extends Event {
   prompt(): Promise<void>;
@@ -87,7 +88,13 @@ export function PwaStatus() {
       className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-9 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
       aria-live="polite"
     >
-      {offline && <span>Bạn đang mất kết nối. Kết nối mạng để lưu chuyến đi.</span>}
+      {offline && (
+        <span>
+          {offlineDev
+            ? 'Dev offline: vẫn tạo, sửa và lưu chuyến trên trình duyệt này.'
+            : 'Bạn đang mất kết nối. Kết nối mạng để lưu chuyến đi.'}
+        </span>
+      )}
       {install && (
         <Button
           secondary
