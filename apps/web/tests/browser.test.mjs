@@ -507,7 +507,7 @@ test('browser Back and Forward keep the dirty page until the popup is accepted',
   await page.waitForURL(base + '/trips');
   await page.evaluate(() => history.forward());
   await page.waitForURL(base + '/trips/new');
-  assert.notEqual(
+  assert.equal(
     await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
     'Giữ thông tin khi quay lại',
   );

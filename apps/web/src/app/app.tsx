@@ -78,7 +78,10 @@ export function App() {
       <Navigation path={path} />
       <div className="min-w-0 lg:ml-64">
         <header
-          className={`${path.startsWith('/trips/') || path === '/sample' ? 'hidden lg:block' : ''}border-b border-line/60 bg-cream px-5 sm:px-10`}
+          className={[
+            path.startsWith('/trips/') || path === '/sample' ? 'hidden lg:block' : '',
+            'border-b border-line/60 bg-cream px-5 sm:px-10',
+          ].join(' ')}
         >
           <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4">
             <div className="lg:hidden">
