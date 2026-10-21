@@ -1492,10 +1492,24 @@ for (const [mode, viewport] of [
       .getByRole('link', { name: 'Chuyến đi', exact: true })
       .click();
     await page.locator('main img[src="/travel/da-lat.webp"]').waitFor();
+    const thumbnailBounds = await page.locator('main img[src="/travel/da-lat.webp"]').boundingBox();
     assert.equal(await page.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
     await page.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
     const photoDialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
     await photoDialog.waitFor();
+    const enlarged = photoDialog.getByRole('img');
+    await enlarged.evaluate((img) => img.decode());
+    const enlargedBounds = await enlarged.boundingBox();
+    assert(
+      enlargedBounds.width > thumbnailBounds.width,
+      'photo opens larger than the trip thumbnail',
+    );
+    const credit = photoDialog.getByRole('link', { name: /^Ảnh:/ });
+    assert((await credit.boundingBox()).y >= enlargedBounds.y + enlargedBounds.height);
+    assert.equal(await credit.evaluate((link) => getComputedStyle(link).fontSize), '12px');
+    const modalBounds = await photoDialog.boundingBox();
+    assert(modalBounds.x >= 0 && modalBounds.x + modalBounds.width <= viewport.width);
+    await capture('photo');
     assert.equal(
       await photoDialog.getByRole('link', { name: 'CC BY 4.0', exact: true }).count(),
       1,

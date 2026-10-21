@@ -123,3 +123,8 @@ Per the next request, city/general illustration fallbacks and overview covers in
 ### Clarification: keep images, remove visible captions — 2026-10-21
 
 The user clarified that only the “Ảnh minh họa” badge and credits below the image should disappear. Overview fallbacks and list covers are restored. Image buttons open a native photo-information dialog containing the original subject, source/author, license and transformation notes. No badge or attribution caption appears in the normal trip/list layout. Browser checks cover retained images, hidden captions, source/license access, closing by button/Escape, and provider priority/failure/replacement.
+
+
+### Enlarge photos on click — 2026-10-21
+
+Clicking a trip/activity image now opens a wider photo viewer. The full image fits the viewport without cropping; source/author and license links sit underneath in small text. Closed viewers do not load an additional image. Native dialog behavior retains keyboard focus and supports Escape and the Close button. Build/lint and five affected browser flows pass, with image enlargement, credit placement and mobile/desktop bounds checked. New `after/*-photo.png` screenshots show the viewer at 360/390/1440px.
