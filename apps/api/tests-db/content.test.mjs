@@ -56,6 +56,7 @@ async function fixture(run) {
     B = randomUUID(),
     prefix = 'cms-' + randomUUID();
   const tokens = { A: token(A), B: token(B) };
+  let authClock = Date.now();
   const { app } = await createApi(
     {
       TRIPS_ENABLED: 'true',
@@ -72,6 +73,7 @@ async function fixture(run) {
     undefined,
     {},
     {
+      now: () => authClock,
       fetcher: async (_url, options) => {
         const who = Object.keys(tokens).find(
           (key) => options.headers.authorization === 'Bearer ' + tokens[key],
@@ -115,7 +117,7 @@ async function fixture(run) {
       issuer,
       A,
     ]);
-    await run({ A, B, prefix, request, create, update, base, token: tokens.A });
+    await run({ A, B, prefix, request, create, update, base, token: tokens.A, advanceAuthWindow: () => { authClock += 60000; } });
   } finally {
     await app.close();
   }
@@ -450,7 +452,7 @@ test('sourced editorial seed is repeatable and preserves admin payload, version 
   }));
 
 test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved reopened manual plans at mobile and desktop widths', () =>
-  fixture(async ({ A, B, create, update, base, token, request }) => {
+  fixture(async ({ A, B, create, update, base, token, request, advanceAuthWindow }) => {
     const id = 'aaa-browser-' + randomUUID();
     const draft = await create(
       entry(id, 'destination', {
@@ -462,7 +464,7 @@ test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved
     );
     await failure(await request(null, 'GET', '/v1/content/' + id), 404, 'NOT_FOUND');
     const published = await update(draft, { status: 'published' });
-    const { tripIds } = await checkCmsDatabaseBrowser({ base, token, owner: A, record: published });
+    const { tripIds } = await checkCmsDatabaseBrowser({ base, token, owner: A, record: published, advanceAuthWindow });
     assert.equal(tripIds.length, 3);
     const trips = await admin.query(
       'SELECT id,"ownerSubject",destination FROM "Trip" WHERE id=ANY($1::varchar[])',

@@ -6,7 +6,7 @@ import { build, preview } from 'vite';
 import { chromium } from '@playwright/test';
 
 // Real loopback Nest/PostgreSQL traffic. Only Supabase is an explicit offline auth double.
-export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
+export async function checkCmsDatabaseBrowser({ base, token, owner, record, advanceAuthWindow }) {
   const root = fileURLToPath(new URL('..', import.meta.url));
   const origin = 'http://127.0.0.1:4197';
   const authOrigin = 'https://abcdefghijklmnopqrst.supabase.co';
@@ -49,6 +49,9 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
       { width: 390, height: 844 },
       { width: 1440, height: 1000 },
     ]) {
+      // Separate acceptance sessions must not consume a single artificial auth minute.
+      // The production limiter stays enabled; only the existing injected test clock advances.
+      advanceAuthWindow();
       const name = String(viewport.width);
       const context = await browser.newContext({
         viewport,
