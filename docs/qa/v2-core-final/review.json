@@ -1,0 +1,45 @@
+{
+  "status": "Ready for user acceptance; aesthetic work stopped",
+  "baseline": "d97bfb1",
+  "testedCommit": "a28a380010cc60e538f137f0389e6cff4eb8223a",
+  "uiSourceCommit": "8245d75721a5bde34fa66e55d0fbe32d483e7ccc",
+  "runningUrl": "http://localhost:5174",
+  "apiHealth": "http://localhost:3000/v1/health",
+  "tests": {
+    "browser": {
+      "passed": 69,
+      "failed": 0
+    },
+    "postgres": {
+      "trips": 24,
+      "cms": 6,
+      "failed": 0
+    },
+    "webTypecheck": "pass",
+    "webLint": "pass",
+    "webBuild": "pass",
+    "docsCheck": "pass"
+  },
+  "personalDatabase": {
+    "reset": false,
+    "schemaChanges": false,
+    "tablesCompared": 12,
+    "unchanged": true,
+    "proof": [
+      "db-before.json",
+      "db-after.json"
+    ]
+  },
+  "evidence": {
+    "verified": "Real local CMS/Nest/PostgreSQL anonymous read-only screenshots; isolated real API/DB write and reload journeys at 360/390/1440; Google existing session read/profile/reload through Chrome UI",
+    "identityFixtures": "Browser regressions use offline Supabase/Google identity; DB integration uses offline Supabase identity and a per-viewport injected auth test clock; production limiter unchanged",
+    "providerFixtures": "Discovery preview, Google Maps and upload/save failure scenarios are fixtures; no live AI/SerpApi calls",
+    "notVerified": [
+      "Fresh Google OAuth roundtrip this pass",
+      "Physical Android/iOS device and on-screen keyboard",
+      "Live Google Maps/SerpApi/Gemini discovery and cross-device sync"
+    ]
+  },
+  "ci": "See PR checks for the pushed head. Local evidence is tied to testedCommit above.",
+  "scope": "Core UI completion only; no merge, production deployment, billing, migrations, reset, or commercial feature additions"
+}

@@ -1,0 +1,17 @@
+
+> @goease/web@0.1.0 build C:\Users\LENOVO\OneDrive\Desktop\FPT\Ky-7\EXE101\go-ease-webapp\apps\web
+> tsc --noEmit && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 240 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     1.02 kB │ gzip:   0.57 kB
+dist/assets/osm-map-vh-t_kPv.css   15.09 kB │ gzip:   6.36 kB
+dist/assets/index-CCTu7IJR.css     60.32 kB │ gzip:  12.19 kB
+dist/assets/osm-map-DvUYXWlV.js   151.42 kB │ gzip:  44.76 kB
+dist/assets/dist-DUv6x2D9.js      214.40 kB │ gzip:  55.16 kB
+dist/assets/index-NBkyoqqV.js     499.52 kB │ gzip: 148.77 kB
+
+✓ built in 672ms
