@@ -112,48 +112,6 @@ function PhotoChain({
             onError={() => setIndex((value) => value + 1)}
           />
         )}
-        <div className="mt-4 rounded-xl bg-cream px-3 py-2 sm:px-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <span
-                aria-hidden="true"
-                className="grid size-9 shrink-0 place-items-center rounded-full bg-sand text-sm font-semibold text-teal"
-              >
-                {photo.author.slice(0, 1).toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                <p className="text-[10px] text-muted">Ghi nhận ảnh</p>
-                <p className="text-sm font-medium break-words">{photo.author}</p>
-              </div>
-            </div>
-            <a
-              className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line bg-paper px-3 text-xs font-medium text-ink transition-colors hover:border-teal hover:text-teal"
-              href={photo.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Xem nguồn ↗
-            </a>
-          </div>
-          {photo.licenseUrl && (
-            <details className="mt-1 border-t border-line/60 text-xs text-muted">
-              <summary className="font-normal">Bản quyền ảnh</summary>
-              <div className="pb-2">
-                <a
-                  className="text-teal underline underline-offset-4"
-                  href={photo.licenseUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {photo.license}
-                </a>
-                <p className="mt-2 leading-relaxed">
-                  Ảnh đã được thu nhỏ; ảnh xem trước được cắt khung.
-                </p>
-              </div>
-            </details>
-          )}
-        </div>
       </dialog>
     </figure>
   );

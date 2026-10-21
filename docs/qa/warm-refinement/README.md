@@ -133,3 +133,8 @@ Clicking a trip/activity image now opens a wider photo viewer. The full image fi
 ### Photo motion and attribution layout — 2026-10-21
 
 The viewer now fades/scales in (220 ms) and out (160 ms); desktop thumbnails have a subtle hover zoom. Escape, Close and backdrop clicks share the exit behavior. Reduced-motion preference skips the animated exit and suppresses hover zoom. Attribution is a compact author card with a separate source button; license and transformation details are collapsed under “Bản quyền ảnh”. Build/lint and the five affected browser scenarios pass, including normal animation, reduced-motion layouts, attribution expansion and backdrop closing. Viewer screenshots updated.
+
+
+### Remove credits from viewer — 2026-10-21
+
+Per the explicit request, the viewer no longer renders author/source/license controls or attribution text. It retains the image, location title, Close button, animations, Escape and backdrop closing. Asset provenance and license metadata remain in the distributed travel README and manifest. Build/lint and five related browser flows pass; assertions check that the viewer has no links, attribution details or credit text. Viewer screenshots updated.

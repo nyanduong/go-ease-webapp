@@ -1,6 +1,6 @@
 # Travel photo credits
 
-These locally bundled photographs are selected from Wikimedia Commons. They are resized and converted to WebP; the UI crops them to fit. Each image retains its own license below (including ShareAlike for the derivative image where applicable). The application makes source/author, license links and modification details available in the photo information dialog opened by clicking the image.
+These locally bundled photographs are selected from Wikimedia Commons. They are resized and converted to WebP; the UI crops them to fit. Each image retains its own license below (including ShareAlike for the derivative image where applicable). Attribution metadata and licenses accompany the distributed assets in this file; the photo viewer does not render credits.
 
 Provider thumbnails remain remote, are preferred for discovered places, and link back to the existing place source. They are not downloaded into this library or cached by the service worker.
 
@@ -22,6 +22,6 @@ Provider thumbnails remain remote, are preferred for discovered places, and link
 
 `apps/web/scripts/import-travel-photos.py` records the reviewed file names and exact-place aliases. Run it with Python + Pillow to import those files and regenerate `src/features/trips/curated-photos.json`. Review the source, license, metadata and appearance whenever changing a selection. Existing matching local files are reused; delete an individual WebP first if intentionally refreshing the same source.
 
-Exact matching is scoped to the destination and normalized place name. City/general overview substitutions and saved-trip covers are retained. Per the clarified request, no illustration badge or source caption is displayed on/below the image. Clicking the image opens its attribution information. Unknown destination IDs use the Đà Lạt overview as a general illustration, with the actual subject retained in alt text and the information dialog.
+Exact matching is scoped to the destination and normalized place name. City/general overview substitutions and saved-trip covers are retained. Per the clarified request, no illustration badge or source caption is displayed on/below the image. Clicking the image opens a larger image without credits. Unknown destination IDs use the Đà Lạt overview as a general illustration, with the actual subject retained in alt text and the information dialog.
 
 Verified metadata and downloaded files: 2026-10-21.

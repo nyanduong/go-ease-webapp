@@ -652,10 +652,7 @@ test('provider photos are preferred and a replaced activity resets the image fal
   assert.equal(await row.getByRole('link', { name: /^Ảnh:/ }).count(), 0);
   await row.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
   const photoDialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
-  assert.equal(
-    await photoDialog.getByRole('link', { name: 'Xem nguồn ↗', exact: true }).getAttribute('href'),
-    sourcePlaces(getDestination('da-nang'))[0].sourceUrl,
-  );
+  assert.equal(await photoDialog.locator('a, details').count(), 0);
   assert.equal(
     await photoDialog.evaluate((node) => getComputedStyle(node).animationName),
     'photo-viewer-in',
