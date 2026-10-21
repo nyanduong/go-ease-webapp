@@ -207,6 +207,45 @@ export async function checkAdminBrowser({ base, token, entry }) {
     assert.equal(await page.getByLabel('Tên địa điểm', { exact: true }).count(), 0);
     assert.equal(writes(), writesBeforeDiscard);
     await page.screenshot({ path: output + '/admin-mobile.png', fullPage: true });
+    await page.getByRole('button', { name: 'CMS khám phá', exact: true }).click();
+    await page.getByRole('button', { name: 'Tải nội dung', exact: true }).click();
+    await page.getByRole('button', { name: 'Tải lại nội dung', exact: true }).waitFor();
+    await page.getByRole('button', { name: '+ Tạo nội dung', exact: true }).click();
+    const contentId = 'browser-cms-' + Date.now();
+    await page.getByLabel('ID nội dung', { exact: true }).fill(contentId);
+    await page.getByLabel('Tiêu đề', { exact: true }).fill('Điểm đến CMS trình duyệt');
+    await page
+      .getByLabel('Mô tả ngắn', { exact: true })
+      .fill('Điểm đến được nhập qua biểu mẫu quản trị.');
+    await page
+      .getByLabel('Nội dung bài viết', { exact: true })
+      .fill('Nội dung fixture cho luồng biên tập và công bố.');
+    await page.getByLabel('Địa chỉ', { exact: true }).fill('Đà Lạt, Việt Nam');
+    await page.getByLabel('Vĩ độ nội dung', { exact: true }).fill('11.9404');
+    await page.getByLabel('Kinh độ nội dung', { exact: true }).fill('108.4583');
+    await page.getByRole('button', { name: '+ Thêm nguồn', exact: true }).click();
+    await page.getByLabel('Tên nguồn 1', { exact: true }).fill('Nguồn fixture');
+    await page
+      .getByLabel('URL nguồn 1', { exact: true })
+      .fill('https://example.test/editorial-source');
+    await page.getByRole('button', { name: 'Lưu nội dung', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Sửa nội dung Điểm đến CMS trình duyệt', exact: true })
+      .waitFor();
+    assert.equal((await page.request.get(base + '/v1/content/' + contentId)).status(), 404);
+    await page
+      .getByRole('button', { name: 'Sửa nội dung Điểm đến CMS trình duyệt', exact: true })
+      .click();
+    await page.getByLabel('Trạng thái', { exact: true }).selectOption('published');
+    await page.getByRole('button', { name: 'Lưu nội dung', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Sửa nội dung Điểm đến CMS trình duyệt', exact: true })
+      .waitFor();
+    assert.equal((await page.request.get(base + '/v1/content/' + contentId)).status(), 200);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({ path: output + '/cms-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: output + '/cms-mobile.png', fullPage: true });
     assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0);
     await page.reload();
     await page.getByRole('heading', { name: 'Đăng nhập nhân viên' }).waitFor();

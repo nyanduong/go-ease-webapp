@@ -2,7 +2,7 @@ name: Kiểm tra chất lượng
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'nyan/goease-v2-*']
   push:
     branches: [main]
 

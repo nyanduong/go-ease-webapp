@@ -27,6 +27,7 @@
     "db:local": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs start",
     "db:stop": "pnpm --filter @goease/api exec node scripts/db-local.mjs stop",
     "db:seed": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs seed",
+    "db:seed:content": "pnpm build:packages && pnpm --filter @goease/api exec node scripts/db-local.mjs content-seed",
     "db:backup": "pnpm --filter @goease/api exec node scripts/db-local.mjs backup",
     "demo:trips": "pnpm build:api && pnpm --filter @goease/api demo:trips",
     "test:db": "pnpm build:api && pnpm --filter @goease/mobile exec tsc -p tsconfig.logic-tests.json && pnpm --filter @goease/api exec node scripts/test-db.mjs",

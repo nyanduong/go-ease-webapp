@@ -14,7 +14,10 @@ export class PrismaService {
             max: 4,
             connectionTimeoutMillis: 2000,
             idleTimeoutMillis: 5000,
-            options: `-c statement_timeout=${config.TRIPS_DB_TIMEOUT_MS} -c lock_timeout=1000`,
+            // adapter-pg normalizes timestamptz offsets to UTC without shifting the
+            // wall clock. Request UTC from PostgreSQL so timestamps stay accurate
+            // on hosts whose database defaults to Asia/Ho_Chi_Minh (or any zone).
+            options: `-c timezone=UTC -c statement_timeout=${config.TRIPS_DB_TIMEOUT_MS} -c lock_timeout=1000`,
             application_name: 'goease-private-trips',
           },
           { onPoolError: () => {} },

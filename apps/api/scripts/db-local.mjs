@@ -11,9 +11,10 @@ import {
   migrateDatabase,
 } from './db-tools.mjs';
 import { Pool } from 'pg';
+import { seedContent } from './content-seed.mjs';
 try {
   const operation = process.argv[2];
-  if (!['start', 'stop', 'seed', 'backup'].includes(operation)) throw Error();
+  if (!['start', 'stop', 'seed', 'content-seed', 'backup'].includes(operation)) throw Error();
   const meta =
     operation === 'start'
       ? await localCluster('dev')
@@ -41,7 +42,13 @@ try {
       migrateDatabase(meta.adminUrl);
       await seedCatalog(meta.adminUrl);
     }
-    if (operation === 'seed') {
+    if (operation === 'content-seed') {
+      migrateDatabase(meta.adminUrl);
+      await seedContent(meta.adminUrl);
+      console.info(
+        'Sourced editorial content seeded locally; existing admin edits and trips preserved.',
+      );
+    } else if (operation === 'seed') {
       await seedCatalog(meta.adminUrl);
       console.info(
         'Catalog seed applied from the committed sourced catalog; no private trips seeded.',

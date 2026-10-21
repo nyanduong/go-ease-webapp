@@ -5,6 +5,11 @@ import {
   adminPlaceCreateSchema,
   adminPlaceUpdateSchema,
   type ManagedPlace,
+  contentPageSchema,
+  contentInputSchema,
+  contentRecordSchema,
+  contentUpdateSchema,
+  type ContentInput,
 } from '@goease/contracts';
 type Mutation =
   | { kind: 'create'; entry: ManagedPlace['entry'] }
@@ -51,7 +56,7 @@ export function createAdminClient(options: {
             credentials: 'omit',
           });
           const raw = await response.text();
-          if (raw.length > 200000) throw Error('Phản hồi quá lớn.');
+          if (raw.length > CATALOG_LIMITS.maxResponseChars) throw Error('Phản hồi quá lớn.');
           if (response.status === 401 || response.status === 403) stop();
           if (!response.ok)
             throw Error(
@@ -216,6 +221,37 @@ export function createAdminClient(options: {
           ),
         ),
       );
+    },
+    listContent(options: { after?: string; kind?: ContentInput['kind'] } = {}) {
+      return session(async (signal) => {
+        const query = new URLSearchParams({ limit: '50' });
+        if (options.after) query.set('after', options.after);
+        if (options.kind) query.set('kind', options.kind);
+        return contentPageSchema.parse(
+          await wire(base() + '/v1/admin/content?' + query, { headers: headers() }, signal),
+        );
+      });
+    },
+    saveContent(entry: ContentInput, expectedVersion?: number) {
+      return session(async (signal) => {
+        const body =
+          expectedVersion === undefined
+            ? contentInputSchema.parse(entry)
+            : contentUpdateSchema.parse({ entry, expectedVersion });
+        return contentRecordSchema.parse(
+          await wire(
+            base() +
+              '/v1/admin/content' +
+              (expectedVersion === undefined ? '' : '/' + encodeURIComponent(entry.id)),
+            {
+              method: expectedVersion === undefined ? 'POST' : 'PUT',
+              headers: headers(),
+              body: JSON.stringify(body),
+            },
+            signal,
+          ),
+        );
+      });
     },
     save(operation: Mutation) {
       return session(async (signal) => {

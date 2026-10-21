@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { catalogEntrySchema, type ManagedPlace } from '@goease/contracts';
 import { createAdminClient } from './controller';
 import { ConfirmDialog } from './ConfirmDialog';
+import { ContentManager } from './ContentManager';
 import './style.css';
 function App() {
   const client = useMemo(
@@ -16,6 +17,7 @@ function App() {
     [],
   );
   const [places, setPlaces] = useState<ManagedPlace[]>([]),
+    [view, setView] = useState<'catalog' | 'content'>('catalog'),
     [nextCursor, setNextCursor] = useState<string | null>(null),
     [authed, setAuthed] = useState(false),
     [busy, setBusy] = useState(false),
@@ -103,9 +105,9 @@ function App() {
     <main>
       <header>
         <div>
-          <p className="eyebrow">GOEASE / CATALOG</p>
-          <h1>Quản lý địa điểm</h1>
-          <p>Danh mục Đà Lạt · Nguồn tham khảo và vị trí cho lịch trình nhóm</p>
+          <p className="eyebrow">GOEASE / CMS</p>
+          <h1>Quản lý nội dung du lịch</h1>
+          <p>Điểm đến, địa điểm, ẩm thực và bài viết có nguồn</p>
         </div>
         {authed && (
           <button
@@ -149,96 +151,120 @@ function App() {
         </section>
       ) : (
         <>
-          <nav>
-            <span>
-              {places.filter((p) => p.enabled).length} hoạt động / {places.length} địa điểm đã tải
-            </span>
+          <nav aria-label="Khu vực quản trị">
             <button
               disabled={busy}
-              onClick={() =>
-                void work(async () => {
-                  const data = await client.list();
-                  setPlaces(data.places);
-                  setNextCursor(data.nextCursor);
-                })
-              }
+              aria-pressed={view === 'catalog'}
+              onClick={() => setView('catalog')}
             >
-              Tải lại catalog
+              Catalog lập kế hoạch
             </button>
-            <button disabled={busy} onClick={() => setEditing(null)}>
-              + Tạo địa điểm
+            <button
+              disabled={busy}
+              aria-pressed={view === 'content'}
+              onClick={() => setView('content')}
+            >
+              CMS khám phá
             </button>
           </nav>
-          <p>
-            Tắt địa điểm giữ dữ liệu lịch sử và pin chuyến cũ. Tọa độ/ID bất biến; thay vị trí cần
-            ID mới. Giá chỉ tham khảo.
-          </p>
-          {editing !== undefined && (
-            <Editor
-              key={editing?.entry.id ?? 'new'}
-              saved={editing}
-              busy={busy}
-              onCancel={() => setEditing(undefined)}
-              onSave={(entry, enabled) => {
-                void work(async () => {
-                  const saved = await client.save(
-                    editing
-                      ? { kind: 'update', entry, enabled, expectedVersion: editing.version }
-                      : { kind: 'create', entry },
-                  );
-                  setPlaces((old) => [...old.filter((p) => p.entry.id !== saved.entry.id), saved]);
-                  setEditing(undefined);
-                });
-              }}
-            />
-          )}
-          <section className="grid">
-            {places.map((place) => (
-              <article key={place.entry.id}>
-                <div className="status">
-                  {place.enabled ? 'Đang hoạt động' : 'Đã tắt'} · v{place.version}
-                </div>
-                <h2>{place.entry.name}</h2>
-                <p>
-                  {place.entry.category} · {place.entry.suggestedDurationMinutes} phút
-                </p>
-                <p>
-                  {place.entry.referenceCost.status === 'unknown'
-                    ? 'Chưa có giá'
-                    : `${place.entry.referenceCost.amountVnd.toLocaleString('vi-VN')} VND/người · tham khảo`}
-                </p>
-                <a href={place.entry.coordinateSourceUrl} target="_blank" rel="noreferrer">
-                  Nguồn tọa độ ↗
-                </a>
-                <button disabled={busy} onClick={() => setEditing(place)}>
-                  Chỉnh sửa {place.entry.name}
-                </button>
-              </article>
-            ))}
-          </section>
-          {nextCursor && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                void work(async () => {
-                  const data = await client.list(nextCursor);
-                  setPlaces((old) => [
-                    ...old,
-                    ...data.places.filter(
-                      (place) => !old.some((existing) => existing.entry.id === place.entry.id),
-                    ),
-                  ]);
-                  setNextCursor(data.nextCursor);
-                })
-              }
-            >
-              Tải thêm địa điểm
-            </button>
-          )}
+          <div hidden={view !== 'content'}>
+            <ContentManager client={client} />
+          </div>
+          <div hidden={view !== 'catalog'}>
+            <nav>
+              <span>
+                {places.filter((p) => p.enabled).length} hoạt động / {places.length} địa điểm đã tải
+              </span>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void work(async () => {
+                    const data = await client.list();
+                    setPlaces(data.places);
+                    setNextCursor(data.nextCursor);
+                  })
+                }
+              >
+                Tải lại catalog
+              </button>
+              <button disabled={busy} onClick={() => setEditing(null)}>
+                + Tạo địa điểm
+              </button>
+            </nav>
+            <p>
+              Tắt địa điểm giữ dữ liệu lịch sử và pin chuyến cũ. Tọa độ/ID bất biến; thay vị trí cần
+              ID mới. Giá chỉ tham khảo.
+            </p>
+            {editing !== undefined && (
+              <Editor
+                key={editing?.entry.id ?? 'new'}
+                saved={editing}
+                busy={busy}
+                onCancel={() => setEditing(undefined)}
+                onSave={(entry, enabled) => {
+                  void work(async () => {
+                    const saved = await client.save(
+                      editing
+                        ? { kind: 'update', entry, enabled, expectedVersion: editing.version }
+                        : { kind: 'create', entry },
+                    );
+                    setPlaces((old) => [
+                      ...old.filter((p) => p.entry.id !== saved.entry.id),
+                      saved,
+                    ]);
+                    setEditing(undefined);
+                  });
+                }}
+              />
+            )}
+            <section className="grid">
+              {places.map((place) => (
+                <article key={place.entry.id}>
+                  <div className="status">
+                    {place.enabled ? 'Đang hoạt động' : 'Đã tắt'} · v{place.version}
+                  </div>
+                  <h2>{place.entry.name}</h2>
+                  <p>
+                    {place.entry.category} · {place.entry.suggestedDurationMinutes} phút
+                  </p>
+                  <p>
+                    {place.entry.referenceCost.status === 'unknown'
+                      ? 'Chưa có giá'
+                      : `${place.entry.referenceCost.amountVnd.toLocaleString('vi-VN')} VND/người · tham khảo`}
+                  </p>
+                  <a href={place.entry.coordinateSourceUrl} target="_blank" rel="noreferrer">
+                    Nguồn tọa độ ↗
+                  </a>
+                  <button disabled={busy} onClick={() => setEditing(place)}>
+                    Chỉnh sửa {place.entry.name}
+                  </button>
+                </article>
+              ))}
+            </section>
+            {nextCursor && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void work(async () => {
+                    const data = await client.list(nextCursor);
+                    setPlaces((old) => [
+                      ...old,
+                      ...data.places.filter(
+                        (place) => !old.some((existing) => existing.entry.id === place.entry.id),
+                      ),
+                    ]);
+                    setNextCursor(data.nextCursor);
+                  })
+                }
+              >
+                Tải thêm địa điểm
+              </button>
+            )}
+          </div>
         </>
       )}
       <footer>
-        GoEase MVP · Catalog có nguồn · Không có chức năng xem chuyến riêng hoặc quản lý thanh toán
+        GoEase · Nội dung biên tập có nguồn · Catalog và dữ liệu chuyến được quản lý độc lập
       </footer>
     </main>
   );
