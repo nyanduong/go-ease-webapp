@@ -4,7 +4,7 @@ import { Link, navigate } from '../../app/router';
 import { Icon, type IconName } from '../../components/icon';
 import { Button, Notice } from '../../components/ui';
 import { contentPage } from './content-api';
-import { ContentImage, DiscoveryCollection } from './content-cards';
+import { ContentImage, DiscoveryCollection, contentPhotos } from './content-cards';
 
 const shortcuts: { label: string; icon: IconName; href: string }[] = [
   { label: 'Lên lịch', icon: 'calendar', href: '/trips/new?choose=1' },
@@ -39,7 +39,24 @@ export function DiscoveryHome() {
       });
     return () => request.abort();
   }, [attempt]);
-  const cover = items.find((item) => item.entry.kind === 'destination');
+  const photoKey = (item: ContentRecord) => contentPhotos(item.entry)[0]?.url;
+  const completedPhoto = (item: ContentRecord) => {
+    const photo = contentPhotos(item.entry)[0];
+    return !!photo && !photo.city;
+  };
+  const destinationAndArticlePhotos = new Set(
+    items.filter((item) => ['destination', 'article'].includes(item.entry.kind)).map(photoKey),
+  );
+  const cover =
+    items
+      .filter(
+        (item) =>
+          item.entry.kind === 'place' &&
+          completedPhoto(item) &&
+          (contentPhotos(item.entry)[0]?.aspectRatio ?? 1.3) >= 1.2 &&
+          !destinationAndArticlePhotos.has(photoKey(item)),
+      )
+      .at(-1) ?? items.find((item) => item.entry.kind === 'destination' && completedPhoto(item));
   return (
     <div className="discovery-stack">
       <h1 className="sr-only">Khám phá cùng GoEase</h1>
@@ -113,7 +130,14 @@ export function DiscoveryHome() {
           ['article', 'Kinh nghiệm cho chuyến đi'],
         ] as const
       ).map(([kind, title]) => {
-        const group = items.filter((item) => item.entry.kind === kind);
+        let group = items
+          .filter((item) => item.entry.kind === kind)
+          .sort((a, b) => Number(completedPhoto(b)) - Number(completedPhoto(a)));
+        if (kind === 'place') {
+          if (group.length > 4) group = group.filter((item) => item.entry.id !== cover?.entry.id);
+          group = group.slice(0, 4);
+        }
+        if (kind === 'article') group = group.slice(0, 2);
         return group.length || kind === 'destination' ? (
           <section key={kind} className="discovery-section" aria-label={title}>
             <div className="discovery-section-heading">
@@ -122,7 +146,7 @@ export function DiscoveryHome() {
                 Xem tất cả <Icon name="chevron" />
               </Link>
             </div>
-            <DiscoveryCollection items={group} kind={kind} />
+            <DiscoveryCollection items={group} kind={kind} rail={kind === 'food'} />
           </section>
         ) : null;
       })}

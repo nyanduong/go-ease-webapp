@@ -99,7 +99,7 @@ export function App() {
           ].join(' ')}
         >
           <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4">
-            <div className={path === '/' || path === '/explore' ? '' : 'lg:hidden'}>
+            <div className="lg:hidden">
               <Brand />
             </div>
             {path !== '/' && path !== '/explore' && (
@@ -110,7 +110,7 @@ export function App() {
                 Một chuyến đi, theo cách bạn thích.
               </Link>
             )}
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
               {path === '/' && (
                 <Link
                   href="/favorites"

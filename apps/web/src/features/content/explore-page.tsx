@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ContentRecord } from '@goease/contracts';
 import { Link, navigate } from '../../app/router';
 import { Button, Notice } from '../../components/ui';
@@ -21,6 +21,18 @@ export function ExplorePage() {
     [error, setError] = useState(''),
     [attempt, setAttempt] = useState(0);
   const [after, setAfter] = useState('');
+  const filterRow = useRef<HTMLDivElement>(null);
+  const topicRow = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    for (const row of [filterRow.current, topicRow.current]) {
+      const selected = row?.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!row || !selected) continue;
+      const item = selected.getBoundingClientRect(),
+        bounds = row.getBoundingClientRect();
+      if (item.left < bounds.left) row.scrollLeft += item.left - bounds.left;
+      if (item.right > bounds.right) row.scrollLeft += item.right - bounds.right;
+    }
+  }, [filter, categoryId, categories.length]);
   useEffect(() => {
     const request = new AbortController();
     void contentPage(new URLSearchParams({ kind: 'category', limit: '50' }), request.signal)
@@ -108,7 +120,7 @@ export function ExplorePage() {
           <Icon name="search" />
         </button>
       </form>
-      <div className="discovery-filters" aria-label="Lọc nội dung">
+      <div ref={filterRow} className="discovery-filters" aria-label="Lọc nội dung">
         {[['', 'Tất cả'], ...kinds.map((kind) => [kind, kindLabels[kind]])].map(([kind, label]) => (
           <Link
             key={kind}
@@ -120,7 +132,7 @@ export function ExplorePage() {
         ))}
       </div>
       {topics.length > 0 && (
-        <div className="discovery-topics" aria-label="Chủ đề khám phá">
+        <div ref={topicRow} className="discovery-topics" aria-label="Chủ đề khám phá">
           {topics.map(({ entry }) => (
             <Link
               key={entry.id}

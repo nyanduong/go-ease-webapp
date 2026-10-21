@@ -477,3 +477,95 @@ test('discovery pagination preserves keyword and topic, deduplicates records and
     await context.close();
   }
 });
+
+test('polished Home limits places/articles, prioritizes photographs and keeps attribution next to each image', async () => {
+  const f = await setup({ width: 390, height: 844 }, false);
+  const { page, context } = f;
+  const illustrated = (id, kind, title) =>
+    make(id, kind, title, {
+      image: {
+        url: 'https://images.example.test/' + id + '.jpg',
+        alt: title,
+        credit: 'Fixture photographer',
+      },
+    });
+  const extra = [
+    ...records,
+    ...Array.from({ length: 6 }, (_, i) =>
+      illustrated('polish-place-' + i, 'place', 'Địa điểm có ảnh ' + i),
+    ),
+    ...Array.from({ length: 3 }, (_, i) =>
+      illustrated('polish-article-' + i, 'article', 'Cẩm nang có ảnh ' + i),
+    ),
+    illustrated('polish-food', 'food', 'Món ăn có ảnh'),
+  ];
+  try {
+    await context.route('https://images.example.test/**', (route) => route.abort());
+    await context.route('https://api.goease.test/v1/content?**', (route) => {
+      const kind = new URL(route.request().url()).searchParams.get('kind');
+      return route.fulfill({
+        json: {
+          apiVersion: '1',
+          items: extra.filter((item) => !kind || item.entry.kind === kind).slice(0, 6),
+          nextCursor: null,
+        },
+        headers: { 'access-control-allow-origin': base },
+      });
+    });
+    await page.goto(base + '/');
+    await page.getByRole('heading', { name: 'Địa điểm có ảnh 0', exact: true }).waitFor();
+    assert.equal(await page.locator('.discovery-card-place').count(), 4);
+    assert.equal(await page.locator('.discovery-card-article').count(), 2);
+    assert.equal(
+      await page.locator('.discovery-collection-food.discovery-collection-rail').count(),
+      1,
+    );
+    assert.equal(
+      await page.locator('.discovery-card-food h3').first().innerText(),
+      'Món ăn có ảnh',
+    );
+    assert.equal(
+      await page.locator('.discovery-card-place h3').filter({ hasText: 'Tràng An' }).count(),
+      0,
+    );
+    const trigger = page.getByRole('button', {
+      name: 'Ảnh & nguồn: Địa điểm có ảnh 0',
+      exact: true,
+    });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
+    await dialog.waitFor();
+    await dialog.getByText('Fixture photographer', { exact: false }).waitFor();
+    assert.equal(
+      await dialog.getByRole('link', { name: 'Mở nguồn ảnh ↗' }).getAttribute('href'),
+      'https://images.example.test/polish-place-0.jpg',
+    );
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'hidden' });
+    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    const food = page.locator('.discovery-card-food');
+    await food.filter({ hasText: 'Món ăn có ảnh' }).locator('[data-image-state="error"]').waitFor();
+    await food
+      .filter({ hasText: 'Cơm cháy Ninh Bình' })
+      .locator('[data-image-state="missing"]')
+      .waitFor();
+    await food
+      .filter({ hasText: 'Món ăn có ảnh' })
+      .getByRole('img', { name: 'Ảnh chưa tải được: Món ăn có ảnh' })
+      .waitFor();
+    await food
+      .filter({ hasText: 'Cơm cháy Ninh Bình' })
+      .getByRole('img', { name: 'Chưa có ảnh: Cơm cháy Ninh Bình' })
+      .waitFor();
+    await page
+      .getByRole('region', { name: 'Địa điểm đáng ghé' })
+      .getByRole('link', { name: 'Xem tất cả', exact: true })
+      .click();
+    await page.getByRole('heading', { name: 'Tràng An', exact: true }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('kind'), 'place');
+    assert.equal(await page.locator('.discovery-card-place').count(), 6);
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await context.close();
+  }
+});

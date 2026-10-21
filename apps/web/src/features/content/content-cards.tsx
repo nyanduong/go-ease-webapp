@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { ContentInput, ContentRecord } from '@goease/contracts';
 import { Link } from '../../app/router';
 import { Icon } from '../../components/icon';
@@ -18,18 +18,7 @@ export const kindLabels: Record<ContentInput['kind'], string> = {
   article: 'Cẩm nang',
   category: 'Chủ đề',
 };
-export function ContentImage({
-  entry,
-  hero = false,
-  compact = false,
-  href,
-}: {
-  entry: ContentInput;
-  hero?: boolean;
-  compact?: boolean;
-  href?: string;
-}) {
-  const [index, setIndex] = useState(0);
+export function contentPhotos(entry: ContentInput) {
   const images: {
     url: string;
     alt: string;
@@ -37,6 +26,8 @@ export function ContentImage({
     sourceUrl: string;
     licenseUrl?: string;
     city?: boolean;
+    position?: string;
+    aspectRatio?: number;
   }[] = [];
   if (entry.image) {
     const cached = [...curated, ...editorialPhotos].find((photo) => {
@@ -57,6 +48,8 @@ export function ContentImage({
         entry.sources.find((source) => source.title.startsWith('Ảnh'))?.url ??
         entry.image.url,
       ...(cached?.licenseUrl ? { licenseUrl: cached.licenseUrl } : {}),
+      position: cached ? photoPosition(cached.src) : undefined,
+      aspectRatio: cached && 'width' in cached ? cached.width / cached.height : undefined,
     });
   }
   const addLocal = (photo: TravelPhoto | undefined, city = false) => {
@@ -69,6 +62,11 @@ export function ContentImage({
       sourceUrl: photo.sourceUrl,
       ...(photo.licenseUrl ? { licenseUrl: photo.licenseUrl } : {}),
       city,
+      position: photoPosition(photo.src),
+      aspectRatio: (() => {
+        const dimensions = curated.find((item) => item.src === photo.src);
+        return dimensions ? dimensions.width / dimensions.height : undefined;
+      })(),
     });
   };
   if (entry.kind === 'destination') addLocal(destinationPhoto(entry.destination?.id ?? entry.id));
@@ -76,12 +74,43 @@ export function ContentImage({
     addLocal(placePhoto(entry.title, entry.destinationId));
     addLocal(destinationPhoto(entry.destinationId), true);
   }
+  return images;
+}
+
+function photoPosition(src: string) {
+  if (src === '/travel/dalat-datanla.webp') return '50% 28%';
+  if (src === '/travel/da-nang.webp') return '50% 40%';
+  if (src === '/travel/dalat-station.webp') return '50% 55%';
+  return '50% 50%';
+}
+
+export function ContentImage({
+  entry,
+  hero = false,
+  compact = false,
+  href,
+}: {
+  entry: ContentInput;
+  hero?: boolean;
+  compact?: boolean;
+  href?: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const images = contentPhotos(entry);
   const image = images[index];
+  const creditImage = image ?? images[0];
+  const unavailable = !image && images.length > 0;
   const pixels =
     compact && !image ? (
-      <div className="content-image-missing" role="img" aria-label={'Chưa có ảnh: ' + entry.title}>
+      <div
+        className="content-image-missing"
+        role="img"
+        aria-label={(unavailable ? 'Ảnh chưa tải được: ' : 'Chưa có ảnh: ') + entry.title}
+      >
         <Icon name={entry.kind === 'food' ? 'food' : 'pin'} />
-        <span>Chưa có ảnh</span>
+        <span>{unavailable ? 'Ảnh chưa tải được' : 'Chưa có ảnh'}</span>
       </div>
     ) : (
       <img
@@ -95,11 +124,13 @@ export function ContentImage({
         className={`w-full object-cover ${compact ? 'content-image-pixels' : hero ? 'aspect-[16/9] max-h-[32rem]' : 'aspect-[4/3]'}`}
         width={hero ? 960 : 480}
         height={hero ? 540 : 360}
+        style={compact ? { objectPosition: image?.position } : undefined}
       />
     );
   return (
     <figure
       className={compact ? 'content-image-compact' : 'min-w-0 overflow-hidden rounded-2xl bg-sand'}
+      data-image-state={unavailable ? 'error' : image ? (index ? 'fallback' : 'ready') : 'missing'}
     >
       {href ? (
         <Link href={href} aria-label={'Mở ' + entry.title}>
@@ -108,7 +139,54 @@ export function ContentImage({
       ) : (
         pixels
       )}
-      {image && (
+      {compact && image?.city && <span className="content-city-label">Ảnh điểm đến</span>}
+      {compact && creditImage && (
+        <figcaption>
+          <button
+            className="photo-credit-trigger"
+            aria-label={'Ảnh & nguồn: ' + entry.title}
+            onClick={() => dialog.current?.showModal()}
+          >
+            <span>
+              <Icon name="info" />
+            </span>
+          </button>
+          <dialog
+            ref={dialog}
+            aria-labelledby={titleId}
+            className="content-credit-dialog"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) event.currentTarget.close();
+            }}
+          >
+            <div className="content-credit-heading">
+              <h2 id={titleId}>Thông tin ảnh</h2>
+              <button
+                autoFocus
+                aria-label="Đóng thông tin ảnh"
+                onClick={() => dialog.current?.close()}
+              >
+                ×
+              </button>
+            </div>
+            <p className="font-semibold">{creditImage.alt}</p>
+            <p>
+              {image?.city ? 'Ảnh minh họa điểm đến' : 'Ảnh'}: {creditImage.credit}
+            </p>
+            <p>Thu nhỏ và hiển thị cắt theo khung. Giấy phép dưới đây áp dụng cho ảnh này.</p>
+            {unavailable && <p>Ảnh chưa tải được. Đây là thông tin nguồn của ảnh gốc.</p>}
+            <a href={creditImage.sourceUrl} target="_blank" rel="noreferrer">
+              Mở nguồn ảnh ↗
+            </a>
+            {creditImage.licenseUrl && (
+              <a href={creditImage.licenseUrl} target="_blank" rel="noreferrer">
+                Xem giấy phép ảnh ↗
+              </a>
+            )}
+          </dialog>
+        </figcaption>
+      )}
+      {!compact && image && (
         <figcaption className={compact ? 'content-credit' : 'px-3 py-2 text-xs text-muted'}>
           <details open={!compact}>
             {compact && <summary aria-label={'Nguồn ảnh: ' + entry.title}>Ảnh & nguồn</summary>}
@@ -140,12 +218,23 @@ export function ContentImage({
 export function DiscoveryCollection({
   items,
   kind,
+  rail = false,
 }: {
   items: ContentRecord[];
   kind: Exclude<ContentInput['kind'], 'category'>;
+  rail?: boolean;
 }) {
   return (
-    <div className={'discovery-collection discovery-collection-' + kind}>
+    <div
+      className={
+        'discovery-collection discovery-collection-' +
+        kind +
+        (rail ? ' discovery-collection-rail' : '')
+      }
+      role="group"
+      aria-label={kindLabels[kind] + (rail || kind === 'destination' ? ' · Cuộn ngang' : '')}
+      tabIndex={rail || kind === 'destination' ? 0 : undefined}
+    >
       {items.map(({ entry }) => (
         <article key={entry.id} className={'discovery-card discovery-card-' + kind}>
           <ContentImage

@@ -2,11 +2,12 @@ import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 // Read-only visual checks against the running local PWA and its real CMS/API.
 // No identity fixture, provider calls, storage injection or database writes.
 const root = fileURLToPath(new URL('../../..', import.meta.url));
-const folder = root + '/docs/qa/v2-ui/after';
+const folder = root + '/docs/qa/' + (process.argv[2] ?? 'v2-ui/after');
 const browser = await chromium.launch();
 const evidence = [];
 await mkdir(folder, { recursive: true });
@@ -16,9 +17,7 @@ async function loadImages(page) {
     await image.evaluate((img) => img.decode().catch(() => {}));
   }
   await page.evaluate(() => {
-    document
-      .querySelectorAll('.discovery-collection-destination')
-      .forEach((row) => (row.scrollLeft = 0));
+    document.querySelectorAll('.discovery-collection').forEach((row) => (row.scrollLeft = 0));
     scrollTo(0, 0);
   });
 }
@@ -66,6 +65,28 @@ try {
       }));
       assert.equal(measurements.overflow, false);
       assert.equal(measurements.largeCategoryCards, 0);
+      if (screen === 'home') {
+        assert.equal(await page.locator('.discovery-card-place').count(), 4);
+        assert.equal(await page.locator('.discovery-card-article').count(), 2);
+        assert.equal(
+          await page.locator('.discovery-collection-food.discovery-collection-rail').count(),
+          1,
+        );
+        const cover = await page.locator('.planning-banner img').getAttribute('src');
+        assert(
+          !(await page
+            .locator('.discovery-card-destination img')
+            .evaluateAll(
+              (imgs, src) => imgs.some((img) => img.getAttribute('src') === src),
+              cover,
+            )),
+        );
+      }
+      if (name === 'desktop')
+        assert.equal(
+          await page.getByRole('link', { name: 'GoEase — Trang chủ', exact: true }).count(),
+          1,
+        );
       if (viewport.width === 390)
         assert(measurements.firstDestinations.every((card) => card.photoLoaded && card.visible));
       for (const image of await page.locator('main img').all()) {
@@ -73,9 +94,7 @@ try {
         await image.evaluate((img) => img.decode().catch(() => {}));
       }
       await page.evaluate(() => {
-        document
-          .querySelectorAll('.discovery-collection-destination')
-          .forEach((row) => (row.scrollLeft = 0));
+        document.querySelectorAll('.discovery-collection').forEach((row) => (row.scrollLeft = 0));
         scrollTo(0, 0);
       });
       await page.screenshot({ path: `${folder}/${screen}-${name}.png`, animations: 'disabled' });
@@ -84,8 +103,43 @@ try {
         fullPage: true,
         animations: 'disabled',
       });
+      if (screen === 'home' && viewport.width < 640) {
+        const food = page.locator('.discovery-collection-food');
+        await food.focus();
+        await page.keyboard.press('ArrowRight');
+        await page.waitForFunction(
+          () => document.querySelector('.discovery-collection-food')?.scrollLeft > 0,
+        );
+        await page.screenshot({
+          path: `${folder}/food-scroll-${name}.png`,
+          animations: 'disabled',
+        });
+        await food.evaluate((row) => (row.scrollLeft = 0));
+      }
       evidence.push({ screen, viewport, ...measurements });
     }
+    for (const selector of ['.discovery-collection-destination']) {
+      const row = page.locator(selector);
+      if (viewport.width < 640) {
+        await row.focus();
+        await page.keyboard.press('ArrowRight');
+        await page.waitForFunction(
+          () => document.querySelector('.discovery-collection-destination')?.scrollLeft > 0,
+        );
+        await row.evaluate((node) => (node.scrollLeft = 0));
+      }
+    }
+    await page.getByRole('button', { name: 'Ảnh & nguồn: Đà Lạt', exact: true }).click();
+    const attribution = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
+    await attribution.waitFor();
+    await attribution.getByText('P. Hughes', { exact: false }).waitFor();
+    assert.equal(
+      await attribution.getByRole('link', { name: 'Xem giấy phép ảnh ↗' }).getAttribute('href'),
+      'https://creativecommons.org/licenses/by/4.0',
+    );
+    await page.screenshot({ path: `${folder}/attribution-${name}.png`, animations: 'disabled' });
+    await page.keyboard.press('Escape');
+    await attribution.waitFor({ state: 'hidden' });
     await page.getByLabel('Tìm nội dung du lịch').fill('Hằng Nga');
     await page.getByRole('button', { name: 'Tìm nội dung', exact: true }).click();
     await page.getByRole('heading', { name: 'Biệt thự Hằng Nga', exact: true }).waitFor();
@@ -143,6 +197,10 @@ try {
     JSON.stringify(
       {
         source: 'Live localhost:5174 + real local Nest/PostgreSQL, anonymous browser, no mocks',
+        testedCommit: execFileSync('git', ['rev-parse', 'HEAD'], {
+          cwd: root,
+          encoding: 'utf8',
+        }).trim(),
         checks: [
           'search',
           'kind change preserves query',

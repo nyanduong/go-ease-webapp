@@ -320,10 +320,7 @@
   min-height: 108px;
   aspect-ratio: auto;
 }
-.planning-banner .content-credit {
-  background: var(--color-sand);
-}
-.discovery-section {
+.planning-banner .discovery-section {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -427,39 +424,8 @@
   font-size: 0.75rem;
   color: var(--color-muted);
 }
-.content-credit {
-  padding-inline: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--color-muted);
-}
-.content-credit summary {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding-block: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 400;
-  cursor: pointer;
-}
-.content-credit summary::after {
-  content: '+';
-  margin-left: auto;
-  padding-left: 0.25rem;
-}
-.content-credit details[open] summary::after {
-  content: '−';
-}
 .content-credit-body {
   overflow-wrap: anywhere;
-}
-.content-credit .content-credit-body {
-  padding-bottom: 0.5rem;
-}
-.content-credit a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  text-decoration: underline;
 }
 .discovery-card-article {
   display: flex;
@@ -608,4 +574,132 @@
     padding-inline: 0.25rem;
     overflow-wrap: normal;
   }
+}
+
+/* RC1 polish: attribution stays with its photo, outside the image/title flow. */
+.content-image-compact {
+  position: relative;
+}
+.photo-credit-trigger {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--color-ink);
+}
+.photo-credit-trigger > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.18);
+}
+.photo-credit-trigger svg {
+  width: 18px;
+  height: 18px;
+}
+.content-credit-dialog {
+  position: fixed;
+  margin: auto;
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 3rem);
+  overflow: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  box-shadow: 0 16px 64px rgb(0 0 0 / 0.2);
+}
+.content-credit-dialog::backdrop {
+  background: rgb(32 40 36 / 0.45);
+}
+.content-credit-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.content-credit-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.content-credit-heading h2 {
+  font-size: 1.125rem;
+}
+.content-credit-heading button {
+  flex: 0 0 44px;
+  font-size: 1.5rem;
+}
+.content-credit-dialog p {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.content-credit-dialog a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-teal-dark);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.content-city-label {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  padding: 2px 6px;
+  border-radius: 0.25rem;
+  background: rgb(32 40 36 / 0.8);
+  font-size: 0.75rem;
+  color: white;
+}
+.planning-banner .content-image-pixels {
+  height: 140px;
+  min-height: 140px;
+}
+.discovery-filters,
+.discovery-topics {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-block: 2px;
+}
+.discovery-filters a,
+.discovery-topics a {
+  flex: 0 0 auto;
+}
+.discovery-topics {
+  margin-top: -0.75rem;
+}
+.discovery-collection-rail {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(9rem, calc((100% - 0.875rem) / 2.15));
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding-bottom: 0.25rem;
+}
+@media (min-width: 640px) {
+  .discovery-collection-rail {
+    grid-auto-columns: minmax(12rem, calc((100% - 2rem) / 3));
+  }
+  .planning-banner .content-image-pixels {
+    height: 166px;
+    min-height: 166px;
+  }
+}
+.discovery-card {
+  gap: 0.375rem;
+}
+.discovery-card h3 a {
+  align-items: flex-start;
+  padding-top: 2px;
 }
