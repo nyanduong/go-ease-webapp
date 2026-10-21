@@ -6,8 +6,15 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "rootDir": "src/features/trips",
     "outDir": ".logic-tests"
   },
-  "include": ["src/features/trips/edit-buffer.ts", "src/features/trips/budget-presentation.ts"]
+  "include": [
+    "src/features/trips/edit-buffer.ts",
+    "src/features/trips/budget-presentation.ts",
+    "src/features/trips/creation-cache.ts",
+    "src/features/trips/recent-trip.ts",
+    "src/features/trips/travel-photos.ts"
+  ]
 }

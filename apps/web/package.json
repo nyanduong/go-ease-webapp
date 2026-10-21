@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests scripts vite.config.ts",
-    "test": "tsc -p tsconfig.logic-tests.json && node --test tests/service-worker.test.mjs tests/trip-edit.test.mjs tests/google-auth.test.mjs tests/account-profile.test.mjs tests/token-session.test.mjs tests/discovery-client.test.mjs tests/confirmation-service.test.mjs tests/local-api-origin.test.mjs tests/offline-trips.test.mjs",
+    "test": "tsc -p tsconfig.logic-tests.json && node --test tests/service-worker.test.mjs tests/trip-edit.test.mjs tests/google-auth.test.mjs tests/account-profile.test.mjs tests/token-session.test.mjs tests/discovery-client.test.mjs tests/confirmation-service.test.mjs tests/local-api-origin.test.mjs tests/offline-trips.test.mjs tests/m0-web.test.mjs",
     "test:offline": "node --test tests/offline-trips.test.mjs tests/offline-production.test.mjs",
     "test:e2e": "node scripts/test-browser.mjs"
   },

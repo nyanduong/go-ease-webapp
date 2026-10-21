@@ -62,6 +62,7 @@ async function boundedUser(response: Response) {
         role: z.literal('authenticated'),
         is_anonymous: z.boolean().optional(),
         identities: z.array(z.object({ provider: z.string() })).optional(),
+        user_metadata: z.record(z.string(), z.unknown()).optional(),
       })
       .parse(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))));
   } finally {
@@ -80,6 +81,11 @@ export class AuthVerifier {
     private readonly options: AuthOptions = {},
   ) {}
   async verify(authorization: string | undefined, query: unknown, signal: AbortSignal) {
+    const { response } = await this.verifyProfileMedia(authorization, query, signal);
+    return response;
+  }
+  // Metadata is display-only. Ownership still comes exclusively from verified identity.
+  async verifyProfileMedia(authorization: string | undefined, query: unknown, signal: AbortSignal) {
     if (!this.config.AUTH_ENABLED)
       throw new ApiFailure(503, 'AUTH_DISABLED', 'Auth spike đang tắt.');
     if (!this.config.SUPABASE_AUTH_URL || !this.config.SUPABASE_PUBLISHABLE_KEY)
@@ -178,10 +184,11 @@ export class AuthVerifier {
       ) {
         throw new ApiFailure(401, 'AUTH_INVALID', 'Cần phiên Google OAuth được xác minh.');
       }
-      return authIdentityResponseSchema.parse({
+      const identityResponse = authIdentityResponseSchema.parse({
         apiVersion: '1',
         identity: { id: user.id, provider: 'supabase' },
       });
+      return { response: identityResponse, userMetadata: user.user_metadata };
     };
     try {
       return await Promise.race([operation(), stopped]);

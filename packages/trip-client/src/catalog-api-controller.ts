@@ -1,5 +1,6 @@
 import {
   apiErrorResponseSchema,
+  CATALOG_LIMITS,
   catalogResponseSchema,
   managedCatalogSchema,
   type CatalogResponse,
@@ -35,7 +36,7 @@ export async function fetchManagedCatalog(base: string, fetcher: typeof fetch = 
           redirect: 'error',
         });
         const raw = await response.text();
-        if (!response.ok || raw.length > 200000)
+        if (!response.ok || raw.length > CATALOG_LIMITS.maxResponseChars)
           throw new CatalogApiError('HTTP', 'Không tải được catalog server.');
         return managedCatalogSchema.parse(JSON.parse(raw));
       })(),
@@ -87,7 +88,7 @@ export async function fetchApiCatalog(
         { signal: controller.signal, headers: { accept: 'application/json' } },
       );
       const raw = await response.text();
-      if (raw.length > 150000)
+      if (raw.length > CATALOG_LIMITS.maxResponseChars)
         throw new CatalogApiError('INVALID_RESPONSE', 'Phản hồi API vượt giới hạn.');
       let body: unknown;
       try {

@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
 import { API_CONFIG } from '../../config/config.module.js';
@@ -21,9 +21,14 @@ import { AuthModule } from '../auth/auth.module.js';
 import { AuthVerifier } from '../auth/auth-verifier.service.js';
 import { requestSignal } from '../../common/http/request-signal.js';
 import { ApiFailure } from '../../common/errors/api-failure.js';
+import {
+  assetId,
+  inspectProfileUploads,
+  trackProfileUpload,
+  PROFILE_MEDIA_FILE_LIMIT,
+  PROFILE_MEDIA_BYTE_LIMIT,
+} from './profile-media-storage.js';
 
-const assetId =
-  /^[a-f0-9]{24}-[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.jpg$/;
 const uploadSchema = z.strictObject({
   jpeg: z
     .string()
@@ -70,7 +75,11 @@ export class ProfileMediaController {
   @Post()
   async upload(@Req() req: Request, @Body() body: unknown) {
     const signal = requestSignal(req);
-    const verified = await this.auth.verify(req.headers.authorization, {}, signal);
+    const { response: verified, userMetadata } = await this.auth.verifyProfileMedia(
+      req.headers.authorization,
+      {},
+      signal,
+    );
     const parsed = uploadSchema.safeParse(body);
     if (!parsed.success)
       throw new ApiFailure(400, 'BAD_REQUEST', 'Chọn ảnh JPG, PNG hoặc WebP hợp lệ.');
@@ -87,12 +96,57 @@ export class ProfileMediaController {
     try {
       const folder = resolve(this.config.PROFILE_MEDIA_DIR);
       await mkdir(folder, { recursive: true, mode: 0o700 });
-      if ((await readdir(folder)).filter((name) => name.startsWith(owner + '-')).length >= 50)
+      const usage = await inspectProfileUploads(folder, owner, userMetadata, false);
+      if (
+        usage.files >= PROFILE_MEDIA_FILE_LIMIT ||
+        usage.bytes + bytes.length > PROFILE_MEDIA_BYTE_LIMIT
+      )
         throw new ApiFailure(429, 'TRIP_LIMIT', 'Kho ảnh tài khoản đã đầy. Hãy liên hệ hỗ trợ.');
       if (signal.aborted) throw new ApiFailure(499, 'AUTH_CANCELLED', 'Đã dừng tải ảnh.');
       const id = owner + '-' + randomUUID() + '.jpg';
       await writeFile(join(folder, id), bytes, { flag: 'wx', mode: 0o600 });
+      try {
+        await trackProfileUpload(folder, id);
+        if (signal.aborted) throw new ApiFailure(499, 'AUTH_CANCELLED', 'Đã dừng tải ảnh.');
+      } catch (error) {
+        // Roll back only this request's newly created, never returned asset.
+        await unlink(join(folder, id));
+        await unlink(join(folder, id + '.pending.json')).catch(() => {});
+        throw error;
+      }
       return { apiVersion: '1', path: '/v1/profile-media/' + id };
+    } finally {
+      this.pending.delete(owner);
+    }
+  }
+  @Post('cleanup')
+  async cleanup(@Req() req: Request, @Body() body: unknown) {
+    const parsed = z.strictObject({ dryRun: z.boolean().default(true) }).safeParse(body);
+    if (!parsed.success) throw new ApiFailure(400, 'BAD_REQUEST', 'Yêu cầu dọn ảnh không hợp lệ.');
+    const signal = requestSignal(req);
+    const { response, userMetadata } = await this.auth.verifyProfileMedia(
+      req.headers.authorization,
+      {},
+      signal,
+    );
+    const owner = createHash('sha256')
+      .update(this.config.SUPABASE_AUTH_URL + ':' + response.identity.id)
+      .digest('hex')
+      .slice(0, 24);
+    if (this.pending.has(owner))
+      throw new ApiFailure(409, 'AUTH_BUSY', 'Đang tải ảnh khác lên. Hãy chờ một chút.');
+    this.pending.add(owner);
+    try {
+      if (signal.aborted) throw new ApiFailure(499, 'AUTH_CANCELLED', 'Đã dừng dọn ảnh.');
+      return {
+        apiVersion: '1',
+        ...(await inspectProfileUploads(
+          resolve(this.config.PROFILE_MEDIA_DIR),
+          owner,
+          userMetadata,
+          parsed.data.dryRun,
+        )),
+      };
     } finally {
       this.pending.delete(owner);
     }

@@ -19,6 +19,7 @@ import {
   OFFLINE_WORKSPACE_OWNER,
 } from '@goease/trip-client/offline-trip-controller';
 import { transaction } from '../../platform/browser-storage';
+import { clearCreation } from '../trips/creation-cache';
 
 const project = import.meta.env.VITE_SUPABASE_URL?.match(
   /^https:\/\/([a-z0-9]{20})\.supabase\.co$/,
@@ -470,6 +471,7 @@ export const accountSession = {
   },
   async logout() {
     if (offlineDev) return;
+    clearCreation(sessionStorage, accountTrips.getSnapshot().owner);
     cancelConfirmations();
     lifecycle++;
     google.clear();

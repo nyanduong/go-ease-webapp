@@ -1,5 +1,5 @@
 import type { PrismaClient } from '../generated/prisma/client.js';
-import { catalogEntrySchema } from '@goease/contracts';
+import { catalogEntrySchema, CATALOG_LIMITS } from '@goease/contracts';
 export async function checkDatabase(client: PrismaClient) {
   const roles = await client.$queryRaw<
     { unsafe: boolean }[]
@@ -13,10 +13,13 @@ export async function checkDatabase(client: PrismaClient) {
     { safe: boolean }[]
   >`SELECT (c.relrowsecurity AND c.relforcerowsecurity) AS safe FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('Place','CatalogAdmin','PlaceRevision')`;
   if (catalogTables.length !== 3 || catalogTables.some((t) => !t.safe)) throw Error();
-  const places = await client.place.findMany({ orderBy: { id: 'asc' } });
+  const places = await client.place.findMany({
+    orderBy: { id: 'asc' },
+    take: CATALOG_LIMITS.maxEntries + 1,
+  });
   if (
     places.length < 8 ||
-    places.length > 20 ||
+    places.length > CATALOG_LIMITS.maxEntries ||
     places.filter((p) => p.enabled).length < 8 ||
     places.some((place) => {
       const entry = catalogEntrySchema.parse(place.snapshot);

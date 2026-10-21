@@ -1,5 +1,6 @@
 import {
-  managedCatalogSchema,
+  adminCatalogPageSchema,
+  CATALOG_LIMITS,
   managedPlaceSchema,
   adminPlaceCreateSchema,
   adminPlaceUpdateSchema,
@@ -103,7 +104,10 @@ export function createAdminClient(options: {
   };
   return {
     logout: stop,
-    valid: () => !!access && expires > now(),
+    valid: () => {
+      if (access && expires <= now()) stop();
+      return !!access;
+    },
     acceptOAuth(data: unknown) {
       if (current) return Promise.reject(Error('Đang xử lý.'));
       stop();
@@ -134,8 +138,12 @@ export function createAdminClient(options: {
             !user.identities?.some((identity) => identity.provider === 'google')
           )
             throw Error('Cần đăng nhập Google.');
-          return managedCatalogSchema.parse(
-            await wire(base() + '/v1/admin/catalog', { headers: headers() }, signal),
+          return adminCatalogPageSchema.parse(
+            await wire(
+              base() + '/v1/admin/catalog?limit=' + CATALOG_LIMITS.defaultPageSize,
+              { headers: headers() },
+              signal,
+            ),
           );
         } catch (error) {
           stop();
@@ -182,8 +190,12 @@ export function createAdminClient(options: {
             throw Error('Phiên không hợp lệ.');
           access = data.access_token;
           expires = data.expires_at * 1000;
-          return managedCatalogSchema.parse(
-            await wire(base() + '/v1/admin/catalog', { headers: headers() }, signal),
+          return adminCatalogPageSchema.parse(
+            await wire(
+              base() + '/v1/admin/catalog?limit=' + CATALOG_LIMITS.defaultPageSize,
+              { headers: headers() },
+              signal,
+            ),
           );
         } catch (cause) {
           stop();
@@ -191,10 +203,17 @@ export function createAdminClient(options: {
         }
       });
     },
-    list() {
+    list(after?: string) {
       return session(async (signal) =>
-        managedCatalogSchema.parse(
-          await wire(base() + '/v1/admin/catalog', { headers: headers() }, signal),
+        adminCatalogPageSchema.parse(
+          await wire(
+            base() +
+              '/v1/admin/catalog?limit=' +
+              CATALOG_LIMITS.defaultPageSize +
+              (after ? '&after=' + encodeURIComponent(after) : ''),
+            { headers: headers() },
+            signal,
+          ),
         ),
       );
     },

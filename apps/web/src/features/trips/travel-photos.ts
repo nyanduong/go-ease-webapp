@@ -1,5 +1,5 @@
 import type { Activity } from '@goease/contracts';
-import curated from './curated-photos.json';
+import curated from './curated-photos.json' with { type: 'json' };
 
 export interface TravelPhoto {
   src: string;
@@ -9,6 +9,12 @@ export interface TravelPhoto {
   license?: string;
   licenseUrl?: string;
 }
+export const neutralPhoto: TravelPhoto = {
+  src: '/travel/placeholder.svg',
+  alt: 'Chưa có ảnh cho điểm đến này',
+  sourceUrl: '',
+  author: 'GoEase',
+};
 
 function normalize(value: string) {
   return value
@@ -21,7 +27,7 @@ function normalize(value: string) {
 }
 
 export function destinationPhoto(destinationId?: string): TravelPhoto {
-  const photo = curated.find((item) => item.id === destinationId) ?? curated[0];
+  const photo = curated.find((item) => item.id === destinationId) ?? neutralPhoto;
   return photo;
 }
 
@@ -32,7 +38,9 @@ export function activityPhotos(activity: Activity, destinationId: string): Trave
       photo.destinationId === destinationId &&
       photo.aliases.some((alias) => name === normalize(alias)),
   );
-  const fallback = exact ?? destinationPhoto(destinationId);
+  const fallbacks = [exact, destinationPhoto(destinationId), neutralPhoto]
+    .filter((photo): photo is TravelPhoto => !!photo)
+    .filter((photo, index, list) => list.findIndex((item) => item.src === photo.src) === index);
   const snapshot = activity.location.kind === 'discovered' ? activity.location.placeSnapshot : null;
   // Read-only selection: do not change saved snapshots or call discovery for imagery.
   if (snapshot?.thumbnailUrl?.startsWith('https://')) {
@@ -43,8 +51,8 @@ export function activityPhotos(activity: Activity, destinationId: string): Trave
         sourceUrl: snapshot.sourceUrl,
         author: 'Nguồn địa điểm',
       },
-      fallback,
+      ...fallbacks,
     ];
   }
-  return [fallback];
+  return fallbacks;
 }

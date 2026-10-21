@@ -104,8 +104,25 @@ export async function checkAdminBrowser({ base, token, entry }) {
       );
       throw error;
     }
+    while (
+      !(await page.getByRole('button', { name: 'Chỉnh sửa ' + entry.name, exact: true }).count())
+    ) {
+      await page.getByRole('button', { name: 'Tải thêm địa điểm', exact: true }).click();
+    }
     await page.getByRole('button', { name: 'Chỉnh sửa ' + entry.name, exact: true }).click();
     await page.getByLabel('Tên địa điểm', { exact: true }).fill('Browser edited Place');
+    // Regression: hiding and returning to a valid RAM session must preserve the editor.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    assert.equal(
+      await page.getByLabel('Tên địa điểm', { exact: true }).inputValue(),
+      'Browser edited Place',
+    );
+    assert.equal(await page.getByRole('button', { name: 'Đăng xuất', exact: true }).count(), 1);
     const writes = () =>
       requestTrace.filter((request) => /^(POST|PUT) \/v1\/admin\//.test(request)).length;
     const writesBeforeSave = writes();

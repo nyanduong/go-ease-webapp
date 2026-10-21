@@ -1,5 +1,5 @@
 import type { Trip } from '@goease/contracts';
-import { activityPhotos, destinationPhoto } from './travel-photos';
+import { activityPhotos, destinationPhoto, neutralPhoto } from './travel-photos';
 import { TravelPhotoView } from './travel-photo';
 
 export function TripCover({ destinationId, trip }: { destinationId?: string; trip?: Trip }) {
@@ -11,6 +11,6 @@ export function TripCover({ destinationId, trip }: { destinationId?: string; tri
   const photos =
     activity && trip
       ? activityPhotos(activity, trip.destinationId)
-      : [destinationPhoto(destinationId ?? trip?.destinationId)];
+      : [destinationPhoto(destinationId ?? trip?.destinationId), neutralPhoto];
   return <TravelPhotoView photos={photos} cover className="mx-auto w-full max-w-4xl" />;
 }

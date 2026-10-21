@@ -1,13 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { POPULAR_DESTINATIONS } from '@goease/contracts';
 import { Link } from '../../app/router';
-import { useAccount } from './session';
+import { accountTrips, useAccount } from './session';
+import { mostRecentlyUpdated } from '../trips/recent-trip';
 import { Icon } from '../../components/icon';
 
 export function AccountHome() {
   const { trips } = useAccount();
   const [destinationId, setDestinationId] = useState('');
-  const latest = trips.draft?.trip ?? trips.items[0];
+  const requested = useRef(new Set<string>());
+  useEffect(() => {
+    requested.current.clear();
+  }, [trips.owner]);
+  useEffect(() => {
+    if (!trips.ready || trips.busy || !trips.cursor || trips.draft || trips.pending) return;
+    const key = `${trips.owner}:${trips.cursor}`;
+    if (requested.current.has(key)) return;
+    requested.current.add(key);
+    void accountTrips.list(true);
+  }, [trips.owner, trips.ready, trips.busy, trips.cursor, trips.draft, trips.pending]);
+  const latest =
+    trips.draft?.trip ?? (!trips.cursor ? mostRecentlyUpdated(trips.items) : undefined);
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-9 py-3 sm:py-6">
       <div className="min-w-0">
