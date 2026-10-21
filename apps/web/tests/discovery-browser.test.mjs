@@ -653,12 +653,15 @@ test('provider photos are preferred and a replaced activity resets the image fal
   await row.getByRole('button', { name: /^Thông tin ảnh:/ }).click();
   const photoDialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
   assert.equal(
-    await photoDialog
-      .getByRole('link', { name: 'Ảnh: Nguồn địa điểm', exact: true })
-      .getAttribute('href'),
+    await photoDialog.getByRole('link', { name: 'Xem nguồn ↗', exact: true }).getAttribute('href'),
     sourcePlaces(getDestination('da-nang'))[0].sourceUrl,
   );
+  assert.equal(
+    await photoDialog.evaluate((node) => getComputedStyle(node).animationName),
+    'photo-viewer-in',
+  );
   await page.keyboard.press('Escape');
+  await photoDialog.waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: 'Đổi địa điểm Điểm thử nghiệm 1', exact: true }).click();
   await page.getByLabel('Địa điểm đã tìm', { exact: true }).selectOption('fixture-da-nang-1');
   await row.locator('img[src="/travel/da-nang.webp"]').waitFor();

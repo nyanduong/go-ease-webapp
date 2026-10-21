@@ -1504,12 +1504,17 @@ for (const [mode, viewport] of [
       enlargedBounds.width > thumbnailBounds.width,
       'photo opens larger than the trip thumbnail',
     );
-    const credit = photoDialog.getByRole('link', { name: /^Ảnh:/ });
+    const credit = photoDialog.getByRole('link', { name: 'Xem nguồn ↗', exact: true });
     assert((await credit.boundingBox()).y >= enlargedBounds.y + enlargedBounds.height);
     assert.equal(await credit.evaluate((link) => getComputedStyle(link).fontSize), '12px');
     const modalBounds = await photoDialog.boundingBox();
     assert(modalBounds.x >= 0 && modalBounds.x + modalBounds.width <= viewport.width);
     await capture('photo');
+    assert.equal(
+      await photoDialog.getByRole('link', { name: 'CC BY 4.0', exact: true }).count(),
+      0,
+    );
+    await photoDialog.getByText('Bản quyền ảnh', { exact: true }).click();
     assert.equal(
       await photoDialog.getByRole('link', { name: 'CC BY 4.0', exact: true }).count(),
       1,

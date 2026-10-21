@@ -128,3 +128,8 @@ The user clarified that only the “Ảnh minh họa” badge and credits below 
 ### Enlarge photos on click — 2026-10-21
 
 Clicking a trip/activity image now opens a wider photo viewer. The full image fits the viewport without cropping; source/author and license links sit underneath in small text. Closed viewers do not load an additional image. Native dialog behavior retains keyboard focus and supports Escape and the Close button. Build/lint and five affected browser flows pass, with image enlargement, credit placement and mobile/desktop bounds checked. New `after/*-photo.png` screenshots show the viewer at 360/390/1440px.
+
+
+### Photo motion and attribution layout — 2026-10-21
+
+The viewer now fades/scales in (220 ms) and out (160 ms); desktop thumbnails have a subtle hover zoom. Escape, Close and backdrop clicks share the exit behavior. Reduced-motion preference skips the animated exit and suppresses hover zoom. Attribution is a compact author card with a separate source button; license and transformation details are collapsed under “Bản quyền ảnh”. Build/lint and the five affected browser scenarios pass, including normal animation, reduced-motion layouts, attribution expansion and backdrop closing. Viewer screenshots updated.
