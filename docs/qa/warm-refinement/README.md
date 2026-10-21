@@ -143,3 +143,12 @@ Per the explicit request, the viewer no longer renders author/source/license con
 ### Image-only viewer — 2026-10-21
 
 The viewer now shows only the full photograph against a dark backdrop. The white panel, visible location title and Close button are removed. The transparent dialog keeps an accessible label and closes through Escape or clicking outside; animations remain. Build/lint and the affected browser flows verify the frameless layout, absence of visible controls/text, image bounds and closing behavior. Viewer screenshots refreshed.
+
+
+## Compact discovery review — 2026-10-21
+
+Generated results now replace the creation form with a focused review step instead of being appended below it. Only the selected day is shown; horizontal day tabs support click, arrows, Home and End. Activities have photos and a collapsed place selector. Cost, warnings, explanations and place-source context are grouped in one collapsed section. Unknown costs remain explicitly unknown. A sticky continuation button sits above mobile navigation.
+
+“Sửa thông tin chuyến” restores the populated form. “Xem lại lịch gợi ý” returns to the retained result without another provider request; changing inputs invalidates the old result as before. Replacements survive changing days and continue through the existing draft/save flow. Entering review scrolls to the top and focuses its heading. Ownership, cancellation, draft durability, validation and manual creation remain unchanged.
+
+Validation: web production build/lint passed; all 49 existing browser scenarios passed, plus three new four-day layout checks at 360/390/1440px. Targeted flows verify hidden form, one-day rendering, keyboard switching, retained inputs/replacements, no extra provider calls, action placement above navigation and save/reopen. Screenshots: `after/preview-360.png`, `after/preview-390.png`, `after/preview-1440.png`.

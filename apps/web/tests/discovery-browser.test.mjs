@@ -333,8 +333,38 @@ for (const [mode, viewport] of [
     assert.deepEqual(state.requests[0].interests, ['nature', 'cafe']);
     assert.equal(state.writes.length, 0);
     assert.equal(await page.getByText('Chưa lưu vào tài khoản', { exact: true }).count(), 1);
+    assert.equal(await page.getByLabel('Tên chuyến đi', { exact: true }).count(), 0);
+    const reviewPanel = page.getByRole('tabpanel');
+    const firstDayName = await reviewPanel.getByRole('heading').first().innerText();
+    await page.getByRole('tab', { name: /^Ngày 2/ }).click();
+    assert.notEqual(await reviewPanel.getByRole('heading').first().innerText(), firstDayName);
+    await page.getByRole('tab', { name: /^Ngày 2/ }).press('Home');
+    assert.equal(await reviewPanel.getByRole('heading').first().innerText(), firstDayName);
+    assert.equal(await page.getByText('Ngân sách cả nhóm', { exact: true }).isVisible(), false);
+    await page.getByRole('button', { name: 'Sửa thông tin chuyến', exact: true }).click();
+    assert.equal(
+      await page.getByLabel('Tên chuyến đi', { exact: true }).inputValue(),
+      'Cuối tuần ở Đà Nẵng',
+    );
+    await page.getByRole('button', { name: 'Xem lại lịch gợi ý', exact: true }).click();
+    assert.equal(
+      state.requests.length,
+      1,
+      'returning to the preview does not query the provider again',
+    );
+    await page.getByText('Đổi địa điểm', { exact: true }).first().click();
     const replacement = page.getByLabel(/^Thay địa điểm /).first();
     await replacement.selectOption('fixture-da-nang-4');
+    await page.getByRole('tab', { name: /^Ngày 2/ }).click();
+    await page.getByRole('tab', { name: /^Ngày 1/ }).click();
+    await page.getByText('Đổi địa điểm', { exact: true }).first().click();
+    assert.equal(
+      await page
+        .getByLabel(/^Thay địa điểm /)
+        .first()
+        .inputValue(),
+      'fixture-da-nang-4',
+    );
     await page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true }).click();
     await page.waitForURL(/\/trips\/[a-f0-9-]{36}$/);
     await page.getByRole('button', { name: /^(Lưu thay đổi|Giữ chuyến này)/ }).waitFor();
@@ -484,6 +514,55 @@ for (const [mode, destination, viewport] of [
       .waitFor();
     assert.equal(state.searches.length, 1, 'saved trip opens without resolving destination again');
     await finish(f, `arbitrary-${mode}`);
+  });
+}
+
+for (const viewport of [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 1440, height: 1000 },
+]) {
+  test(`compact four-day review at ${viewport.width}px keeps one day visible and the action accessible`, async () => {
+    const f = await setup(viewport),
+      { page, state } = f;
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await form(page);
+    await page.getByLabel('Số ngày', { exact: true }).fill('4');
+    await page.getByRole('button', { name: 'Tạo lịch trình', exact: true }).click();
+    await page.getByRole('heading', { name: 'Gợi ý cho Đà Nẵng', exact: true }).waitFor();
+    assert.equal(await page.getByRole('tab').count(), 4);
+    assert.equal(await page.getByRole('tabpanel').count(), 1);
+    assert.equal(await page.getByRole('tabpanel').getByRole('heading').count(), 2);
+    assert.equal(await page.getByLabel('Số ngày', { exact: true }).count(), 0);
+    const action = page.getByRole('button', { name: 'Chỉnh sửa và lưu lịch này', exact: true });
+    const actionBounds = await action.boundingBox();
+    assert(
+      actionBounds.y >= 0 &&
+        actionBounds.y + actionBounds.height <= viewport.height - (viewport.width < 1024 ? 70 : 0),
+    );
+    assert.equal(
+      await page
+        .getByRole('heading', { level: 1 })
+        .evaluate((heading) => heading === document.activeElement),
+      true,
+    );
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('main img')].every((img) => img.complete),
+    );
+    const folder = root + '/../../docs/qa/warm-refinement/after';
+    await mkdir(folder, { recursive: true });
+    await page.screenshot({ path: `${folder}/preview-${viewport.width}.png`, fullPage: false });
+    await page.getByRole('tab', { name: /^Ngày 1/ }).press('End');
+    assert.equal(
+      await page.getByRole('tab', { name: /^Ngày 4/ }).getAttribute('aria-selected'),
+      'true',
+    );
+    assert((await page.getByRole('tabpanel').getByRole('heading').count()) <= 2);
+    assert.equal(state.requests.length, 1);
+    await page.getByText(/^Lưu ý & chi phí/).click();
+    assert.equal(await page.getByText('Ngân sách cả nhóm', { exact: true }).isVisible(), true);
+    assert.equal(state.writes.length, 0);
+    await finish(f, `compact-review-${viewport.width}`);
   });
 }
 
