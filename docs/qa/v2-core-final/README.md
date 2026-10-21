@@ -1,6 +1,6 @@
 # GoEase V2 Core RC1 — UI completion / chờ nghiệm thu
 
-Bản đã kiểm tra: `a28a380010cc60e538f137f0389e6cff4eb8223a`, tiếp tục từ `d97bfb1`. Mã giao diện chốt ở `8245d75`; hai commit sau chỉ sửa harness kiểm thử. Commit bàn giao bằng chứng không đổi mã chạy.
+Bản đã kiểm tra: `68f55c8372a3834a31cdb6e0911fd34216ea3d43`, tiếp tục từ `d97bfb1`. Vòng đồng bộ chính ở `8245d75`; `68f55c8` sửa thêm nhãn yêu thích khi tải lỗi và thêm hồi quy cho việc reload phục hồi. Commit bàn giao bằng chứng không đổi mã chạy.
 
 Mở ứng dụng đang chạy: http://localhost:5174/ — API http://localhost:3000/v1/health. Nhánh `nyan/goease-v2-discovery`, PR [#118](https://github.com/nyanduong/go-ease-webapp/pull/118), phụ thuộc [#117](https://github.com/nyanduong/go-ease-webapp/pull/117) → [#116](https://github.com/nyanduong/go-ease-webapp/pull/116). Không merge hoặc triển khai production. Tag RC1 cũ không di chuyển.
 
@@ -8,14 +8,14 @@ Mở ứng dụng đang chạy: http://localhost:5174/ — API http://localhost:
 
 | Phạm vi | Kết quả thật | Giới hạn |
 | --- | --- | --- |
-| Web | 69/69 ca trình duyệt; lint, typecheck, production build đạt | Identity/API/provider được mô phỏng trong suite này |
+| Web | 70/70 ca trình duyệt; lint, typecheck, production build đạt | Identity/API/provider được mô phỏng trong suite này |
 | Nest + Prisma + PostgreSQL | 24/24 ca trips, 6/6 ca CMS; UI tạo/sửa/lưu/reload/mở lại/bỏ yêu thích ở 360, 390, 1440px | DB riêng; Supabase identity fixture, đồng hồ auth fixture tách từng phiên; không đổi limiter production |
 | Home/Khám phá/chi tiết | Chụp trực tiếp PWA và CMS/DB local thật, không mock, không ghi DB; tìm/lọc/Back/cuộn ngang/200% chữ đạt | Trình duyệt desktop mô phỏng viewport |
 | Google thật | Phiên Google đang có mở được hồ sơ và khôi phục sau reload trong Chrome | Không logout tài khoản cá nhân để chạy OAuth mới; chưa xác nhận roundtrip OAuth mới ở lượt này |
 | Dữ liệu cá nhân | 12/12 bảng có số dòng và SHA-256 giống trước/sau | Chỉ lưu hash, không đưa dữ liệu cá nhân/credential vào repo |
 | Thiết bị và provider thật | Chưa kiểm chứng | Chưa thử bàn phím Android/iOS thật, SerpApi/Gemini/Google Maps live hoặc đồng bộ thiết bị thứ hai |
 
-Log: [web](web-e2e.log), [DB](db-regression.log), [typecheck](typecheck.log), [lint](lint.log), [build](build.log), [docs](docs-check.log), [live UI](live-ui.log). Dữ liệu: [trước](db-before.json), [sau](db-after.json). [Evidence máy đọc](review.json), [live screenshots](verified/evidence.json), [request/status API thật](db-content/evidence.json).
+Log: [web](web-e2e.log), [DB](db-regression.log), [typecheck](typecheck.log), [lint](lint.log), [build](build.log), [docs](docs-check.log), [live UI](live-ui.log). Dữ liệu: [trước](db-before.json), [sau](db-after.json). [Evidence máy đọc](review.json), [live screenshots](final/evidence.json), [request/status API thật](db-content/evidence.json).
 
 ## Thay đổi đã chốt
 
@@ -31,14 +31,14 @@ Log: [web](web-e2e.log), [DB](db-regression.log), [typecheck](typecheck.log), [l
 
 ## Home và Khám phá trước/sau
 
-Các cặp dùng cùng viewport, zoom 100%, ảnh và dữ liệu đã tải. Trước: `d97bfb1`; sau: `a28a380`.
+Các cặp dùng cùng viewport, zoom 100%, ảnh và dữ liệu đã tải. Thư mục `final` là ảnh bàn giao mới nhất; `verified` giữ ảnh lịch sử của bản `a28a380`. Trước: `d97bfb1`; sau: `68f55c8`.
 
 | Màn | 390×844 trước | 390×844 sau | 1440×1000 trước | 1440×1000 sau |
 | --- | --- | --- | --- | --- |
-| Home | [Ảnh](before/home-390.png) | [Ảnh](verified/home-390.png) | [Ảnh](before/home-desktop.png) | [Ảnh](verified/home-desktop.png) |
-| Khám phá | [Ảnh](before/explore-390.png) | [Ảnh](verified/explore-390.png) | [Ảnh](before/explore-desktop.png) | [Ảnh](verified/explore-desktop.png) |
+| Home | [Ảnh](before/home-390.png) | [Ảnh](final/home-390.png) | [Ảnh](before/home-desktop.png) | [Ảnh](final/home-desktop.png) |
+| Khám phá | [Ảnh](before/explore-390.png) | [Ảnh](final/explore-390.png) | [Ảnh](before/explore-desktop.png) | [Ảnh](final/explore-desktop.png) |
 
-![Home 390px sau hoàn thiện](verified/home-390.png)
+![Home 390px sau hoàn thiện](final/home-390.png)
 
 ## Bộ ảnh theo hành trình
 
@@ -46,9 +46,9 @@ Các cặp dùng cùng viewport, zoom 100%, ảnh và dữ liệu đã tải. Tr
 
 | Bước | 360px | 390×844 | Desktop 1440px |
 | --- | --- | --- | --- |
-| 1. Home | [Ảnh](verified/home-360.png) | [Ảnh](verified/home-390.png) | [Ảnh](verified/home-desktop.png) |
-| 2. Khám phá | [Ảnh](verified/explore-360.png) | [Ảnh](verified/explore-390.png) | [Ảnh](verified/explore-desktop.png) |
-| 3. Chi tiết địa điểm | [Ảnh](verified/detail-place-360.png) | [Ảnh](verified/detail-place-390.png) | [Ảnh](verified/detail-place-desktop.png) |
+| 1. Home | [Ảnh](final/home-360.png) | [Ảnh](final/home-390.png) | [Ảnh](final/home-desktop.png) |
+| 2. Khám phá | [Ảnh](final/explore-360.png) | [Ảnh](final/explore-390.png) | [Ảnh](final/explore-desktop.png) |
+| 3. Chi tiết địa điểm | [Ảnh](final/detail-place-360.png) | [Ảnh](final/detail-place-390.png) | [Ảnh](final/detail-place-desktop.png) |
 | 4. Danh sách trống | [Ảnh](journey/01-empty-360.png) | [Ảnh](journey/01-empty-390.png) | [Ảnh](journey/01-empty-1440.png) |
 | 5. Tạo chuyến | [Ảnh](journey/02-create-360.png) | [Ảnh](journey/02-create-390.png) | [Ảnh](journey/02-create-1440.png) |
 | 6. Xem trước (provider fixture) | [Ảnh](journey/preview-360.png) | [Ảnh](journey/preview-390.png) | [Ảnh](journey/preview-1440.png) |
@@ -62,7 +62,7 @@ Các cặp dùng cùng viewport, zoom 100%, ảnh và dữ liệu đã tải. Tr
 | 14. Trợ giúp | [Ảnh](journey/10-help-360.png) | [Ảnh](journey/10-help-390.png) | [Ảnh](journey/10-help-1440.png) |
 | 15. Yêu thích qua API/DB thật | [Ảnh](db-content/360-favorites-reopened-real-db-auth-fixture.png) | [Ảnh](db-content/390-favorites-reopened-real-db-auth-fixture.png) | [Ảnh](db-content/1440-favorites-reopened-real-db-auth-fixture.png) |
 
-Bổ sung: [chi tiết điểm đến](verified/detail-destination-390.png), [ẩm thực](verified/detail-food-390.png), [bài viết](verified/detail-article-390.png), [ghi công cuối trang](verified/attribution-390.png), [dialog mobile](journey/confirmation-form-mobile.png), [dialog desktop](journey/confirmation-form-desktop.png), [upload/hồ sơ fixture](journey/profile-mobile.png), [thiếu dữ liệu](journey/warm-refinement-missing-data.png), [sửa/lưu/reload qua DB thật](db-content/390-edited-saved-reloaded-real-db-auth-fixture.png).
+Bổ sung: [chi tiết điểm đến](final/detail-destination-390.png), [ẩm thực](final/detail-food-390.png), [bài viết](final/detail-article-390.png), [ghi công cuối trang](final/attribution-390.png), [dialog mobile](journey/confirmation-form-mobile.png), [dialog desktop](journey/confirmation-form-desktop.png), [upload/hồ sơ fixture](journey/profile-mobile.png), [thiếu dữ liệu](journey/warm-refinement-missing-data.png), [sửa/lưu/reload qua DB thật](db-content/390-edited-saved-reloaded-real-db-auth-fixture.png).
 
 ## Checklist chỉ còn cần người dùng/thiết bị thật
 

@@ -10,8 +10,8 @@ computing gzip size...
 dist/index.html                     1.02 kB │ gzip:   0.57 kB
 dist/assets/osm-map-vh-t_kPv.css   15.09 kB │ gzip:   6.36 kB
 dist/assets/index-CCTu7IJR.css     60.32 kB │ gzip:  12.19 kB
-dist/assets/osm-map-DvUYXWlV.js   151.42 kB │ gzip:  44.76 kB
+dist/assets/osm-map-D2O9Vlzp.js   151.42 kB │ gzip:  44.76 kB
 dist/assets/dist-DUv6x2D9.js      214.40 kB │ gzip:  55.16 kB
-dist/assets/index-NBkyoqqV.js     499.52 kB │ gzip: 148.77 kB
+dist/assets/index-C-kvbXw4.js     499.55 kB │ gzip: 148.78 kB
 
-✓ built in 672ms
+✓ built in 760ms

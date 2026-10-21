@@ -1,6 +1,6 @@
 # GoEase V2 Core — release candidate 1
 
-> Cập nhật nghiệm thu UI Core: [bản đã kiểm tra a28a380 và bộ ảnh 360/390/1440px](qa/v2-core-final/README.md). Thông tin credential/kiểm tra lịch sử bên dưới không thay thế trạng thái bàn giao mới.
+> Cập nhật nghiệm thu UI Core: [bản đã kiểm tra 68f55c8 và bộ ảnh 360/390/1440px](qa/v2-core-final/README.md). Thông tin credential/kiểm tra lịch sử bên dưới không thay thế trạng thái bàn giao mới.
 
 Implementation began 2026-10-21 (Asia/Ho_Chi_Minh). This candidate covers M0–M2. Production deployment and merging remain owner-controlled. M3 additions are frozen out of the Core candidate until acceptance.
 

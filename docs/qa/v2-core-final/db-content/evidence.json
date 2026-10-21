@@ -1,6 +1,6 @@
 {
   "data": "Isolated real PostgreSQL and real Nest HTTP; editorial fixture created/published through admin API. Supabase provider is an offline double; no live providers.",
-  "testedCommit": "a28a380010cc60e538f137f0389e6cff4eb8223a",
+  "testedCommit": "68f55c8372a3834a31cdb6e0911fd34216ea3d43",
   "viewports": [
     {
       "name": "360",
@@ -8,7 +8,7 @@
         "width": 360,
         "height": 800
       },
-      "tripId": "730f021d-3adc-46fb-a024-343316bc7e2d",
+      "tripId": "eda53148-d91f-41ac-aabb-302373bb593b",
       "requests": [
         {
           "method": "GET",
@@ -42,7 +42,12 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -52,17 +57,7 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/content",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -92,12 +87,12 @@
         },
         {
           "method": "PUT",
-          "path": "/v1/favorites/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/favorites/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -117,12 +112,12 @@
         },
         {
           "method": "GET",
-          "path": "/v1/trips/730f021d-3adc-46fb-a024-343316bc7e2d",
+          "path": "/v1/trips/eda53148-d91f-41ac-aabb-302373bb593b",
           "status": 200
         },
         {
           "method": "PUT",
-          "path": "/v1/trips/730f021d-3adc-46fb-a024-343316bc7e2d",
+          "path": "/v1/trips/eda53148-d91f-41ac-aabb-302373bb593b",
           "status": 200
         },
         {
@@ -137,27 +132,7 @@
         },
         {
           "method": "GET",
-          "path": "/v1/trips/730f021d-3adc-46fb-a024-343316bc7e2d",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/auth/me",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/catalog/places",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/trips",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/favorites",
+          "path": "/v1/trips/eda53148-d91f-41ac-aabb-302373bb593b",
           "status": 200
         },
         {
@@ -182,7 +157,27 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -197,7 +192,7 @@
         },
         {
           "method": "DELETE",
-          "path": "/v1/favorites/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/favorites/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -228,7 +223,7 @@
         "width": 390,
         "height": 844
       },
-      "tripId": "060c9c0f-a1a4-42c0-8c85-08d41813c29d",
+      "tripId": "9afffb7c-dbe0-43af-8be5-cd59acb00108",
       "requests": [
         {
           "method": "GET",
@@ -262,17 +257,22 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -302,12 +302,12 @@
         },
         {
           "method": "PUT",
-          "path": "/v1/favorites/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/favorites/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -327,12 +327,12 @@
         },
         {
           "method": "GET",
-          "path": "/v1/trips/060c9c0f-a1a4-42c0-8c85-08d41813c29d",
+          "path": "/v1/trips/9afffb7c-dbe0-43af-8be5-cd59acb00108",
           "status": 200
         },
         {
           "method": "PUT",
-          "path": "/v1/trips/060c9c0f-a1a4-42c0-8c85-08d41813c29d",
+          "path": "/v1/trips/9afffb7c-dbe0-43af-8be5-cd59acb00108",
           "status": 200
         },
         {
@@ -347,27 +347,7 @@
         },
         {
           "method": "GET",
-          "path": "/v1/trips/060c9c0f-a1a4-42c0-8c85-08d41813c29d",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/auth/me",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/catalog/places",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/trips",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/favorites",
+          "path": "/v1/trips/9afffb7c-dbe0-43af-8be5-cd59acb00108",
           "status": 200
         },
         {
@@ -392,7 +372,27 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -407,7 +407,7 @@
         },
         {
           "method": "DELETE",
-          "path": "/v1/favorites/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/favorites/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -438,7 +438,7 @@
         "width": 1440,
         "height": 1000
       },
-      "tripId": "9982057f-1367-4608-a755-7b8de2ddd94d",
+      "tripId": "dfef2ba0-f0af-4819-b141-965945e1e538",
       "requests": [
         {
           "method": "GET",
@@ -472,12 +472,12 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -487,7 +487,7 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -517,12 +517,12 @@
         },
         {
           "method": "PUT",
-          "path": "/v1/favorites/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/favorites/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -542,12 +542,12 @@
         },
         {
           "method": "GET",
-          "path": "/v1/trips/9982057f-1367-4608-a755-7b8de2ddd94d",
+          "path": "/v1/trips/dfef2ba0-f0af-4819-b141-965945e1e538",
           "status": 200
         },
         {
           "method": "PUT",
-          "path": "/v1/trips/9982057f-1367-4608-a755-7b8de2ddd94d",
+          "path": "/v1/trips/dfef2ba0-f0af-4819-b141-965945e1e538",
           "status": 200
         },
         {
@@ -562,27 +562,7 @@
         },
         {
           "method": "GET",
-          "path": "/v1/trips/9982057f-1367-4608-a755-7b8de2ddd94d",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/auth/me",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/catalog/places",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/trips",
-          "status": 200
-        },
-        {
-          "method": "GET",
-          "path": "/v1/favorites",
+          "path": "/v1/trips/dfef2ba0-f0af-4819-b141-965945e1e538",
           "status": 200
         },
         {
@@ -607,7 +587,27 @@
         },
         {
           "method": "GET",
-          "path": "/v1/content/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
@@ -622,7 +622,7 @@
         },
         {
           "method": "DELETE",
-          "path": "/v1/favorites/aaa-browser-a5374bff-429e-4a61-8e2e-69b8fae3938b",
+          "path": "/v1/favorites/aaa-browser-03e94304-2cb3-4b31-a518-676c7ed6989d",
           "status": 200
         },
         {
