@@ -5,7 +5,19 @@ import type { DayMap } from '@goease/trip-client/map-controller';
 import { Button, Notice } from '../../components/ui';
 
 /** Only visible tiles are requested. Browser HTTP caching remains in control. */
-export default function OsmDayMap({ model }: { model: DayMap }) {
+export default function OsmDayMap({
+  model,
+  selectedPlaceId,
+  onSelect,
+}: {
+  model: DayMap;
+  selectedPlaceId?: string;
+  onSelect?: (id: string) => void;
+}) {
+  const selectRef = useRef(onSelect),
+    selectedRef = useRef(selectedPlaceId);
+  selectRef.current = onSelect;
+  selectedRef.current = selectedPlaceId;
   const container = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState('Đang tải nền bản đồ…'),
     [attempt, retry] = useState(0);
@@ -50,7 +62,7 @@ export default function OsmDayMap({ model }: { model: DayMap }) {
         item.textContent = `${activity.order}. ${activity.name}`;
         popup.append(item);
       }
-      marker([pin.coordinates.latitude, pin.coordinates.longitude], {
+      const pinMarker = marker([pin.coordinates.latitude, pin.coordinates.longitude], {
         title: `Điểm ${index + 1}: ${pin.name}`,
         keyboard: true,
         icon: divIcon({
@@ -63,6 +75,8 @@ export default function OsmDayMap({ model }: { model: DayMap }) {
       })
         .addTo(map)
         .bindPopup(popup);
+      pinMarker.on('click', () => selectRef.current?.(pin.placeId));
+      if (selectedRef.current === pin.placeId) pinMarker.openPopup();
     }
     const resize = new ResizeObserver(() => map.invalidateSize({ pan: false }));
     resize.observe(container.current);
@@ -81,7 +95,7 @@ export default function OsmDayMap({ model }: { model: DayMap }) {
       <div
         ref={container}
         aria-label="Bản đồ OpenStreetMap"
-        className="relative isolate z-0 h-96 w-full overflow-hidden rounded-3xl border border-line bg-mint [&_.leaflet-control-zoom_a]:h-11! [&_.leaflet-control-zoom_a]:w-11! [&_.leaflet-control-zoom_a]:leading-11! [&_.leaflet-popup-content]:wrap-anywhere"
+        className="relative isolate z-0 h-[min(65dvh,38rem)] min-h-80 w-full overflow-hidden rounded-3xl border border-line bg-mint [&_.leaflet-control-zoom_a]:h-11! [&_.leaflet-control-zoom_a]:w-11! [&_.leaflet-control-zoom_a]:leading-11! [&_.leaflet-popup-content]:wrap-anywhere"
       />
       {status && (
         <Notice>

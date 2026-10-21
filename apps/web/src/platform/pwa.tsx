@@ -7,7 +7,7 @@ interface InstallPrompt extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 }
-export function PwaStatus() {
+export function PwaStatus({ showInstallHelp = true }: { showInstallHelp?: boolean }) {
   const [offline, setOffline] = useState(!navigator.onLine),
     [waiting, setWaiting] = useState<ServiceWorker | null>(null),
     [install, setInstall] = useState<InstallPrompt | null>(null),
@@ -85,7 +85,7 @@ export function PwaStatus() {
   }
   return (
     <div
-      className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-9 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
+      className="flex flex-wrap items-center gap-3 text-xs text-muted [&_button]:min-h-11 [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
       aria-live="polite"
     >
       {offline && (
@@ -119,7 +119,7 @@ export function PwaStatus() {
         </Button>
       )}
       {message && <span>{message}</span>}
-      {!install && (
+      {!install && showInstallHelp && (
         <details>
           <summary>Cài trên điện thoại</summary>
           <p>

@@ -203,6 +203,7 @@ export function GroupFields({
       <label>
         Ngân sách nhóm (VND)
         <input
+          id="group-budget"
           inputMode="numeric"
           value={value.budgetVnd}
           aria-invalid={!!errors.budgetVnd}

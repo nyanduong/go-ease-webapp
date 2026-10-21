@@ -145,3 +145,19 @@ test('distance estimates are symmetric, finite at poles and clearly independent 
   assert.ok(Number.isFinite(distanceKm(a, b)));
   assert.equal(distanceKm(a, b), distanceKm(b, a));
 });
+
+test('pace changes daily visit caps while respecting openings, preserving unknown costs and legacy defaults', () => {
+  const places = Array.from({ length: 10 }, (_, index) => place(index, { durationMinutes: 30 }));
+  const request = { ...input, durationDays: 1, budgetVnd: null };
+  for (const [pace, expected] of [['relaxed', 2], ['balanced', 3], ['active', 4], [undefined, 3]]) {
+    const result = generateDiscoveredTrip(request, places, { ...options, pace });
+    assert.equal(result.ok, true);
+    assert.equal(result.trip.days[0].activities.length, expected);
+    assert.deepEqual(findTimeOverlaps(result.trip.days[0]), []);
+    assert.equal(result.trip.budgetVnd, null);
+    assert.equal(result.budget.unknownCostCount, expected);
+    assert(result.trip.days[0].activities.every((activity) => activity.costVnd === null));
+    assert(result.explanations.some((text) => text.includes(`tối đa ${expected}`)));
+  }
+  assert.equal(generateDiscoveredTrip(request, places, { ...options, pace: 'unknown' }).code, 'INVALID_OPTIONS');
+});

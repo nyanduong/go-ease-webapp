@@ -2,7 +2,8 @@ import { ProfileCard } from './profile-card';
 import { useEffect, useRef, useState } from 'react';
 import { AccountGate, Button, Brand, Notice, PageTitle } from '../../components/ui';
 import { accountSession, accountTrips, useAccount } from './session';
-import { JourneySketch, LoginArtwork } from './login-artwork';
+import { ScenicImage } from '../../components/scenic-image';
+import { Link } from '../../app/router';
 import { confirmAction } from '../../platform/confirmation';
 
 export function LoginPage() {
@@ -36,77 +37,43 @@ export function LoginPage() {
       />
     );
   return (
-    <main className="postcard-login">
-      <header className="postcard-login-header">
+    <main className="flex min-h-dvh flex-col bg-cream px-5 py-6 sm:px-10">
+      <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
         <Brand />
-        <span className="postcard-language" aria-label="Ngôn ngữ: Tiếng Việt">
-          <svg
-            aria-hidden="true"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z" />
-          </svg>
-          Tiếng Việt
-        </span>
+        <Link href="/" className="text-action">
+          Về trang chủ
+        </Link>
       </header>
-      <div className="postcard-login-content">
-        <LoginArtwork />
-        <section className="postcard-signin" aria-labelledby="login-title">
-          <p className="postcard-signin-eyebrow">ĐI MỘT CHUYẾN, THÊM MỘT CÂU CHUYỆN</p>
-          <h1 id="login-title">
-            Chuyến đi mới,
+      <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-12 py-10 md:grid-cols-2">
+        <div className="hidden overflow-hidden rounded-2xl md:block">
+          <ScenicImage priority className="aspect-[4/5] w-full object-cover" />
+        </div>
+        <section
+          className="mx-auto flex w-full max-w-md flex-col gap-5"
+          aria-labelledby="login-title"
+        >
+          <p className="text-sm font-semibold tracking-wide text-teal">CHUYẾN ĐI CỦA BẠN</p>
+          <h1 id="login-title" className="text-4xl">
+            Cùng lên kế hoạch
             <br />
-            bắt đầu <span>từ đây.</span>
+            cho một chuyến đi.
           </h1>
-          <p className="postcard-signin-description">
-            Đăng nhập để tạo, chỉnh sửa
-            <br className="postcard-description-break" /> và lưu lại lịch trình của bạn.
+          <p className="text-muted">
+            Đăng nhập để tạo, chỉnh sửa và lưu lại lịch trình trong tài khoản của bạn.
           </p>
           <button
             type="button"
-            className="postcard-google-button"
-            disabled={session.busy}
-            onClick={() => {
-              void accountSession.loginGoogle();
-            }}
+            className="surface flex min-h-14 items-center justify-center gap-3 px-5 py-3 font-semibold hover:bg-sand"
+            disabled={session.busy || !online}
+            onClick={() => void accountSession.loginGoogle()}
           >
-            <span className="postcard-google-mark">
-              <img src="/google-g.png" alt="" width="24" height="24" />
-            </span>
-            <span>Tiếp tục với Google</span>
-            <svg
-              className="postcard-button-arrow"
-              aria-hidden="true"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
-              <path d="m9 5 7 7-7 7" />
-            </svg>
+            <img src="/google-g.png" alt="" width="24" height="24" />
+            Tiếp tục với Google
           </button>
-          <p className="postcard-signin-note">
-            <svg
-              aria-hidden="true"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M7 3h10v18l-5-3-5 3V3Z" />
-            </svg>
-            Lịch trình của bạn, luôn có thể mở lại.
-          </p>
+          <p className="text-sm text-muted">Sau đăng nhập, bạn sẽ trở lại nơi đang làm.</p>
+          {!online && (
+            <Notice error>Bạn đang mất kết nối. Kết nối mạng rồi tiếp tục với Google.</Notice>
+          )}
           {session.busy && <p role="status">{session.message}</p>}
           {!session.busy &&
             session.message &&
@@ -115,27 +82,22 @@ export function LoginPage() {
               <Notice error>Chưa đăng nhập được. Vui lòng thử lại.</Notice>
             )}
           {session.phase === 'unverified' && !session.busy && (
-            <Button
-              secondary
-              onClick={() => {
-                void accountSession.resume();
-              }}
-            >
+            <Button secondary onClick={() => void accountSession.resume()}>
               Thử lại kết nối
             </Button>
           )}
-          <JourneySketch />
+          <Link
+            href="/sample"
+            className="text-action justify-center text-teal underline underline-offset-4"
+          >
+            Xem thử một chuyến trước
+          </Link>
         </section>
       </div>
-      <footer className="postcard-login-footer">
-        <p>Mỗi hành trình đẹp bắt đầu từ một ý tưởng.</p>
-        <p>
-          Điểm đến mới đang chờ bạn <span aria-hidden="true">↗</span>
-        </p>
-      </footer>
     </main>
   );
 }
+
 export function AccountPage() {
   const { session, trips, profile } = useAccount();
   const [migrating, setMigrating] = useState(false),
@@ -204,7 +166,7 @@ export function AccountPage() {
         eyebrow="Không gian của bạn"
         description="Một chút về bạn, trước những hành trình mới."
       >
-        Hồ sơ cá nhân
+        Cá nhân
       </PageTitle>
       {profile.value ? (
         <ProfileCard
@@ -244,6 +206,24 @@ export function AccountPage() {
         >
           Đăng xuất
         </Button>
+      </div>
+      <div className="surface flex flex-col divide-y divide-line px-5">
+        <Link
+          href="/about"
+          className="flex min-h-16 items-center justify-between gap-3 font-semibold"
+        >
+          Giới thiệu & trợ giúp <span aria-hidden="true">→</span>
+        </Link>
+        <Link
+          href="/travel-services"
+          className="flex min-h-16 items-center justify-between gap-3 font-semibold"
+        >
+          Chỗ nghỉ & chuyến bay <span aria-hidden="true">↗</span>
+        </Link>
+        <p className="py-4 text-sm text-muted">
+          GoEase lưu nháp trên thiết bị theo tài khoản. Bấm Lưu để lưu chuyến vào tài khoản; cần kết
+          nối mạng để mở và đồng bộ dữ liệu.
+        </p>
       </div>
       <details className="rounded-3xl border border-line bg-paper p-5 sm:p-6">
         <summary className="cursor-pointer text-sm font-bold text-muted">

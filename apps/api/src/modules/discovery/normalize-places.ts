@@ -235,6 +235,12 @@ export function normalizePlaces(raw: unknown, destination: Destination, fetchedA
       ...('openingWindows' in hours && hours.openingWindows
         ? { openingWindows: hours.openingWindows }
         : {}),
+      ...(typeof entry.thumbnail === 'string' &&
+      entry.thumbnail.length <= 2048 &&
+      URL.canParse(entry.thumbnail) &&
+      new URL(entry.thumbnail).protocol === 'https:'
+        ? { thumbnailUrl: entry.thumbnail }
+        : {}),
       durationMinutes: durations[kind],
       durationBasis: 'estimate',
       sourceUrl: sourceUrl.toString(),

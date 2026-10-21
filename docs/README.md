@@ -2,6 +2,8 @@
 
 Ứng dụng khách hàng hiện phát triển chính ở **PWA `apps/web`**; admin đã chuyển sang `apps/admin`. Expo vẫn được giữ. [Chạy PWA, bản đồ và offline](PWA.md) · [Cây dự án hiện tại](FOLDER_STRUCTURE.md). Các tài liệu theo issue/mốc Expo bên dưới giữ bối cảnh lịch sử.
 
+Bản UI/UX hiện tại: [Hướng 1 — Ấm áp, gần gũi: audit, thay đổi và nghiệm thu](qa/warm-refinement/README.md).
+
 ## Phạm vi sản phẩm hiện tại
 
 - [Định hướng mở rộng nhiều điểm đến với SerpApi](MULTI_DESTINATION_PLAN.md)
@@ -13,7 +15,7 @@
 - [Admin catalog và quyền vận hành](ADMIN_CATALOG.md)
 - [Nghiệm thu popup xác nhận desktop/mobile và audit native dialog](qa/confirmation-popups/README.md)
 
-Kế hoạch MVP cập nhật ngày 20/10/2026: bắt buộc đăng nhập Google, chỉ chuyến tài khoản, không có khách vãng lai. PWA/admin đã chuyển Google OAuth và account-only; xem [setup Google](GOOGLE_LOGIN.md). Nghiệm thu production/thiết bị vẫn là bước riêng. Dùng kế hoạch này cho phạm vi PWA; đối chiếu README/code và runbook tương ứng cho cách chạy hiện tại.
+Kế hoạch MVP cập nhật ngày 20/10/2026: chỉ chuyến tài khoản, không có khách tạo chuyến trong production. Refine ngày 21/10 mở Trang chủ/Giới thiệu/lịch mẫu công khai để xem trước; tạo/chỉnh/lưu vẫn bắt buộc đăng nhập Google. PWA/admin đã chuyển Google OAuth và account-only; xem [setup Google](GOOGLE_LOGIN.md). Nghiệm thu production/thiết bị vẫn là bước riêng. Dùng kế hoạch này cho phạm vi PWA; đối chiếu README/code và runbook tương ứng cho cách chạy hiện tại.
 
 ## Các mốc Expo và hướng dẫn kỹ thuật trước đây
 

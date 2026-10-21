@@ -9,10 +9,13 @@ import { AccountPage, LoginPage } from '../features/account/account-page';
 import { startAccountLifecycle, useAccount, accountSession } from '../features/account/session';
 import { AboutPage, TravelServices } from '../features/about/about-pages';
 import { PwaStatus } from '../platform/pwa';
+import { SampleTrip } from '../features/trips/sample-trip';
+import { Icon } from '../components/icon';
 import { offlineDev } from '../platform/dev-mode';
 
 function Route({ path }: { path: string }) {
   if (path === '/' || path === '/login' || path === '/auth/callback') return <AccountHome />;
+  if (path === '/sample') return <SampleTrip />;
   if (path === '/trips') return <AccountWorkspace />;
   if (path === '/trips/new') return <AccountWorkspace mode="new" />;
   if (path === '/account')
@@ -20,6 +23,9 @@ function Route({ path }: { path: string }) {
       <Notice>
         Dev offline: chuyến được lưu trong trình duyệt này, không đăng nhập và không đồng bộ tài
         khoản. Dữ liệu dev tách riêng với chuyến tài khoản và chuyến cũ.
+        <Link href="/about" className="text-action">
+          Giới thiệu & trợ giúp →
+        </Link>
       </Notice>
     ) : (
       <AccountPage />
@@ -46,8 +52,9 @@ export function App() {
   const path = usePath();
   const { session, trips, workspace } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
-  if (!offlineDev && session.phase !== 'backend-verified') return <LoginPage />;
-  if (!trips.ready)
+  const publicPage = path === '/' || path === '/sample' || path === '/about';
+  if (!publicPage && !offlineDev && session.phase !== 'backend-verified') return <LoginPage />;
+  if (!publicPage && !trips.ready)
     return (
       <AccountGate
         error={workspace.busy || session.busy ? undefined : workspace.error || undefined}
@@ -69,37 +76,32 @@ export function App() {
       </a>
       <Navigation path={path} />
       <div className="min-w-0 lg:ml-64">
-        <header className="sticky top-0 z-30 border-b border-line bg-cream/95 px-4 sm:px-8">
-          <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4">
+        <header
+          className={`${path.startsWith('/trips/') || path === '/sample' ? 'hidden lg:block' : ''}border-b border-line/60 bg-cream px-5 sm:px-10`}
+        >
+          <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4">
             <div className="lg:hidden">
               <Brand />
             </div>
-            <div className="hidden lg:block">
-              <p className="text-[10px] font-bold tracking-[.2em] text-muted uppercase">
-                GoEase / Không gian của bạn
-              </p>
-              <p className="mt-1 text-lg font-bold">
-                {path === '/'
-                  ? 'Lên kế hoạch. Lưu kỷ niệm.'
-                  : path === '/trips/new'
-                    ? 'Bắt đầu hành trình mới'
-                    : path === '/account'
-                      ? 'Tài khoản của bạn'
-                      : path.startsWith('/trips')
-                        ? 'Hành trình của bạn'
-                        : 'Khám phá cùng GoEase'}
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-2 text-xs text-muted">
-              <span className="size-1.5 rounded-full bg-teal" aria-hidden="true" />
-              Cùng bạn khám phá <span className="hidden sm:inline">· Đi cùng nhau</span>
-            </span>
+            <Link
+              href="/"
+              className="hidden min-h-11 items-center text-sm text-muted lg:inline-flex"
+            >
+              Một chuyến đi, theo cách bạn thích.
+            </Link>
+            <Link
+              href="/account"
+              aria-label="Mở trang cá nhân"
+              className="grid size-11 place-items-center rounded-full border border-line text-muted hover:bg-sand"
+            >
+              <Icon name="account" />
+            </Link>
           </div>
         </header>
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto min-h-[60vh] w-full max-w-7xl px-4 py-6 outline-none sm:px-8 sm:py-8 [&_h1]:wrap-anywhere [&_h3]:wrap-anywhere"
+          className="mx-auto min-h-[60vh] w-full max-w-6xl px-5 py-6 outline-none sm:px-10 sm:py-10 [&_h1]:wrap-anywhere [&_h3]:wrap-anywhere"
         >
           <ErrorBoundary key={path}>
             {offlineDev && (
@@ -115,10 +117,9 @@ export function App() {
             </MotionRegion>
           </ErrorBoundary>
         </main>
-        <footer className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-line px-5 pt-8 pb-32 lg:pb-10">
-          <Brand />
-          <p className="text-sm text-muted">Đi cùng nhau, khám phá nhiều hơn.</p>
-          <PwaStatus />
+        <footer className="mx-auto flex max-w-6xl flex-col gap-3 border-t border-line px-5 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-10 lg:pb-10">
+          <p className="hidden text-sm text-muted lg:block">Đi cùng nhau, khám phá nhiều hơn.</p>
+          <PwaStatus showInstallHelp={path === '/account'} />
         </footer>
       </div>
     </>

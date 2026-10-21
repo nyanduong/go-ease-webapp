@@ -1242,3 +1242,46 @@ test('optional destination search metrics record only aggregate cache/cost diagn
     console.info = originalInfo;
   }
 });
+
+test('preview accepts optional pace without changing auth or old defaults and rejects invalid pace before provider work', () =>
+  service(
+    async (instance) => {
+      const request = { ...tripInput, durationDays: 1, budgetVnd: null };
+      const relaxed = await instance.preview({ input: request, pace: 'relaxed' }, USER, signal());
+      const legacy = await instance.preview({ input: request }, USER, signal());
+      const active = await instance.preview({ input: request, pace: 'active' }, USER, signal());
+      assert.equal(relaxed.result.trip.days[0].activities.length, 2);
+      assert.equal(legacy.result.trip.days[0].activities.length, 3);
+      assert.equal(active.result.trip.days[0].activities.length, 4);
+      assert.equal(active.result.trip.budgetVnd, null);
+      await rejectsCode(
+        instance.preview({ input: request, pace: 'unknown' }, USER, signal()),
+        'BAD_REQUEST',
+      );
+    },
+    {},
+    async () =>
+      Response.json({
+        local_results: Array.from({ length: 12 }, (_, index) =>
+          rawPlace(index, { title: `Công viên ${index}`, type: 'Park' }),
+        ),
+      }),
+  ));
+
+test('normalization preserves optional source thumbnails and ignores unsupported image schemes', () => {
+  const image = 'https://images.example.test/place.jpg';
+  const result = normalizePlaces(
+    {
+      local_results: [
+        rawPlace(0, { thumbnail: image }),
+        rawPlace(1, { thumbnail: 'javascript:alert(1)' }),
+        rawPlace(2, { thumbnail: 'https://not a valid image' }),
+      ],
+    },
+    getDestination('da-nang'),
+    NOW.toISOString(),
+  );
+  assert.equal(result.places[0].thumbnailUrl, image);
+  assert.equal(result.places[1].thumbnailUrl, undefined);
+  assert.equal(result.places[2].thumbnailUrl, undefined);
+});

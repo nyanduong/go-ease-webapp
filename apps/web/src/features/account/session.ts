@@ -352,7 +352,7 @@ export const accountSession = {
     session = { ...session, busy: true, message: 'Đang mở Google…' };
     publish();
     try {
-      const target = await google.begin(safeReturnPath(location.pathname));
+      const target = await google.begin(safeReturnPath(location.pathname + location.search));
       googleRedirectPending = true;
       location.assign(target);
     } catch (error) {

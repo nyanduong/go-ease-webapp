@@ -1,5 +1,7 @@
 # PWA khách hàng GoEase
 
+Giao diện hiện tại theo Hướng 1 ấm áp: [audit, ảnh trước/sau và nghiệm thu](qa/warm-refinement/README.md). Trang chủ, `/sample` và Giới thiệu mở công khai; tạo/chỉnh/lưu chuyến vẫn yêu cầu tài khoản Google. Không có kho chuyến khách mới trong production.
+
 `apps/web` dùng React 19, Vite 8, Tailwind CSS 4 qua plugin Vite. Màu GoEase ở `src/tailwind.css` bằng `@theme`; component dùng utility classes. Admin cũ chuyển sang `apps/admin`. Expo giữ ở `apps/mobile`; controller dùng chung qua `packages/trip-client`.
 
 ## Chạy và cấu hình
@@ -35,7 +37,7 @@ Kiểm tra kho local và guard production: `pnpm --filter @goease/web test:offli
 
 ### Ảnh Cloudinary
 
-Màn login dùng hai postcard tạo mới theo ảnh tham khảo, lưu trên Cloudinary dưới
+Màn login cũ (trước refine 21/10/2026) dùng hai postcard tạo mới theo ảnh tham khảo, lưu trên Cloudinary dưới
 public ID `login-lake_kilh7d` và `login-lane_t7weei` (version `1792500892`). Hai ảnh
 có WebP dự phòng local được service worker precache. Ảnh gốc, bản WebP upload và
 prompt cuối nằm ở `apps/web/assets/login/README.md`; source ảnh gốc không nằm trong
@@ -77,7 +79,7 @@ trả WebP 27.500 / 78.074 / 121.706 bytes; 1536 px trả JPEG 283.419 bytes.
 Các phép đo này tách khỏi browser tests dùng fixture. Logo, Google mark và icon
 cài đặt tiếp tục được phân phối local; bản cloud đã có để quản lý/lưu trữ.
 
-Từ 1024 px, desktop dùng sidebar trái; trang chủ có dashboard và từ 1280 px có cột tổng quan. Màn tạo chuyến có hướng dẫn bên cạnh form; chi tiết thu gọn tiêu đề/ngày/số người, có cột ngân sách bên phải. Dưới 1024 px, mobile/tablet dùng menu dưới, nội dung một cột và nút chạm lớn. Hai bố cục cùng state và nghiệp vụ.
+Từ 1024 px, desktop dùng sidebar trái và Trang chủ hai cột. Màn tạo chuyến giới hạn chiều rộng để dễ đọc; chi tiết dùng timeline rộng, bản đồ chiếm vùng làm việc chính. Dưới 1024 px, mobile/tablet dùng ba mục Trang chủ / Chuyến đi / Cá nhân. Trong chuyến có ba tab Lịch trình / Bản đồ / Chi phí; thông tin nguồn ở Chi tiết hoạt động, thông tin chuyến và dịch vụ ở menu. Giới thiệu/trợ giúp chuyển vào Cá nhân. Thanh lưu nằm sau nội dung, có đệm safe area cho điều hướng dưới. Hai bố cục cùng state và nghiệp vụ.
 
 Hiệu ứng vào trang, chuyển ngày/tab và xuất hiện thẻ dùng Web Animations API, khoảng 240 ms; hover/nhấn dùng Tailwind transitions. Không trì hoãn điều hướng hoặc tự chạy vòng lặp. `prefers-reduced-motion` tắt chuyển động và có test riêng.
 

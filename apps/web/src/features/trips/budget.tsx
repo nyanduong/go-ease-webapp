@@ -1,5 +1,6 @@
 import type { Trip } from '@goease/contracts';
-import { Button, dateLabel } from '../../components/ui';
+import { Icon } from '../../components/icon';
+import { Button, Notice } from '../../components/ui';
 import { budgetPresentation } from './budget-presentation';
 
 export function BudgetSummary({
@@ -75,75 +76,103 @@ export function BudgetSummary({
 export function Budget({
   trip,
   onEditCost,
+  onBudget,
+  onAdd,
   disabled = false,
 }: {
   trip: Trip;
   onEditCost: (activityId: string, dayId: string) => void;
+  onBudget: () => void;
+  onAdd: () => void;
   disabled?: boolean;
 }) {
   const model = budgetPresentation(trip);
   return (
-    <section className="flex min-w-0 flex-col gap-5" aria-label="Ngân sách chuyến đi">
-      <div className="flex flex-col gap-3 rounded-3xl bg-sand p-6">
-        <span className="text-xs font-bold tracking-widest text-amber-900 uppercase">
-          {model.label}
-        </span>
-        <strong className="text-3xl text-teal-dark">{model.headline}</strong>
-        <p>{model.completeness}</p>
+    <section className="flex min-w-0 flex-col gap-4" aria-label="Chi phí chuyến đi">
+      <div className="flex items-start justify-between gap-3 rounded-2xl bg-sand p-5 sm:p-7">
+        <div className="min-w-0">
+          <p className="text-base text-muted">Ngân sách cả nhóm</p>
+          <strong className="mt-2 block text-3xl tracking-tight sm:text-4xl">
+            {model.budgetText}
+          </strong>
+          <p className="mt-2 text-sm text-muted">
+            {trip.people} người · {trip.durationDays} ngày
+          </p>
+        </div>
+        <Button secondary disabled={disabled} onClick={onBudget} aria-label="Sửa ngân sách">
+          Sửa
+        </Button>
       </div>
-      <div className="rounded-3xl border border-line bg-paper p-5 sm:p-6">
-        <h3>Ngân sách đặt ra: {model.budgetText}</h3>
-        <p className={model.warning ? 'text-error' : 'text-muted'}>
-          {model.warning || model.phase === 'complete'
-            ? model.difference
-            : 'Bổ sung chi phí còn thiếu để biết ngân sách có đủ không.'}
-        </p>
+      <div className="surface overflow-hidden px-5 sm:px-7">
+        <div className="border-b border-line py-5">
+          <p className="text-base text-muted">Các khoản đã có giá · cả nhóm</p>
+          <strong className="mt-1 block text-3xl">
+            {model.phase === 'empty'
+              ? 'Chưa có khoản chi'
+              : model.phase === 'unknown'
+                ? 'Chưa có giá'
+                : model.knownText}
+          </strong>
+          <p className="mt-2 text-sm text-muted">{model.progress}</p>
+        </div>
+        <ul className="divide-y divide-line">
+          {trip.days.flatMap((day, index) =>
+            day.activities.map((activity) => (
+              <li key={activity.id}>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  className="flex min-h-20 w-full items-center gap-3 py-4 text-left"
+                  aria-label={`Sửa chi phí: ${activity.name}`}
+                  onClick={() => onEditCost(activity.id, day.id)}
+                >
+                  <Icon name="file" className="shrink-0 text-muted" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm text-muted">Ngày {index + 1}</span>
+                    <span className="block break-words">{activity.name}</span>
+                  </span>
+                  <span
+                    className={`shrink-0 text-sm sm:text-base ${activity.costVnd === null ? 'text-muted' : 'font-medium'}`}
+                  >
+                    {activity.costVnd === null
+                      ? 'Chưa rõ'
+                      : activity.costVnd === 0
+                        ? 'Miễn phí'
+                        : `${activity.costVnd.toLocaleString('vi-VN')} đ`}
+                  </span>
+                  <Icon name="chevron" className="shrink-0 text-muted" width="16" />
+                </button>
+              </li>
+            )),
+          )}
+        </ul>
       </div>
       {model.summary.unknownCostCount > 0 && (
-        <div className="rounded-3xl border border-line bg-paper p-5">
-          <h3>Bổ sung chi phí còn thiếu</h3>
-          <ul className="mt-4 divide-y divide-line">
-            {trip.days.flatMap((day, index) =>
-              day.activities
-                .filter((activity) => activity.costVnd === null)
-                .map((activity) => (
-                  <li
-                    key={activity.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3"
-                  >
-                    <span className="min-w-0 flex-1 text-sm">
-                      <small className="block">Ngày {index + 1}</small>
-                      {activity.name}
-                    </span>
-                    <Button
-                      secondary
-                      disabled={disabled}
-                      aria-label={`Bổ sung chi phí: ${activity.name}`}
-                      onClick={() => onEditCost(activity.id, day.id)}
-                    >
-                      Nhập chi phí
-                    </Button>
-                  </li>
-                )),
-            )}
-          </ul>
-        </div>
-      )}
-      <div className="grid min-w-0 gap-4 md:grid-cols-2">
-        {model.days.map((day) => (
-          <div key={day.dayId} className="rounded-3xl border border-line bg-paper p-5">
-            <h3>{dateLabel(day.date)}</h3>
-            <b>
-              {day.unknownCostCount ===
-                trip.days.find((item) => item.id === day.dayId)!.activities.length &&
-              day.unknownCostCount > 0
-                ? 'Chưa có chi phí đã nhập'
-                : day.knownText}
-            </b>
-            <p className="mt-2 text-xs text-muted">{day.completeness}</p>
+        <Notice>
+          <div className="flex items-start gap-3">
+            <Icon name="info" className="mt-1 shrink-0" />
+            <div>
+              <p className="font-semibold">
+                Còn {model.summary.unknownCostCount} khoản chưa có giá
+              </p>
+              <p>Chưa đủ thông tin để tính tổng chuyến đi. Chọn từng khoản để bổ sung.</p>
+            </div>
           </div>
-        ))}
-      </div>
+        </Notice>
+      )}
+      {model.phase === 'complete' && (
+        <p className={model.warning ? 'text-error' : 'text-muted'}>
+          {model.difference} Đây là các khoản trong lịch trình; có thể còn chi phí khác.
+        </p>
+      )}
+      <Button disabled={disabled} onClick={onAdd}>
+        <Icon name="plus" />
+        Thêm chi phí
+      </Button>
+      <p className="text-sm text-muted">
+        Mỗi khoản là chi phí cả nhóm, không nhân lại số người. Khoản chi mới được thêm vào lịch
+        trình để bạn dễ theo dõi.
+      </p>
     </section>
   );
 }

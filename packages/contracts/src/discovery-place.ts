@@ -14,6 +14,7 @@ export const discoveryPlaceSchema = z.strictObject({
     dayOfWeek: z.number().int().min(0).max(6), startTime: clockTimeSchema, endTime: clockTimeSchema,
   }).refine((window) => window.endTime > window.startTime, 'Khung giờ phải kết thúc trong cùng ngày')).max(28).optional(),
   durationMinutes: z.number().int().min(15).max(480), durationBasis: z.literal('estimate'),
+  thumbnailUrl: z.url().max(2048).refine((url) => url.startsWith('https://')).optional(),
   sourceUrl: z.httpUrl(), fetchedAt: z.iso.datetime(),
 });
 export type DiscoveryPlace = z.infer<typeof discoveryPlaceSchema>;

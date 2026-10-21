@@ -53,7 +53,21 @@ export function directionsUrl(latitude: number, longitude: number) {
   });
   return 'https://www.google.com/maps/dir/?' + params;
 }
-export function GoogleDayMap({ model }: { model: DayMap }) {
+export function GoogleDayMap({
+  model,
+  selectedPlaceId,
+  onSelect,
+  onActivity,
+}: {
+  model: DayMap;
+  selectedPlaceId?: string;
+  onSelect?: (id: string) => void;
+  onActivity?: (id: string) => void;
+}) {
+  const selectedRef = useRef(selectedPlaceId),
+    selectRef = useRef(onSelect);
+  selectedRef.current = selectedPlaceId;
+  selectRef.current = onSelect;
   const container = useRef<HTMLDivElement>(null),
     [status, setStatus] = useState(''),
     [useOsm, setUseOsm] = useState(false),
@@ -97,14 +111,14 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
           label.className =
             'flex size-9 items-center justify-center rounded-full border-2 border-paper bg-teal font-bold text-white shadow-lg';
           label.textContent = String(index + 1);
-          markers.push(
-            new AdvancedMarkerElement({
-              map,
-              position,
-              title: pin.name,
-              content: label,
-            }),
-          );
+          const marker = new AdvancedMarkerElement({
+            map,
+            position,
+            title: pin.name,
+            content: label,
+          });
+          marker.addListener('click', () => selectRef.current?.(pin.placeId));
+          markers.push(marker);
         }
         if (model.pins.length > 1) map.fitBounds(bounds, 48);
         maps.event.addListenerOnce(map, 'tilesloaded', () => {
@@ -146,7 +160,7 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
         <>
           <div
             ref={container}
-            className="h-96 w-full overflow-hidden rounded-3xl border border-line bg-line"
+            className="h-[min(65dvh,38rem)] min-h-80 w-full overflow-hidden rounded-3xl border border-line bg-line"
             aria-label="Google Maps"
           />
           {status && (
@@ -175,21 +189,36 @@ export function GoogleDayMap({ model }: { model: DayMap }) {
             </Notice>
           )}
           <Suspense fallback={<Notice>Đang mở bản đồ…</Notice>}>
-            <OsmDayMap model={model} />
+            <OsmDayMap model={model} selectedPlaceId={selectedPlaceId} onSelect={onSelect} />
           </Suspense>
         </>
       )}
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {model.pins.map((pin, index) => (
-          <div className="rounded-3xl border border-line bg-paper p-5 sm:p-6" key={pin.placeId}>
+          <div
+            className={`rounded-2xl border bg-paper p-5 sm:p-6 ${selectedPlaceId === pin.placeId ? 'border-teal ring-1 ring-teal/20' : 'border-line'}`}
+            key={pin.placeId}
+          >
             <span className="text-xs font-bold tracking-widest text-teal-dark uppercase">
               Điểm {index + 1}
             </span>
-            <h3>{pin.name}</h3>
+            <button
+              type="button"
+              className="min-h-11 text-left text-lg font-bold"
+              aria-pressed={selectedPlaceId === pin.placeId}
+              onClick={() => onSelect?.(pin.placeId)}
+            >
+              {pin.name}
+            </button>
             {pin.activities.map((activity) => (
-              <p key={activity.id}>
-                {activity.order}. {activity.name}
-              </p>
+              <button
+                type="button"
+                key={activity.id}
+                className="text-action block text-left"
+                onClick={() => onActivity?.(activity.id)}
+              >
+                {activity.order}. {activity.name} · Xem trong lịch →
+              </button>
             ))}
             {!offlineDev && (
               <a

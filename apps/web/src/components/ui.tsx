@@ -5,15 +5,12 @@ export function Brand() {
   return (
     <Link
       href="/"
-      className="flex shrink-0 items-center gap-2 text-2xl font-extrabold tracking-tight text-teal-dark"
+      className="inline-flex min-h-11 shrink-0 items-center text-3xl font-extrabold tracking-[-.06em] text-ink"
       aria-label="GoEase — Trang chủ"
     >
-      <img src="/icons/favicon-round.svg" alt="" width="38" height="38" />
       <span>
-        GoEase
-        <small className="block text-xs font-normal tracking-normal text-amber-800 italic">
-          Just go. We’ll plan.
-        </small>
+        Go<span className="underline decoration-teal decoration-[3px] underline-offset-8">E</span>
+        ase
       </span>
     </Link>
   );
@@ -69,7 +66,7 @@ export function Button({
     <button
       type="button"
       {...props}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-3 text-center text-sm font-bold transition-[transform,background-color,box-shadow] duration-200 motion-safe:hover:shadow-sm motion-safe:active:scale-[.97] motion-reduce:transition-none ${danger ? 'bg-red-50 text-error hover:bg-red-100' : secondary ? 'bg-mint text-teal-dark hover:bg-teal/15' : 'bg-linear-to-r from-amber-500 to-orange text-white hover:from-orange hover:to-amber-600'} ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-center text-base font-semibold transition-[transform,background-color] duration-150 motion-safe:active:scale-[.98] motion-reduce:transition-none ${danger ? 'bg-red-50 text-error hover:bg-red-100' : secondary ? 'border border-line bg-paper text-ink hover:bg-sand' : 'bg-teal text-white hover:bg-teal-dark'} ${className}`}
     />
   );
 }

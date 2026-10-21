@@ -17,6 +17,7 @@ import {
   type FormErrors,
 } from '@goease/trip-client/create-trip-controller';
 import { Button, Notice, dateLabel } from '../../components/ui';
+import { Icon } from '../../components/icon';
 import { useLeaveGuard } from '../../app/router';
 import { accountSession, accountTrips, useAccount } from '../account/session';
 import { TripForm } from './trip-form';
@@ -44,7 +45,21 @@ export function NewAccountTrip({
   onCreate: (trip: Trip) => Promise<void>;
 }) {
   const { catalog } = useAccount();
-  const [initial] = useState(() => initialTripForm(new Date()));
+  const [initial] = useState(() => {
+    const base = initialTripForm(new Date());
+    const query = new URLSearchParams(location.search);
+    const destination = getDestination(query.get('destination') ?? '');
+    return {
+      ...base,
+      name: 'Chuyến đi của tôi',
+      ...(destination
+        ? { destinationId: destination.id, destination }
+        : query.has('choose') || query.has('destination')
+          ? { destinationId: '', destination: undefined }
+          : {}),
+    };
+  });
+  const [pace, setPace] = useState<'relaxed' | 'balanced' | 'active'>('relaxed');
   const [form, setForm] = useState(initial),
     [errors, setErrors] = useState<FormErrors>({});
   const [selectedInterests, setInterests] = useState<
@@ -54,12 +69,27 @@ export function NewAccountTrip({
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
   const [destinationBusy, setDestinationBusy] = useState(false);
+  const submitting = useRef(false);
+  async function createDraft(trip: Trip) {
+    if (submitting.current || disabled) return;
+    submitting.current = true;
+    setBusy(true);
+    try {
+      await onCreate(trip);
+    } finally {
+      submitting.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
   const controller = useRef<AbortController | null>(null);
   const confirming = useRef(false),
     mounted = useRef(true),
     current = useRef({ form, selectedInterests, disabled, busy, destinationBusy });
   current.current = { form, selectedInterests, disabled, busy, destinationBusy };
-  const changed = JSON.stringify(form) !== JSON.stringify(initial) || selectedInterests.length > 0;
+  const changed =
+    JSON.stringify(form) !== JSON.stringify(initial) ||
+    selectedInterests.length > 0 ||
+    pace !== 'relaxed';
   useLeaveGuard(changed, disabled || busy || destinationBusy);
   useEffect(() => {
     mounted.current = true;
@@ -126,6 +156,7 @@ export function NewAccountTrip({
       const result = await accountSession.discoverTrip(
         {
           input: parsed.input,
+          pace,
           ...(selectedInterests.length ? { interests: selectedInterests } : {}),
         },
         request.signal,
@@ -162,7 +193,7 @@ export function NewAccountTrip({
         activities: [],
       })),
     });
-    await onCreate(trip);
+    await createDraft(trip);
   }
   async function sample() {
     const parsed = validate();
@@ -183,7 +214,7 @@ export function NewAccountTrip({
       setMessage(result.message);
       return;
     }
-    await onCreate(result.trip);
+    await createDraft(result.trip);
   }
   function replacePlace(activityId: string, placeId: string) {
     if (!preview) return;
@@ -223,17 +254,14 @@ export function NewAccountTrip({
   }
   return (
     <section
-      className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
+      className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-6"
       aria-label="Lên kế hoạch chuyến đi"
     >
       <div>
-        <p className="text-xs font-bold tracking-widest text-teal uppercase">Điểm đến của bạn</p>
-        <h3 className="mt-2 text-2xl">Một nơi mới, một hành trình mới.</h3>
-        <p className="mt-2 text-sm text-muted">
-          {offlineDev
-            ? 'Tạo lịch trống cho điểm đến có sẵn, hoặc dùng lịch mẫu Đà Lạt. Chỉnh sửa và lưu trên trình duyệt; không cần Internet.'
-            : 'Tìm nơi bạn muốn đến, chọn sở thích rồi xem gợi ý. Chỉnh sửa và chủ động lưu vào tài khoản.'}
-        </p>
+        <button type="button" className="text-action mb-4" onClick={() => void cancel()}>
+          <Icon name="back" /> Tạo chuyến đi
+        </button>
+        <h1>Chuyến đi của bạn</h1>
       </div>
       <form
         noValidate
@@ -251,39 +279,48 @@ export function NewAccountTrip({
             setMessage('');
             setErrors({});
           }}
+          pace={pace}
+          onPace={(value) => {
+            setPace(value);
+            setPreview(null);
+          }}
           errors={errors}
           disabled={disabled || busy}
           searchDestinations={accountSession.searchDestinations}
           onSearchBusyChange={setDestinationBusy}
+          options={
+            !offlineDev && (
+              <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
+                <legend className="mb-3 font-semibold">
+                  Bạn thích trải nghiệm gì?{' '}
+                  <span className="text-sm font-normal text-muted">(tối đa 6, không bắt buộc)</span>
+                </legend>
+                {interests.map(([id, label]) => (
+                  <label
+                    key={id}
+                    className={`flex min-h-11 cursor-pointer flex-row items-center gap-2 rounded-full border px-4 py-2 text-sm ${selectedInterests.includes(id) ? 'border-teal bg-mint text-teal-dark' : 'border-line'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4 w-auto"
+                      checked={selectedInterests.includes(id)}
+                      disabled={selectedInterests.length >= 6 && !selectedInterests.includes(id)}
+                      onChange={(event) => {
+                        setInterests((value) =>
+                          event.target.checked
+                            ? [...value, id]
+                            : value.filter((item) => item !== id),
+                        );
+                        setPreview(null);
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </fieldset>
+            )
+          }
         />
-        {!offlineDev && (
-          <fieldset disabled={disabled || busy} className="flex flex-wrap gap-2">
-            <legend className="mb-3 font-semibold">
-              Bạn thích trải nghiệm gì?{' '}
-              <span className="text-sm font-normal text-muted">(tối đa 6, không bắt buộc)</span>
-            </legend>
-            {interests.map(([id, label]) => (
-              <label
-                key={id}
-                className={`flex min-h-11 cursor-pointer flex-row items-center gap-2 rounded-full border px-4 py-2 text-sm ${selectedInterests.includes(id) ? 'border-teal bg-mint text-teal-dark' : 'border-line'}`}
-              >
-                <input
-                  type="checkbox"
-                  className="size-4 w-auto"
-                  checked={selectedInterests.includes(id)}
-                  disabled={selectedInterests.length >= 6 && !selectedInterests.includes(id)}
-                  onChange={(event) => {
-                    setInterests((value) =>
-                      event.target.checked ? [...value, id] : value.filter((item) => item !== id),
-                    );
-                    setPreview(null);
-                  }}
-                />
-                {label}
-              </label>
-            ))}
-          </fieldset>
-        )}
         {message && (
           <Notice error>{message} Bạn vẫn có thể tạo lịch trống và tự thêm hoạt động.</Notice>
         )}
@@ -304,10 +341,10 @@ export function NewAccountTrip({
             </Button>
           </Notice>
         )}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3">
           {!offlineDev && (
             <Button type="submit" disabled={disabled || busy || destinationBusy}>
-              Tìm địa điểm và lên lịch
+              {busy ? 'Đang tạo lịch trình…' : 'Tạo lịch trình'} <Icon name="arrow" />
             </Button>
           )}
           <Button
@@ -327,6 +364,7 @@ export function NewAccountTrip({
             Hủy tạo chuyến
           </Button>
         </div>
+        <p className="text-center text-sm text-muted">Bạn có thể chỉnh lại sau.</p>
       </form>
       {!busy && !preview && (form.destinationId ?? 'da-lat') === 'da-lat' && (
         <details className="rounded-2xl bg-cream p-4 text-sm text-muted">
@@ -334,8 +372,8 @@ export function NewAccountTrip({
             Dùng lịch mẫu Đà Lạt
           </summary>
           <p className="my-3">
-            Lịch mẫu từ bộ địa điểm GoEase đã biên tập, không truy vấn dữ liệu mới. Giá và giờ cần
-            được kiểm tra trước khi đi.
+            Lịch mẫu có 2 điểm/ngày, từ bộ địa điểm GoEase đã biên tập; không áp dụng nhịp đi hoặc
+            truy vấn dữ liệu mới. Giá và giờ cần được kiểm tra trước khi đi.
           </p>
           <Button secondary disabled={disabled || destinationBusy} onClick={() => void sample()}>
             Tạo lịch mẫu Đà Lạt
@@ -452,7 +490,7 @@ export function NewAccountTrip({
               </article>
             ))}
           </div>
-          <Button disabled={disabled} onClick={() => void onCreate(preview.result.trip)}>
+          <Button disabled={disabled || busy} onClick={() => void createDraft(preview.result.trip)}>
             Chỉnh sửa và lưu lịch này
           </Button>
         </section>

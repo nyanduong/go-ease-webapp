@@ -2,23 +2,30 @@
 @import './features/account/login.css';
 
 @theme {
-  --color-cream: #fffaf1;
-  --color-paper: #fffdf7;
-  --color-ink: #153f49;
-  --color-teal: #007f87;
-  --color-teal-dark: #00636c;
-  --color-mint: #e7f3ee;
-  --color-orange: #fb8500;
-  --color-sand: #fff0d7;
-  --color-line: #e6e3d8;
-  --color-muted: #687d80;
+  --color-cream: #faf8f5;
+  --color-paper: #ffffff;
+  --color-ink: #202824;
+  --color-teal: #b84332;
+  --color-teal-dark: #a33729;
+  --color-mint: #f8e7e0;
+  --color-orange: #b84332;
+  --color-sand: #f5eee8;
+  --color-line: #dedbd5;
+  --color-muted: #62635e;
   --color-error: #a73325;
   --font-sans: 'Segoe UI', system-ui, sans-serif;
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+  --spacing-page: 1.25rem;
+  --spacing-section: 2rem;
+  --ease-feedback: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @layer base {
   body {
     @apply m-0 bg-cream font-sans text-ink antialiased;
+    font-size: 16px;
+    line-height: 1.5;
   }
   h1 {
     @apply text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl;
@@ -42,6 +49,9 @@
   select,
   textarea {
     @apply w-full rounded-xl border border-line bg-paper px-3 py-3 font-normal text-ink outline-none focus:border-teal focus:ring-2 focus:ring-teal/20 disabled:opacity-60;
+    min-height: 48px;
+    min-width: 0;
+    font-size: 16px;
   }
   textarea {
     @apply min-h-24 resize-y;
@@ -57,6 +67,7 @@
   button,
   summary {
     @apply cursor-pointer;
+    min-height: 44px;
   }
   button:disabled {
     @apply cursor-not-allowed opacity-50;
@@ -71,5 +82,54 @@
   }
   details > p {
     @apply my-3;
+  }
+}
+
+@layer components {
+  .primary-link {
+    @apply inline-flex min-h-13 items-center justify-center gap-3 rounded-xl bg-teal px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-teal-dark;
+  }
+  .surface {
+    @apply rounded-2xl border border-line bg-paper;
+  }
+  .trip-timeline > section {
+    @apply relative border-b border-line py-5;
+  }
+  .trip-timeline > section:last-child {
+    border-bottom: 0;
+  }
+  .activity-layout {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .activity-content {
+    @apply relative min-w-0 border-l border-line pl-4;
+  }
+  .activity-content::before {
+    content: '';
+    @apply absolute top-2 -left-[5px] size-[9px] rounded-full bg-teal;
+  }
+  .activity-image {
+    @apply float-right ml-3 h-20 w-24 rounded-xl object-cover sm:h-28 sm:w-40;
+  }
+  .activity-actions {
+    @apply clear-both flex flex-wrap items-center gap-x-4 gap-y-1 pt-3;
+  }
+  .text-action {
+    @apply inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted hover:text-teal;
+  }
+  .day-button {
+    @apply min-h-12 shrink-0 rounded-xl border border-line bg-paper px-4 py-3 text-sm text-muted aria-pressed:border-transparent aria-pressed:bg-mint aria-pressed:font-semibold aria-pressed:text-teal-dark;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
