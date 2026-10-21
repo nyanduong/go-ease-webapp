@@ -1,6 +1,6 @@
 import { ProfileCard } from './profile-card';
 import { useEffect, useRef, useState } from 'react';
-import { AccountGate, Button, Brand, Notice, PageTitle } from '../../components/ui';
+import { AccountGate, Button, Brand, Notice } from '../../components/ui';
 import { accountSession, accountTrips, useAccount } from './session';
 import { ScenicImage } from '../../components/scenic-image';
 import { Link } from '../../app/router';
@@ -156,12 +156,10 @@ export function AccountPage() {
   }
   return (
     <div className="flex flex-col gap-5">
-      <PageTitle
-        eyebrow="Không gian của bạn"
-        description="Một chút về bạn, trước những hành trình mới."
-      >
-        Cá nhân
-      </PageTitle>
+      <header className="core-page-heading">
+        <h1>Cá nhân</h1>
+        <p>Hồ sơ và những hành trình của bạn.</p>
+      </header>
       {profile.value ? (
         <ProfileCard
           profile={profile.value}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Trip } from '@goease/contracts';
+import { getDestination, type Trip } from '@goease/contracts';
 import { Button, Notice, dateLabel } from '../../components/ui';
 import { Link, navigate } from '../../app/router';
 import { NewAccountTrip } from '../trips/new-account-trip';
@@ -276,10 +276,13 @@ export function AccountWorkspace({
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
           {trips.items.map((item) => (
             <div
-              className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
+              className="trip-list-card surface flex min-w-0 flex-col gap-3 p-4 sm:p-5"
               key={item.id}
             >
               <TripCover destinationId={item.destinationId} />
+              <p className="text-xs font-semibold text-teal">
+                {getDestination(item.destinationId ?? '')?.name ?? 'Điểm đến trong lịch trình'}
+              </p>
               <h3>{item.name}</h3>
               <p>
                 {dateLabel(item.startDate)} · {item.durationDays} ngày · {item.people} người
@@ -313,7 +316,7 @@ export function AccountWorkspace({
         <p role="status">Đang tải danh sách chuyến đi…</p>
       )}
       {mode === 'list' && !trips.items.length && trips.ready && listReady && (
-        <div className="surface flex flex-col items-center gap-3 px-6 py-12 text-center">
+        <div className="surface flex flex-col items-center gap-3 px-5 py-8 text-center">
           <h2>Chuyến đi đầu tiên đang chờ bạn</h2>
           <p className="max-w-md text-muted">
             Chọn một điểm đến, tạo lịch trình rồi lưu lại ở đây để mở bất cứ khi nào có kết nối.

@@ -576,80 +576,6 @@
   }
 }
 
-/* RC1 polish: attribution stays with its photo, outside the image/title flow. */
-.content-image-compact {
-  position: relative;
-}
-.photo-credit-trigger {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  color: var(--color-ink);
-}
-.photo-credit-trigger > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.94);
-  box-shadow: 0 1px 6px rgb(0 0 0 / 0.18);
-}
-.photo-credit-trigger svg {
-  width: 18px;
-  height: 18px;
-}
-.content-credit-dialog {
-  position: fixed;
-  margin: auto;
-  width: min(26rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 3rem);
-  overflow: auto;
-  padding: 1.25rem;
-  border: 1px solid var(--color-line);
-  border-radius: 1rem;
-  background: var(--color-paper);
-  color: var(--color-ink);
-  box-shadow: 0 16px 64px rgb(0 0 0 / 0.2);
-}
-.content-credit-dialog::backdrop {
-  background: rgb(32 40 36 / 0.45);
-}
-.content-credit-dialog[open] {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.content-credit-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-.content-credit-heading h2 {
-  font-size: 1.125rem;
-}
-.content-credit-heading button {
-  flex: 0 0 44px;
-  font-size: 1.5rem;
-}
-.content-credit-dialog p {
-  font-size: 0.875rem;
-  overflow-wrap: anywhere;
-}
-.content-credit-dialog a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--color-teal-dark);
-  text-decoration: underline;
-  overflow-wrap: anywhere;
-}
 .content-city-label {
   position: absolute;
   bottom: 4px;
@@ -702,4 +628,85 @@
 .discovery-card h3 a {
   align-items: flex-start;
   padding-top: 2px;
+}
+
+/* V2 Core completion: reuse the approved discovery scale and surfaces. */
+.core-shell > header > div {
+  height: 3.75rem;
+}
+.core-shell > main {
+  padding-top: 1.25rem;
+}
+.core-page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.core-page-heading h1,
+.content-detail h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+}
+.core-page-heading > p {
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+.core-shell .rounded-3xl {
+  border-radius: var(--radius-card);
+}
+.content-detail {
+  max-width: 62rem;
+  margin-inline: auto;
+}
+.content-detail > figure img {
+  max-height: 24rem;
+}
+.content-detail-article {
+  max-width: 52rem;
+}
+.content-detail-article > div.grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.content-detail-article .content-reading {
+  max-width: 42rem;
+  margin-inline: auto;
+  font-size: 1.0625rem;
+  line-height: 1.85;
+}
+.content-reading {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.page-photo-credits {
+  max-width: 100%;
+}
+.page-photo-credits summary {
+  font-weight: 400;
+}
+.creation-retention summary {
+  font-weight: 400;
+}
+.trip-cover-compact .photo-thumbnail {
+  height: 8rem;
+  aspect-ratio: auto;
+}
+.trip-list-card .photo-thumbnail {
+  max-height: 10rem;
+}
+.trip-workspace > header {
+  padding-left: 3rem;
+}
+@media (min-width: 640px) {
+  .core-shell > main {
+    padding-top: 2rem;
+  }
+  .trip-cover-compact .photo-thumbnail {
+    height: 10rem;
+  }
+}
+@media (max-width: 1023px) {
+  nav[aria-label='Điều hướng chính'] > a {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }

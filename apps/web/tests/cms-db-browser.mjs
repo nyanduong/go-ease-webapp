@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { build, preview } from 'vite';
@@ -9,7 +10,9 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
   const root = fileURLToPath(new URL('..', import.meta.url));
   const origin = 'http://127.0.0.1:4197';
   const authOrigin = 'https://abcdefghijklmnopqrst.supabase.co';
-  const output = fileURLToPath(new URL('../../../docs/qa/v2-core/db-content/', import.meta.url));
+  const output = fileURLToPath(
+    new URL('../../../docs/qa/v2-core-final/db-content/', import.meta.url),
+  );
   const config = {
     root,
     configFile: root + '/vite.config.ts',
@@ -34,6 +37,7 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
   let browser;
   const evidence = {
     data: 'Isolated real PostgreSQL and real Nest HTTP; editorial fixture created/published through admin API. Supabase provider is an offline double; no live providers.',
+    testedCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
     viewports: [],
   };
   const tripIds = [];
@@ -41,10 +45,11 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
     await mkdir(output, { recursive: true });
     browser = await chromium.launch();
     for (const viewport of [
+      { width: 360, height: 800 },
       { width: 390, height: 844 },
       { width: 1440, height: 1000 },
     ]) {
-      const name = viewport.width < 500 ? 'mobile' : 'desktop';
+      const name = String(viewport.width);
       const context = await browser.newContext({
         viewport,
         serviceWorkers: 'block',
@@ -162,7 +167,7 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
         }
         await page.getByRole('button', { name: 'Bỏ yêu thích', exact: true }).waitFor();
         await screenshot('detail-real-db-auth-fixture');
-        await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).click();
+        await page.getByRole('link', { name: /^Lên lịch tại /, exact: true }).click();
         await page.getByText('Đã chọn điểm đến từ nội dung GoEase.', { exact: false }).waitFor();
         const tripName = 'Hành trình từ CMS · ' + name;
         await page.getByLabel('Tên chuyến đi', { exact: true }).fill(tripName);
@@ -190,11 +195,36 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record }) {
         await page.getByRole('heading', { name: tripName, exact: true }).waitFor();
         await page.getByRole('heading', { name: activityName, exact: true }).waitFor();
         await screenshot('saved-reopened-real-db-auth-fixture');
+        await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
+        await page.getByLabel('Tên chuyến đi', { exact: true }).fill(tripName + ' đã chỉnh');
+        const edited = page.waitForResponse(
+          (response) =>
+            response.url() === base + '/v1/trips/' + trip.id &&
+            response.request().method() === 'PUT' &&
+            response.status() === 200,
+        );
+        await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+        const editedBody = await (await edited).json();
+        assert.equal(editedBody.result.trip.days[0].activities[0].name, activityName);
+        await page.reload();
+        await page.getByRole('heading', { name: tripName + ' đã chỉnh', exact: true }).waitFor();
+        await screenshot('edited-saved-reloaded-real-db-auth-fixture');
         await page.goto(origin + '/favorites');
         await contentLink().waitFor();
         await page.reload();
         await contentLink().waitFor();
         await screenshot('favorites-reopened-real-db-auth-fixture');
+        await contentLink().click();
+        const removed = page.waitForResponse(
+          (response) =>
+            response.url() === base + '/v1/favorites/' + record.entry.id &&
+            response.request().method() === 'DELETE' &&
+            response.status() === 200,
+        );
+        await page.getByRole('button', { name: 'Bỏ yêu thích', exact: true }).click();
+        await removed;
+        await page.goto(origin + '/favorites');
+        await page.getByText('Bạn chưa lưu nội dung nào.', { exact: false }).waitFor();
         assert.deepEqual(errors, []);
         assert(requests.some((value) => value.path === '/v1/auth/me' && value.status === 200));
         assert(

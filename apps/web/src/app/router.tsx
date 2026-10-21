@@ -150,11 +150,29 @@ export function navigate(path: string, replace = false): Promise<boolean> {
     if (approvedRevision === null || !(await restoreCommitted())) return false;
     if (busy() || approvedRevision !== guardRevision) return false;
     if (!replace) position++;
-    history[replace ? 'replaceState' : 'pushState']({ goeasePosition: position }, '', target.href);
+    const from = new URL(committedHref);
+    const detail = /^\/explore\/[^/]+$/.test(target.pathname);
+    const contentReturn =
+      detail && from.pathname !== '/trips/new'
+        ? from.pathname + from.search
+        : detail || target.pathname === '/trips/new'
+          ? history.state?.goeaseContentReturn
+          : undefined;
+    history[replace ? 'replaceState' : 'pushState'](
+      { goeasePosition: position, goeaseContentReturn: contentReturn },
+      '',
+      target.href,
+    );
     committedHref = target.href;
     publish();
     return true;
   });
+}
+export function contentReturnPath() {
+  const path: unknown = history.state?.goeaseContentReturn;
+  if (typeof path !== 'string' || !/^\/(explore(?:\/[^/?#]+)?|favorites)?(?:\?|$)/.test(path))
+    return '/explore';
+  return path;
 }
 export function usePath() {
   return useSyncExternalStore(

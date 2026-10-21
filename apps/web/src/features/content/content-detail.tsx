@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { contentPageSchema, type ContentRecord } from '@goease/contracts';
-import { Link } from '../../app/router';
+import { Link, contentReturnPath } from '../../app/router';
 import { Button, Notice } from '../../components/ui';
 import { Icon } from '../../components/icon';
 import { accountSession, useAccount } from '../account/session';
@@ -9,6 +9,8 @@ import { ContentGrid, ContentImage, kindLabels } from './content-cards';
 
 export function ContentDetail({ id }: { id: string }) {
   const { session } = useAccount();
+  const [backPath] = useState(contentReturnPath);
+  const [destinationName, setDestinationName] = useState('');
   const [record, setRecord] = useState<ContentRecord | null>(null),
     [related, setRelated] = useState<ContentRecord[]>([]),
     [error, setError] = useState(''),
@@ -22,10 +24,22 @@ export function ContentDetail({ id }: { id: string }) {
     setError('');
     setRecord(null);
     setRelated([]);
+    setDestinationName('');
     void contentDetail(id, request.signal)
       .then(async (value) => {
         if (request.signal.aborted) return;
         setRecord(value);
+        if (value.entry.destination) setDestinationName(value.entry.destination.name);
+        else if (value.entry.destinationId) {
+          void contentDetail(value.entry.destinationId, request.signal)
+            .then((parent) => {
+              if (!request.signal.aborted)
+                setDestinationName(parent.entry.destination?.name ?? parent.entry.title);
+            })
+            .catch(() => {
+              /* The detail remains readable without its destination. */
+            });
+        }
         const params: Record<string, string> =
           value.entry.kind === 'category'
             ? { categoryId: id }
@@ -105,31 +119,41 @@ export function ContentDetail({ id }: { id: string }) {
         <Button secondary onClick={() => setAttempt((value) => value + 1)}>
           Thử mở lại
         </Button>
-        <Link href="/explore">Về Khám phá</Link>
+        <Link href={backPath}>Quay lại danh sách</Link>
       </Notice>
     );
-  if (!record) return <p role="status">Đang mở câu chuyện…</p>;
+  if (!record)
+    return (
+      <p role="status" className="surface p-5">
+        Đang mở nội dung…
+      </p>
+    );
   const { entry } = record;
   return (
-    <article className="flex min-w-0 flex-col gap-7">
-      <Link href="/explore" className="text-action self-start">
-        <Icon name="back" /> Khám phá
+    <article className={`content-detail content-detail-${entry.kind} flex min-w-0 flex-col gap-5`}>
+      <Link href={backPath} className="text-action self-start">
+        <Icon name="back" />{' '}
+        {backPath.startsWith('/favorites')
+          ? 'Yêu thích'
+          : backPath === '/'
+            ? 'Trang chủ'
+            : 'Khám phá'}
       </Link>
       <header className="max-w-3xl">
         <p className="mb-2 text-sm font-semibold text-teal">
           {kindLabels[entry.kind]} · GoEase biên tập
         </p>
-        <h1 className="text-4xl sm:text-5xl">{entry.title}</h1>
-        <p className="mt-4 text-lg text-muted">{entry.summary}</p>
+        <h1 className="text-3xl sm:text-4xl">{entry.title}</h1>
+        <p className="mt-3 text-base text-muted">{entry.summary}</p>
       </header>
       <ContentImage key={entry.id + entry.image?.url} entry={entry} hero />
       <div className="flex flex-wrap items-center gap-3">
-        {entry.kind !== 'category' && (
+        {entry.kind !== 'category' && destinationName && (
           <Link
             className="primary-link"
             href={'/trips/new?content=' + encodeURIComponent(entry.id)}
           >
-            Lên kế hoạch ở đây <Icon name="arrow" />
+            Lên lịch tại {destinationName} <Icon name="arrow" />
           </Link>
         )}
         {session.phase === 'backend-verified' ? (
@@ -138,7 +162,13 @@ export function ContentDetail({ id }: { id: string }) {
             disabled={saving || !favoriteReady}
             onClick={() => void toggleFavorite()}
           >
-            {favorite ? 'Bỏ yêu thích' : 'Lưu yêu thích'}
+            {saving
+              ? 'Đang lưu yêu thích…'
+              : !favoriteReady
+                ? 'Đang kiểm tra yêu thích…'
+                : favorite
+                  ? 'Bỏ yêu thích'
+                  : 'Lưu yêu thích'}
           </Button>
         ) : (
           <Link className="text-action" href="/login">
@@ -151,7 +181,13 @@ export function ContentDetail({ id }: { id: string }) {
       </div>
       {favoriteError && <Notice error>{favoriteError}</Notice>}
       <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="min-w-0 text-base leading-relaxed whitespace-pre-line">{entry.body}</div>
+        <div className="content-reading min-w-0 text-base leading-relaxed">
+          {entry.body.split(/\n\s*\n/).map((paragraph, index) => (
+            <p key={index} className="whitespace-pre-line">
+              {paragraph}
+            </p>
+          ))}
+        </div>
         <aside className="surface flex flex-col gap-4 self-start p-5 text-sm">
           <h2 className="text-lg">Trước khi lên đường</h2>
           {entry.address && (
@@ -175,17 +211,22 @@ export function ContentDetail({ id }: { id: string }) {
             cửa, giá và điều kiện trước khi đi.
           </p>
           <h3 className="text-sm">Nguồn tham khảo</h3>
-          {entry.sources.map((source) => (
-            <a
-              key={source.url}
-              className="break-words text-teal underline underline-offset-4"
-              href={source.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {source.title} ↗
-            </a>
-          ))}
+          {entry.sources
+            .filter(
+              (source) =>
+                !source.title.startsWith('Ảnh') && !source.title.startsWith('Giấy phép ảnh'),
+            )
+            .map((source) => (
+              <a
+                key={source.url}
+                className="break-words text-teal underline underline-offset-4"
+                href={source.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {source.title} ↗
+              </a>
+            ))}
         </aside>
       </div>
       {related.length > 0 && (

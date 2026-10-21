@@ -334,6 +334,27 @@ test('editorial photo failures try the exact place, matching city, then neutral 
   await context.route('https://api.goease.test/v1/content/photo-fixture', (route) =>
     route.fulfill({ json: record, headers: { 'access-control-allow-origin': base } }),
   );
+  await context.route('https://api.goease.test/v1/content/da-lat', (route) =>
+    route.fulfill({
+      json: {
+        ...record,
+        entry: {
+          ...record.entry,
+          id: 'da-lat',
+          kind: 'destination',
+          destinationId: null,
+          destination: getDestination('da-lat'),
+        },
+      },
+      headers: { 'access-control-allow-origin': base },
+    }),
+  );
+  await context.route('https://api.goease.test/v1/content?**', (route) =>
+    route.fulfill({
+      json: { apiVersion: '1', items: [], nextCursor: null },
+      headers: { 'access-control-allow-origin': base },
+    }),
+  );
   const attempted = [];
   await context.route('**/travel/dalat-crazy-house.webp', (route) => {
     attempted.push('place');

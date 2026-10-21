@@ -363,10 +363,10 @@ export function NewAccountTrip({
     );
   return (
     <section
-      className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-6"
+      className="trip-creation mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-5"
       aria-label="Lên kế hoạch chuyến đi"
     >
-      <div>
+      <div className="core-page-heading">
         <button
           type="button"
           className="text-action mb-4"
@@ -384,10 +384,14 @@ export function NewAccountTrip({
           Xem lại lịch gợi ý
         </Button>
       )}
-      <p className="text-sm text-muted">
-        Thông tin đang nhập được giữ trong tab này tối đa 24 giờ sau lần sửa cuối; lịch gợi ý tối đa
-        1 giờ. Chỉ chuyến đã lưu mới đồng bộ tài khoản. Đăng xuất hoặc đóng tab sẽ bỏ dữ liệu tạm.
-      </p>
+      <details className="creation-retention text-sm text-muted">
+        <summary>Thông tin đang nhập được giữ thế nào?</summary>
+        <p>
+          Thông tin đang nhập được giữ trong tab này tối đa 24 giờ sau lần sửa cuối; lịch gợi ý tối
+          đa 1 giờ. Chỉ chuyến đã lưu mới đồng bộ tài khoản. Đăng xuất hoặc đóng tab sẽ bỏ dữ liệu
+          tạm.
+        </p>
+      </details>
       {cacheFailed && (
         <Notice error>
           Trình duyệt chưa giữ được thông tin tạm. Hãy hoàn tất chuyến trước khi tải lại trang.

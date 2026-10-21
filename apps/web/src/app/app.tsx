@@ -1,3 +1,4 @@
+import { PhotoCredits, PhotoCreditsProvider } from '../components/photo-credits';
 import { Component, useEffect, type ReactNode } from 'react';
 import { AccountGate, Brand, Notice } from '../components/ui';
 import { Navigation } from './navigation';
@@ -57,6 +58,13 @@ function Route({ path }: { path: string }) {
   );
 }
 export function App() {
+  return (
+    <PhotoCreditsProvider>
+      <AppContent />
+    </PhotoCreditsProvider>
+  );
+}
+function AppContent() {
   const path = usePath();
   const search = useSearch();
   const { session, trips, workspace, profile } = useAccount();
@@ -90,7 +98,7 @@ export function App() {
       </a>
       <Navigation path={path} />
       <div
-        className={`min-w-0 lg:ml-64 ${path === '/' || path === '/explore' ? 'discovery-shell' : ''}`}
+        className={`min-w-0 lg:ml-64 ${path === '/' || path === '/explore' ? 'discovery-shell' : 'core-shell'}`}
       >
         <header
           className={[
@@ -158,6 +166,7 @@ export function App() {
         </main>
         <footer className="mx-auto flex max-w-6xl flex-col gap-3 border-t border-line px-5 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-10 lg:pb-10">
           <p className="hidden text-sm text-muted lg:block">Đi cùng nhau, khám phá nhiều hơn.</p>
+          <PhotoCredits />
           <PwaStatus />
         </footer>
       </div>

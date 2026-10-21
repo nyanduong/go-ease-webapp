@@ -2,30 +2,14 @@ import { travelLinks } from '@goease/trip-client/travel-links-controller';
 import { getDalatPlaces } from '@goease/catalog';
 import { Link } from '../../app/router';
 import { PageTitle } from '../../components/ui';
-import { ScenicImage } from '../../components/scenic-image';
 
 export function AboutPage() {
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <PageTitle eyebrow="Về GoEase">
-        Đi cùng nhau,
-        <br />
-        khám phá nhiều hơn.
-      </PageTitle>
-      <div className="relative flex min-h-60 items-end overflow-hidden rounded-3xl sm:min-h-72 [&>div]:flex [&>div]:w-full [&>div]:flex-col [&>div]:gap-3 [&>div]:bg-linear-to-t [&>div]:from-ink/90 [&>div]:to-transparent [&>div]:p-6 [&>div]:pt-20 [&>div]:text-white sm:[&>div]:p-8">
-        <ScenicImage
-          decorative
-          className="absolute inset-0 size-full object-cover object-center"
-          sizes="(max-width: 1023px) 100vw, 1100px"
-        />
-        <div className="relative">
-          <h2>
-            Một kế hoạch,
-            <br />
-            cùng nhau hoàn thiện.
-          </h2>
-        </div>
-      </div>
+      <header className="core-page-heading">
+        <h1>Giới thiệu & trợ giúp</h1>
+        <p>Lên lịch, lưu chuyến và tiếp tục hành trình của bạn.</p>
+      </header>
       <div className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6">
         <h2>Just go. We’ll plan.</h2>
         <p>
@@ -43,6 +27,30 @@ export function AboutPage() {
           Chỗ nghỉ & chuyến bay ↗
         </Link>
       </div>
+      <section className="surface p-5">
+        <h2 className="mb-3">Sử dụng GoEase</h2>
+        <details>
+          <summary>Lưu và mở lại chuyến đi</summary>
+          <p>
+            Đăng nhập Google, tạo chuyến rồi bấm Lưu. Chờ xác nhận “Đã lưu vào tài khoản” trước khi
+            đóng trang. Mở mục Chuyến đi để tiếp tục chỉnh sửa.
+          </p>
+        </details>
+        <details>
+          <summary>Khi chưa lưu được thay đổi</summary>
+          <p>
+            Giữ trang đang mở, kiểm tra kết nối rồi bấm Thử lưu lại. Bản nháp được giữ riêng theo
+            tài khoản trên thiết bị; chỉ chuyến được server xác nhận mới đồng bộ.
+          </p>
+        </details>
+        <details>
+          <summary>Giá và ngân sách</summary>
+          <p>
+            Ngân sách là tổng cho cả nhóm. Khoản chưa rõ giá được ghi riêng, không được tính là miễn
+            phí. Hãy xác nhận giá và giờ mở cửa trước khi đi.
+          </p>
+        </details>
+      </section>
       <details className="rounded-3xl border border-line bg-paper p-5 sm:p-6">
         <summary>Tham khảo {getDalatPlaces().length} địa điểm tại Đà Lạt</summary>
         <p>Giờ mở cửa và giá có thể thay đổi. Hãy kiểm tra trước khi đi.</p>

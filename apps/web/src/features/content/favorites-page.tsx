@@ -49,10 +49,9 @@ export function FavoritesPage() {
   }, [session.userId, after, attempt]);
   return (
     <section className="flex flex-col gap-6">
-      <header>
-        <p className="mb-2 text-sm text-teal">CẢM HỨNG CỦA BẠN</p>
+      <header className="core-page-heading">
         <h1>Những nơi muốn đến</h1>
-        <p className="mt-3 text-muted">
+        <p className="text-muted">
           Nội dung yêu thích được lưu trong tài khoản để bạn quay lại bất cứ lúc nào.
         </p>
       </header>

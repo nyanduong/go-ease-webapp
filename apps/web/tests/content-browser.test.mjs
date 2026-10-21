@@ -286,7 +286,7 @@ for (const [mode, viewport] of [
       fullPage: true,
       animations: 'disabled',
     });
-    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).click();
+    await page.getByRole('link', { name: /^Lên lịch tại /, exact: true }).click();
     await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
     await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Ninh Bình từ khám phá');
     await page.getByLabel('Ngày bắt đầu', { exact: true }).fill('2099-10-20');
@@ -340,7 +340,7 @@ test('editorial planning back remains available with an existing draft and prese
     await page.getByRole('button', { name: 'Giữ chuyến này', exact: true }).waitFor();
     const draftUrl = page.url();
     await page.goto(base + '/explore/trang-an');
-    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).click();
+    await page.getByRole('link', { name: /^Lên lịch tại /, exact: true }).click();
     await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
     assert.equal(
       await page.getByRole('button', { name: 'Tạo lịch trống', exact: true }).isEnabled(),
@@ -353,7 +353,7 @@ test('editorial planning back remains available with an existing draft and prese
     await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click();
     await page.getByRole('button', { name: 'Bỏ thông tin', exact: true }).click();
     await page.waitForURL(base + '/explore/trang-an');
-    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).click();
+    await page.getByRole('link', { name: /^Lên lịch tại /, exact: true }).click();
     await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
     await page.goBack();
     await page.getByRole('button', { name: 'Rời trang', exact: true }).click();
@@ -383,10 +383,7 @@ test('public discovery requires no account; unpublished/missing detail never off
   await page
     .getByText('Nội dung chưa được công bố hoặc không còn hiển thị.', { exact: false })
     .waitFor();
-  assert.equal(
-    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).count(),
-    0,
-  );
+  assert.equal(await page.getByRole('link', { name: /^Lên lịch tại /, exact: true }).count(), 0);
   assert.deepEqual(f.errors, []);
   await f.context.close();
 });
@@ -478,7 +475,7 @@ test('discovery pagination preserves keyword and topic, deduplicates records and
   }
 });
 
-test('polished Home limits places/articles, prioritizes photographs and keeps attribution next to each image', async () => {
+test('polished Home limits places/articles, prioritizes photographs and keeps page credits without image controls', async () => {
   const f = await setup({ width: 390, height: 844 }, false);
   const { page, context } = f;
   const illustrated = (id, kind, title) =>
@@ -528,21 +525,14 @@ test('polished Home limits places/articles, prioritizes photographs and keeps at
       await page.locator('.discovery-card-place h3').filter({ hasText: 'Tràng An' }).count(),
       0,
     );
-    const trigger = page.getByRole('button', {
-      name: 'Ảnh & nguồn: Địa điểm có ảnh 0',
-      exact: true,
-    });
-    await trigger.click();
-    const dialog = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
-    await dialog.waitFor();
-    await dialog.getByText('Fixture photographer', { exact: false }).waitFor();
-    assert.equal(
-      await dialog.getByRole('link', { name: 'Mở nguồn ảnh ↗' }).getAttribute('href'),
-      'https://images.example.test/polish-place-0.jpg',
-    );
-    await page.keyboard.press('Escape');
-    await dialog.waitFor({ state: 'hidden' });
-    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    assert.equal(await page.locator('.photo-credit-trigger, figure figcaption').count(), 0);
+    // Broken photos do not claim to be displayed; credits track the actual fallback.
+    await page.goto(base + '/explore/da-lat');
+    // Missing content must not retain credits from the previous screen.
+    await page.getByRole('button', { name: 'Thử mở lại', exact: true }).waitFor();
+    assert.equal(await page.locator('.page-photo-credits').count(), 0);
+    await page.goto(base + '/');
+    await page.getByRole('heading', { name: 'Địa điểm có ảnh 0', exact: true }).waitFor();
     const food = page.locator('.discovery-card-food');
     await food.filter({ hasText: 'Món ăn có ảnh' }).locator('[data-image-state="error"]').waitFor();
     await food
@@ -567,5 +557,69 @@ test('polished Home limits places/articles, prioritizes photographs and keeps at
     assert.deepEqual(f.errors, []);
   } finally {
     await context.close();
+  }
+});
+
+test('detail and creation Back preserve search/topic context across cancellation and reload', async () => {
+  const f = await setup({ width: 390, height: 844 });
+  const { page } = f;
+  try {
+    const path = '/explore?q=Tr%C3%A0ng+An&kind=place&categoryId=nature';
+    await page.goto(base + path);
+    await page.getByRole('link', { name: 'Tràng An', exact: true }).click();
+    await page.getByRole('link', { name: 'Lên lịch tại Ninh Bình', exact: true }).click();
+    await page.getByRole('button', { name: 'Ninh Bình Việt Nam', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Hủy tạo chuyến', exact: true }).click();
+    await page.getByRole('button', { name: 'Bỏ thông tin', exact: true }).click();
+    await page.waitForURL(base + '/explore/trang-an');
+    await page.reload();
+    await page.locator('main article > a').first().click();
+    await page.waitForURL(base + path);
+    assert.equal(await page.getByLabel('Tìm nội dung du lịch').inputValue(), 'Tràng An');
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await f.context.close();
+  }
+});
+
+test('same-page photo credits identify the displayed photo, preserve license and clear on navigation', async () => {
+  const f = await setup({ width: 390, height: 844 });
+  const { page, context } = f;
+  const photo = make('credited-place', 'place', 'Ảnh có ghi công', {
+    image: {
+      url: 'https://commons.wikimedia.org/wiki/Special:FilePath/Da_Lat_-_Xuan_Huong_Lake.jpg',
+      alt: 'Hồ Xuân Hương',
+      credit: 'P. Hughes · CC BY 4.0',
+    },
+    sources: [
+      {
+        title: 'Ảnh Hồ Xuân Hương',
+        url: 'https://commons.wikimedia.org/wiki/File:Da_Lat_-_Xuan_Huong_Lake.jpg',
+      },
+    ],
+  });
+  try {
+    await context.route('https://api.goease.test/v1/content/credited-place', (route) =>
+      route.fulfill({ json: photo, headers: { 'access-control-allow-origin': base } }),
+    );
+    await page.goto(base + '/explore/credited-place');
+    await page.getByRole('heading', { name: 'Ảnh có ghi công', exact: true }).waitFor();
+    assert.equal(await page.locator('figure figcaption, .photo-credit-trigger').count(), 0);
+    const credits = page.locator('.page-photo-credits');
+    await credits.locator('summary').click();
+    await credits.getByText('P. Hughes · CC BY 4.0', { exact: true }).waitFor();
+    assert.equal(
+      await credits.getByRole('link', { name: 'Nguồn ảnh ↗', exact: true }).getAttribute('href'),
+      photo.entry.sources[0].url,
+    );
+    assert.equal(
+      await credits.getByRole('link', { name: 'Giấy phép ↗', exact: true }).getAttribute('href'),
+      'https://creativecommons.org/licenses/by/4.0',
+    );
+    await page.goto(base + '/about');
+    assert.equal(await page.locator('.page-photo-credits').count(), 0);
+    assert.deepEqual(f.errors, []);
+  } finally {
+    await f.context.close();
   }
 });

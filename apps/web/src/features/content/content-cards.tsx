@@ -1,4 +1,5 @@
-import { useId, useRef, useState } from 'react';
+import { useState } from 'react';
+import { usePhotoCredit } from '../../components/photo-credits';
 import type { ContentInput, ContentRecord } from '@goease/contracts';
 import { Link } from '../../app/router';
 import { Icon } from '../../components/icon';
@@ -96,11 +97,19 @@ export function ContentImage({
   href?: string;
 }) {
   const [index, setIndex] = useState(0);
-  const dialog = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
   const images = contentPhotos(entry);
   const image = images[index];
-  const creditImage = image ?? images[0];
+  usePhotoCredit(
+    image
+      ? {
+          src: image.url,
+          title: image.alt,
+          credit: image.credit,
+          sourceUrl: image.sourceUrl,
+          licenseUrl: image.licenseUrl,
+        }
+      : undefined,
+  );
   const unavailable = !image && images.length > 0;
   const pixels =
     compact && !image ? (
@@ -115,7 +124,9 @@ export function ContentImage({
     ) : (
       <img
         src={image ? image.url : '/travel/placeholder.svg'}
-        alt={image ? image.alt : 'Chưa có ảnh: ' + entry.title}
+        alt={
+          image ? image.alt : (unavailable ? 'Ảnh chưa tải được: ' : 'Chưa có ảnh: ') + entry.title
+        }
         onError={() => {
           if (image) setIndex((value) => value + 1);
         }}
@@ -124,12 +135,14 @@ export function ContentImage({
         className={`w-full object-cover ${compact ? 'content-image-pixels' : hero ? 'aspect-[16/9] max-h-[32rem]' : 'aspect-[4/3]'}`}
         width={hero ? 960 : 480}
         height={hero ? 540 : 360}
-        style={compact ? { objectPosition: image?.position } : undefined}
+        style={{ objectPosition: image?.position }}
       />
     );
   return (
     <figure
-      className={compact ? 'content-image-compact' : 'min-w-0 overflow-hidden rounded-2xl bg-sand'}
+      className={
+        compact ? 'content-image-compact' : 'relative min-w-0 overflow-hidden rounded-2xl bg-sand'
+      }
       data-image-state={unavailable ? 'error' : image ? (index ? 'fallback' : 'ready') : 'missing'}
     >
       {href ? (
@@ -139,82 +152,12 @@ export function ContentImage({
       ) : (
         pixels
       )}
-      {compact && image?.city && <span className="content-city-label">Ảnh điểm đến</span>}
-      {compact && creditImage && (
-        <figcaption>
-          <button
-            className="photo-credit-trigger"
-            aria-label={'Ảnh & nguồn: ' + entry.title}
-            onClick={() => dialog.current?.showModal()}
-          >
-            <span>
-              <Icon name="info" />
-            </span>
-          </button>
-          <dialog
-            ref={dialog}
-            aria-labelledby={titleId}
-            className="content-credit-dialog"
-            onClick={(event) => {
-              if (event.target === event.currentTarget) event.currentTarget.close();
-            }}
-          >
-            <div className="content-credit-heading">
-              <h2 id={titleId}>Thông tin ảnh</h2>
-              <button
-                autoFocus
-                aria-label="Đóng thông tin ảnh"
-                onClick={() => dialog.current?.close()}
-              >
-                ×
-              </button>
-            </div>
-            <p className="font-semibold">{creditImage.alt}</p>
-            <p>
-              {image?.city ? 'Ảnh minh họa điểm đến' : 'Ảnh'}: {creditImage.credit}
-            </p>
-            <p>Thu nhỏ và hiển thị cắt theo khung. Giấy phép dưới đây áp dụng cho ảnh này.</p>
-            {unavailable && <p>Ảnh chưa tải được. Đây là thông tin nguồn của ảnh gốc.</p>}
-            <a href={creditImage.sourceUrl} target="_blank" rel="noreferrer">
-              Mở nguồn ảnh ↗
-            </a>
-            {creditImage.licenseUrl && (
-              <a href={creditImage.licenseUrl} target="_blank" rel="noreferrer">
-                Xem giấy phép ảnh ↗
-              </a>
-            )}
-          </dialog>
-        </figcaption>
-      )}
-      {!compact && image && (
-        <figcaption className={compact ? 'content-credit' : 'px-3 py-2 text-xs text-muted'}>
-          <details open={!compact}>
-            {compact && <summary aria-label={'Nguồn ảnh: ' + entry.title}>Ảnh & nguồn</summary>}
-            {!compact && <summary className="sr-only">Thông tin ảnh</summary>}
-            <div className="content-credit-body">
-              {image.city ? 'Ảnh minh họa điểm đến' : 'Ảnh'}: {image.credit} · Cắt theo khung.{' '}
-              <a href={image.sourceUrl} target="_blank" rel="noreferrer" className="underline">
-                Nguồn ảnh
-              </a>
-              {image.licenseUrl && (
-                <>
-                  {' '}
-                  ·{' '}
-                  <a href={image.licenseUrl} target="_blank" rel="noreferrer" className="underline">
-                    Giấy phép
-                  </a>
-                </>
-              )}
-            </div>
-          </details>
-        </figcaption>
-      )}
+      {image?.city && <span className="content-city-label">Ảnh minh họa điểm đến</span>}
     </figure>
   );
 }
 
-// Discovery uses different compositions per content type; private favorites retain
-// the existing grid until their own visual review.
+// Shared editorial images keep source metadata in the page credit disclosure.
 export function DiscoveryCollection({
   items,
   kind,
@@ -263,6 +206,7 @@ export function ContentCard({ record }: { record: ContentRecord }) {
     <article className="group flex min-w-0 flex-col gap-3 rounded-2xl outline-offset-4">
       <ContentImage
         key={entry.id + entry.image?.url}
+        compact
         entry={entry}
         href={'/explore/' + encodeURIComponent(entry.id)}
       />

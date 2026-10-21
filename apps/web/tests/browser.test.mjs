@@ -1647,3 +1647,97 @@ for (const [mode, viewport] of [
     await f.context.close();
   });
 }
+
+for (const viewport of [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 1440, height: 1000 },
+]) {
+  test(`Core acceptance journey at ${viewport.width}: empty, manual create, save, reopen, edit, account and help`, async () => {
+    const f = await setup({ viewport });
+    const { page, state } = f;
+    const folder = root + '/test-results/core-final';
+    await mkdir(folder, { recursive: true });
+    async function capture(screen) {
+      await page
+        .locator('main img')
+        .evaluateAll(async (imgs) => Promise.all(imgs.map((img) => img.decode().catch(() => {}))));
+      await page.evaluate(() => scrollTo(0, 0));
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+      await page.screenshot({
+        path: `${folder}/${screen}-${viewport.width}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      });
+      await page.screenshot({
+        path: `${folder}/${screen}-${viewport.width}-viewport.png`,
+        animations: 'disabled',
+      });
+    }
+    try {
+      await login(page);
+      await page
+        .getByRole('heading', { name: 'Chuyến đi đầu tiên đang chờ bạn', exact: true })
+        .waitFor();
+      assert.equal(await page.locator('.trip-list-card').count(), 0);
+      await capture('01-empty');
+      await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click();
+      await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Cuối tuần Đà Lạt');
+      await page.getByLabel('Số ngày', { exact: true }).fill('1');
+      await capture('02-create');
+      await page.getByRole('button', { name: 'Tạo lịch trống', exact: true }).click();
+      await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
+      await page.getByLabel('Tên hoạt động', { exact: true }).fill('Đi bộ quanh hồ');
+      await page
+        .getByLabel('Ghi chú', { exact: true })
+        .fill('Xác nhận lối đi và thời tiết trước khi khởi hành.');
+      await capture('03-edit');
+      await page.getByRole('button', { name: 'Giữ chuyến này', exact: true }).click();
+      await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
+      const tripUrl = page.url();
+      await page.reload();
+      await page.getByRole('heading', { name: 'Cuối tuần Đà Lạt', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Đi bộ quanh hồ', exact: true }).waitFor();
+      await capture('04-reopened');
+      await page.getByRole('tab', { name: 'Chi phí', exact: true }).click();
+      await capture('05-costs-unknown');
+      await page.getByRole('tab', { name: 'Bản đồ', exact: true }).click();
+      await capture('06-map');
+      await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
+      await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Cuối tuần Đà Lạt đã chỉnh');
+      await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+      await page.getByRole('heading', { name: 'Cuối tuần Đà Lạt đã chỉnh', exact: true }).waitFor();
+      await page.goto(base + '/trips');
+      await page
+        .getByRole('button', {
+          name: 'Mở chuyến tài khoản: Cuối tuần Đà Lạt đã chỉnh',
+          exact: true,
+        })
+        .waitFor();
+      await capture('07-list');
+      await page
+        .getByRole('button', {
+          name: 'Mở chuyến tài khoản: Cuối tuần Đà Lạt đã chỉnh',
+          exact: true,
+        })
+        .click();
+      assert.equal(page.url(), tripUrl);
+      assert.equal(state.writes.length, 2);
+      await page.goto(base + '/account');
+      await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+      await capture('08-account');
+      await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+      await capture('09-profile-edit');
+      await page.getByRole('button', { name: 'Hủy chỉnh sửa', exact: true }).click();
+      await page.goto(base + '/about');
+      await page.getByRole('heading', { name: 'Giới thiệu & trợ giúp', exact: true }).waitFor();
+      await capture('10-help');
+      assert.deepEqual(f.errors, []);
+    } finally {
+      await f.context.close();
+    }
+  });
+}

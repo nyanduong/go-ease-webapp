@@ -129,17 +129,16 @@ try {
         await row.evaluate((node) => (node.scrollLeft = 0));
       }
     }
-    await page.getByRole('button', { name: 'Ảnh & nguồn: Đà Lạt', exact: true }).click();
-    const attribution = page.getByRole('dialog', { name: 'Thông tin ảnh', exact: true });
-    await attribution.waitFor();
+    assert.equal(await page.locator('.photo-credit-trigger, figure figcaption').count(), 0);
+    const attribution = page.locator('.page-photo-credits');
+    await attribution.getByText('Thông tin ảnh', { exact: true }).click();
     await attribution.getByText('P. Hughes', { exact: false }).waitFor();
-    assert.equal(
-      await attribution.getByRole('link', { name: 'Xem giấy phép ảnh ↗' }).getAttribute('href'),
-      'https://creativecommons.org/licenses/by/4.0',
+    assert(
+      (await attribution.locator('a[href="https://creativecommons.org/licenses/by/4.0"]').count()) >
+        0,
     );
     await page.screenshot({ path: `${folder}/attribution-${name}.png`, animations: 'disabled' });
-    await page.keyboard.press('Escape');
-    await attribution.waitFor({ state: 'hidden' });
+    await attribution.getByText('Thông tin ảnh', { exact: true }).click();
     await page.getByLabel('Tìm nội dung du lịch').fill('Hằng Nga');
     await page.getByRole('button', { name: 'Tìm nội dung', exact: true }).click();
     await page.getByRole('heading', { name: 'Biệt thự Hằng Nga', exact: true }).waitFor();
@@ -149,8 +148,8 @@ try {
     await page.getByRole('link', { name: 'Địa điểm', exact: true }).click();
     await page.getByRole('heading', { name: 'Biệt thự Hằng Nga', exact: true }).waitFor();
     await page.getByRole('link', { name: 'Biệt thự Hằng Nga', exact: true }).click();
-    await page.getByRole('link', { name: 'Lên kế hoạch ở đây', exact: true }).waitFor();
-    await page.goBack();
+    await page.getByRole('link', { name: /^Lên lịch tại /, exact: true }).waitFor();
+    await page.locator('main article > a').first().click();
     await page.getByRole('heading', { name: 'Khám phá', exact: true }).waitFor();
     assert.equal(new URL(page.url()).searchParams.get('q'), 'Hằng Nga');
     await page.getByRole('link', { name: 'Xóa bộ lọc', exact: true }).click();
@@ -188,6 +187,32 @@ try {
         path: `${folder}/home-390-text200-viewport.png`,
         animations: 'disabled',
       });
+    }
+    for (const kind of ['destination', 'place', 'food', 'article']) {
+      const response = await page.request.get(
+        'http://localhost:3000/v1/content?kind=' + kind + '&limit=1',
+      );
+      assert(response.ok());
+      const record = (await response.json()).items[0];
+      assert(record, 'Live CMS has content for ' + kind);
+      await page.goto('http://localhost:5174/explore/' + record.entry.id);
+      await page.getByRole('heading', { name: record.entry.title, exact: true }).waitFor();
+      await loadImages(page);
+      assert.equal(await page.locator('figure figcaption, .photo-credit-trigger').count(), 0);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+      await page.screenshot({
+        path: `${folder}/detail-${kind}-${name}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      });
+      await page.screenshot({
+        path: `${folder}/detail-${kind}-${name}-viewport.png`,
+        animations: 'disabled',
+      });
+      evidence.push({ screen: 'detail-' + kind, viewport, id: record.entry.id, realCms: true });
     }
     assert.deepEqual(errors, []);
     await context.close();
