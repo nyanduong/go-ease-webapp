@@ -1,0 +1,6 @@
+
+> @goease/api@0.1.0 format:check C:\Users\LENOVO\OneDrive\Desktop\FPT\Ky-7\EXE101\go-ease-webapp\apps\api
+> prettier --check "src/**/*.ts" "dev/**/*.ts" "tests/**/*.mjs" "tests-db/**/*.mjs" "scripts/**/*.mjs" "*.{js,ts,json}" ".prettierrc.json"
+
+Checking formatting...
+All matched files use Prettier code style!
