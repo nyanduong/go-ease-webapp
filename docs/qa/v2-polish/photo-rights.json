@@ -1,0 +1,95 @@
+{
+  "checkedAt": "2026-10-21T10:12:45.343Z",
+  "method": "Wikimedia Commons imageinfo extmetadata for each of 8 displayed photographs; official CC deeds also reviewed",
+  "decision": "Keep attribution on the same image: compact info button opens in-page dialog with title, author, source, exact license link and resize/crop notice. Do not rely on a separate destination page. Share-alike remains attached to each applicable image asset.",
+  "photos": [
+    {
+      "src": "/travel/da-lat.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Da_Lat_-_Xuan_Huong_Lake.jpg",
+      "author": "P. Hughes",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "existingCredit": "P. Hughes",
+      "existingLicense": "CC BY 4.0",
+      "usage": "Creative Commons Attribution 4.0",
+      "description": "Xuan Huong Lake, situated right in the center of Da Lat, Vietnam"
+    },
+    {
+      "src": "/travel/da-nang.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dragon_Bridge_Da_Nang_5.jpg",
+      "author": "Christophe95",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "existingCredit": "Christophe95",
+      "existingLicense": "CC BY-SA 4.0",
+      "usage": "Creative Commons Attribution-Share Alike 4.0",
+      "description": "The Dragon Bridge in Da Nang, Vietnam."
+    },
+    {
+      "src": "/travel/hue.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Vietnam,_Hue,_Imperial_City_of_Hue,_Enclosure.jpg",
+      "author": "Vyacheslav Argenberg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "existingCredit": "Vyacheslav Argenberg",
+      "existingLicense": "CC BY 4.0",
+      "usage": "Creative Commons Attribution 4.0",
+      "description": "Huế, Vietnam. Imperial City of Huế and the citadel of the city of Huế, the former imperial capital of Vietnam. UNESCO Word Heritage Site since 1993."
+    },
+    {
+      "src": "/travel/dalat-station.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Da_Lat_train_station_02.JPG",
+      "author": "Diane Selwyn (talk)",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "existingCredit": "Diane Selwyn (talk)",
+      "existingLicense": "Public domain",
+      "usage": "Public domain",
+      "description": "Da Lat Railway Station, Vietnam."
+    },
+    {
+      "src": "/travel/dalat-crazy-house.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Crazy_House_in_Da_Lat_-_panoramio.jpg",
+      "author": "Michael Karavanov",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "existingCredit": "Michael Karavanov",
+      "existingLicense": "CC BY-SA 3.0",
+      "usage": "Creative Commons Attribution-Share Alike 3.0",
+      "description": "Crazy House in Da Lat"
+    },
+    {
+      "src": "/travel/dalat-datanla.webp",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Datanla_Waterfall.jpg",
+      "author": "Du Tran",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+      "existingCredit": "Du Tran",
+      "existingLicense": "CC BY 2.0",
+      "usage": "Creative Commons Attribution 2.0",
+      "description": "Datanla Falls, Dalat Vietnam."
+    },
+    {
+      "src": "/travel/mi-quang-da-nang.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Mi_Quang_1A_Danang.jpg",
+      "author": "Jpatokal",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "existingCredit": "Jpatokal",
+      "existingLicense": "CC BY-SA 4.0",
+      "usage": "Creative Commons Attribution-Share Alike 4.0",
+      "description": "A bowl of mi quang noodles with pork and shrimp (Mi quảng tôm thịt) at Mi Quang 1A, Da Nang, Vietnam."
+    },
+    {
+      "src": "/travel/bun-bo-hue.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bún_bò_Huế_-_Chợ_Đông_Ba_(2024)_-_img_01.jpg",
+      "author": "Chainwit.",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+      "existingCredit": "Chainwit.",
+      "existingLicense": "CC BY 4.0",
+      "usage": "Creative Commons Attribution 4.0",
+      "description": "A dish of Bún bò Huế at Đông Ba Market, Huế"
+    }
+  ]
+}

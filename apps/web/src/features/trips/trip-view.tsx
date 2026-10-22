@@ -284,7 +284,7 @@ function TripSession({
                   ? 'Đã lưu vào tài khoản'
                   : 'Đã lưu trên thiết bị';
   return (
-    <article className="flex min-w-0 flex-col gap-5">
+    <article className="trip-workspace flex min-w-0 flex-col gap-5">
       <header className="relative flex flex-col gap-2 py-1 pr-10 pl-10">
         <Link
           href={readOnly ? '/' : '/trips'}
@@ -294,7 +294,7 @@ function TripSession({
           <Icon name="back" />
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="hidden text-xs font-bold tracking-widest text-teal uppercase">
+          <span className="text-xs font-semibold text-teal">
             {destinationName}
             {destination?.countryCode === 'VN' ? ' · Việt Nam' : ''}
           </span>
@@ -369,7 +369,9 @@ function TripSession({
           </details>
         </div>
       </header>
-      <TripCover trip={trip} />
+      <div className="trip-cover-compact">
+        <TripCover trip={trip} />
+      </div>
       <div
         role="tablist"
         aria-label="Chi tiết chuyến"

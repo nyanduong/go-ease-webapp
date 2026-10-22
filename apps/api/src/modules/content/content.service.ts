@@ -68,34 +68,79 @@ export class ContentService {
   }
   private async page(tx: Transaction, query: ContentQuery, admin = false, owner?: Owner) {
     const limit = query.limit ?? 20;
-    const rows = await tx.editorialContent.findMany({
-      where: {
-        AND: [
-          admin ? {} : publicWhere,
-          {
-            ...(query.after ? { id: { gt: query.after } } : {}),
-            ...(query.kind ? { kind: query.kind } : {}),
-            ...(query.destinationId ? { destinationId: query.destinationId } : {}),
-            ...(query.categoryId
-              ? {
-                  categories: {
-                    some: { categoryId: query.categoryId, category: { status: 'published' } },
-                  },
-                }
-              : {}),
-            ...(query.q ? { title: { contains: query.q, mode: 'insensitive' as const } } : {}),
-            ...(owner ? { favorites: { some: owner } } : {}),
+    const rows = query.q
+      ? await this.searchPage(tx, query, admin, owner)
+      : await tx.editorialContent.findMany({
+          where: {
+            AND: [
+              admin ? {} : publicWhere,
+              {
+                ...(query.after ? { id: { gt: query.after } } : {}),
+                ...(query.kind ? { kind: query.kind } : {}),
+                ...(query.destinationId ? { destinationId: query.destinationId } : {}),
+                ...(query.categoryId
+                  ? {
+                      categories: {
+                        some: { categoryId: query.categoryId, category: { status: 'published' } },
+                      },
+                    }
+                  : {}),
+                ...(owner ? { favorites: { some: owner } } : {}),
+              },
+            ],
           },
-        ],
-      },
-      orderBy: { id: 'asc' },
-      take: limit + 1,
-    });
+          orderBy: { id: 'asc' },
+          take: limit + 1,
+        });
     return contentPageSchema.parse({
       apiVersion: '1',
       items: rows.slice(0, limit).map(record),
       nextCursor: rows.length > limit ? rows[limit - 1]!.id : null,
     });
+  }
+  private searchPage(tx: Transaction, query: ContentQuery, admin: boolean, owner?: Owner) {
+    // Dev/test clusters use locale C, where ILIKE only folds ASCII. PostgreSQL 18's
+    // builtin Unicode collation also handles Đ/đ and Vietnamese accented capitals.
+    // NFC treats composed and decomposed input alike. strpos keeps %/_ literal.
+    return tx.$queryRaw<(Row & { id: string })[]>(Prisma.sql`
+      SELECT c.id, c.payload, c.version, c."updatedAt"
+      FROM "EditorialContent" c
+      WHERE ${
+        admin
+          ? Prisma.sql`TRUE`
+          : Prisma.sql`
+        c.status = 'published' AND (c."destinationId" IS NULL OR EXISTS (
+          SELECT 1 FROM "EditorialContent" parent
+          WHERE parent.id = c."destinationId" AND parent.status = 'published' AND parent.kind = 'destination'
+        ))`
+      }
+      ${query.after ? Prisma.sql`AND c.id > ${query.after}` : Prisma.empty}
+      ${query.kind ? Prisma.sql`AND c.kind = ${query.kind}` : Prisma.empty}
+      ${query.destinationId ? Prisma.sql`AND c."destinationId" = ${query.destinationId}` : Prisma.empty}
+      ${
+        query.categoryId
+          ? Prisma.sql`AND EXISTS (
+        SELECT 1 FROM "EditorialCategory" relation
+        JOIN "EditorialContent" category ON category.id = relation."categoryId"
+        WHERE relation."contentId" = c.id AND relation."categoryId" = ${query.categoryId} AND category.status = 'published'
+      )`
+          : Prisma.empty
+      }
+      ${
+        owner
+          ? Prisma.sql`AND EXISTS (
+        SELECT 1 FROM "ContentFavorite" favorite
+        WHERE favorite."contentId" = c.id AND favorite."ownerIssuer" = ${owner.ownerIssuer}
+          AND favorite."ownerSubject" = ${owner.ownerSubject}::uuid
+      )`
+          : Prisma.empty
+      }
+      AND strpos(
+        casefold(normalize(c.title, NFC) COLLATE pg_unicode_fast),
+        casefold(normalize(${query.q}, NFC) COLLATE pg_unicode_fast)
+      ) > 0
+      ORDER BY c.id ASC LIMIT ${(query.limit ?? 20) + 1}
+    `);
   }
   list(query: unknown) {
     return this.page(this.db.requireClient(), this.query(query));

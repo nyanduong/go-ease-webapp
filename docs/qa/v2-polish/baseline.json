@@ -1,0 +1,11 @@
+{
+  "commit": "c55714de82ec22365f716f46516ee138b000270e",
+  "browserTests": {
+    "passed": 63,
+    "failed": 0
+  },
+  "workingTree": "clean before polish",
+  "screenshots": "before/",
+  "viewportZoom": "100%",
+  "api": "real local Nest/PostgreSQL, anonymous screenshot browser"
+}

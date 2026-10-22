@@ -1,0 +1,3 @@
+
+> @goease/api@0.1.0 lint C:\Users\LENOVO\OneDrive\Desktop\FPT\Ky-7\EXE101\go-ease-webapp\apps\api
+> eslint src dev tests tests-db scripts prisma.config.ts

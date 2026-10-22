@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBrowserGoogleAuth, safeReturnPath } from '@goease/trip-client/browser-google-auth';
+test('editorial planning and favorites survive OAuth return sanitization without opening redirect paths', () => {
+  for (const path of ['/trips/new?content=hoi-an', '/explore', '/explore/hoi-an', '/favorites'])
+    assert.equal(safeReturnPath(path), path);
+  for (const path of [
+    '/trips/new?content=hoi-an&role=admin',
+    '/trips/new?content=//evil.test',
+    '/favorites\n',
+    '/explore/../../account',
+    'https://evil.test/explore',
+  ])
+    assert.equal(safeReturnPath(path), '/');
+});
 function fixture() {
   const values = new Map();
   const storage = {

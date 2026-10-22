@@ -6,6 +6,29 @@ const id = '12345678-1234-4234-8234-123456789abc', other = 'b5aa7f8a-1711-4c09-b
 const token = { access_token: 'offline.fixture.signature', refresh_token: 'fixture_refresh', token_type: 'bearer', expires_in: 3600, expires_at: 1800003600 };
 const response = (value, status = 200) => new Response(JSON.stringify(value), { status });
 const user = userId => ({ id: userId, aud: 'authenticated', role: 'authenticated', email: 'DO_NOT_LEAK', is_anonymous: false });
+
+test('favorites use only verified backend and reject arbitrary token destinations; cancelled session discards late results', async () => {
+  const calls = [];
+  let release;
+  const f = fixture({ fetcher: async (target, options) => {
+    calls.push({ target, options });
+    if (target.includes('/token?')) return response(token);
+    if (target.endsWith('/user')) return response(user(id));
+    if (target.includes('/favorites')) return new Promise(resolve => { release = () => resolve(response({ apiVersion: '1', items: [], nextCursor: null })); });
+    return response({ apiVersion: '1', identity: { id, provider: 'supabase' } });
+  }});
+  await assert.rejects(() => f.pilot.contentRequest('GET', '/v1/favorites'));
+  assert.equal(calls.length, 0);
+  await f.pilot.login('u@example.test', 'p');
+  await f.pilot.verifyBackend('https://api.example.test');
+  for (const path of ['https://evil.test/v1/favorites', '/v1/favorites/../auth/me', '/v1/favorites?next=https://evil.test']) await assert.rejects(() => f.pilot.contentRequest('PUT', path));
+  const pending = f.pilot.contentRequest('GET', '/v1/favorites');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.at(-1).target, 'https://api.example.test/v1/favorites');
+  assert.equal(calls.at(-1).options.headers.authorization, 'Bearer ' + token.access_token);
+  f.pilot.cancel(); release();
+  await assert.rejects(() => pending, /Phiên đã thay đổi/);
+});
 test('product opt-in keeps refresh on temporary offline restore, hides identity, and still erases rejected credentials', async () => {
   let saved='fixture_refresh'; const storage={get:async()=>saved,set:async v=>{saved=v;},remove:async()=>{saved=null;}};
   const offline=createAuthPilot({url,key,storage,preserveRefreshOnTransient:true,fetcher:async()=>{throw new TypeError('offline');}});

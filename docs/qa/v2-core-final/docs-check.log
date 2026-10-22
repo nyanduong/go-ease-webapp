@@ -1,0 +1,5 @@
+
+> go-ease@ check:docs C:\Users\LENOVO\OneDrive\Desktop\FPT\Ky-7\EXE101\go-ease-webapp
+> python .github/scripts/check-docs.py
+
+PASS: required documents/source, local links and credential patterns.

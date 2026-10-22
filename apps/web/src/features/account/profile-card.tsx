@@ -92,7 +92,7 @@ export function ProfileCard({
       className="overflow-hidden rounded-3xl border border-line bg-paper shadow-sm"
       aria-label="Hồ sơ cá nhân"
     >
-      <div className="relative h-28 overflow-hidden bg-teal-dark sm:h-36">
+      <div className="relative h-20 overflow-hidden bg-sand sm:h-24">
         {shown.coverUrl && (
           <img
             key={shown.coverUrl}
@@ -104,26 +104,9 @@ export function ProfileCard({
             }}
           />
         )}
-        {!shown.coverUrl && (
-          <>
-            <span
-              aria-hidden="true"
-              className="absolute -top-20 right-4 size-64 rounded-full border-[28px] border-white/10"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute top-14 right-40 size-48 rounded-full bg-orange/30"
-            />
-            <p
-              className={`${shown.coverUrl ? 'hidden' : ''} absolute top-6 left-6 text-xs font-bold tracking-widest text-white/80 uppercase sm:left-8`}
-            >
-              Đi cùng nhau, khám phá nhiều hơn.
-            </p>
-          </>
-        )}
       </div>
       <div className="px-5 pb-6 sm:px-8 sm:pb-8">
-        <div className="relative -mt-12 flex flex-wrap items-end justify-between gap-4">
+        <div className="relative -mt-8 flex flex-wrap items-end justify-between gap-4">
           <Avatar
             key={
               (editing ? draft.avatar : profile.avatar) +

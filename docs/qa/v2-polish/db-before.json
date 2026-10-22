@@ -1,0 +1,50 @@
+{
+  "AppUser": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "CatalogAdmin": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "ContentFavorite": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "EditorialCategory": {
+    "count": 14,
+    "sha256": "b633f6b278113ce45f05dab89d5152bf5373f3d208065c95ae0e26116fa52d0a"
+  },
+  "EditorialContent": {
+    "count": 18,
+    "sha256": "87fcf91643bc7ea65d0dc3fca5df7363bbb51ead14d9dc486374189ac7fbc923"
+  },
+  "Place": {
+    "count": 15,
+    "sha256": "315af6c8cd35bd7110be6b7e90f3d2960b9331dd46e4e87ea6e873d5b0675644"
+  },
+  "PlaceRevision": {
+    "count": 15,
+    "sha256": "54d31984f4bdaa276ce59cf41bd9552e94efb096a34ba3c69ca20bccb7956748"
+  },
+  "Trip": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "TripActivity": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "TripDay": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "TripMutation": {
+    "count": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "_prisma_migrations": {
+    "count": 5,
+    "sha256": "ae804bc9e7fc1f5d253ca7b98802082d19f4286b47ae6e65e2f36cd924f01036"
+  }
+}
