@@ -11,7 +11,10 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record, adva
   const origin = 'http://127.0.0.1:4197';
   const authOrigin = 'https://abcdefghijklmnopqrst.supabase.co';
   const output = fileURLToPath(
-    new URL('../../../docs/qa/v2-core-final/db-content/', import.meta.url),
+    new URL(
+      '../../../docs/qa/' + (process.env.GOEASE_CMS_QA_SUBDIR ?? 'v2-core-final/db-content') + '/',
+      import.meta.url,
+    ),
   );
   const config = {
     root,
@@ -135,7 +138,7 @@ export async function checkCmsDatabaseBrowser({ base, token, owner, record, adva
         await screenshot('home-real-db-auth-fixture');
         await page
           .getByLabel('Tìm điểm đến, địa điểm, món ngon…', { exact: true })
-          .fill(record.entry.title);
+          .fill(record.entry.title.toLocaleLowerCase('vi-VN'));
         await page.getByRole('button', { name: 'Tìm nội dung', exact: true }).click();
         await page.waitForURL(/\/explore\?q=/);
         await contentLink().click();

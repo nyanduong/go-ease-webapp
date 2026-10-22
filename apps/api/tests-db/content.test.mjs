@@ -498,3 +498,130 @@ test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved
     await failure(await request('B', 'GET', '/v1/trips/' + tripIds[0]), 404, 'NOT_FOUND');
     assert.notEqual(A, B);
   }));
+
+test('Vietnamese search folds Unicode in C locale and preserves filters, cursors, visibility and owners', () =>
+  fixture(async ({ prefix, request, create, update }) => {
+    const destination = await create(
+      entry(prefix + '-destination', 'destination', { title: 'Đà Lạt', status: 'published' }),
+    );
+    const category = await create(
+      entry(prefix + '-category', 'category', { title: 'Thiên nhiên', status: 'published' }),
+    );
+    const expected = [];
+    for (let i = 0; i < 23; i++) {
+      const id = prefix + '-place-' + String(i).padStart(2, '0');
+      expected.push(id);
+      await create(
+        entry(id, 'place', {
+          title: i === 1 ? 'Ghé ĐÀ LẠT'.normalize('NFD') : 'Ghé Đà Lạt',
+          destinationId: destination.entry.id,
+          categoryIds: i % 2 ? [] : [category.entry.id],
+          status: 'published',
+        }),
+      );
+    }
+    const draft = await create(
+      entry(prefix + '-draft', 'destination', { title: 'Đà Lạt chưa công bố' }),
+    );
+    const hiddenParent = await create(
+      entry(prefix + '-hidden-parent', 'destination', { title: 'Đà Lạt ẩn', status: 'published' }),
+    );
+    const hiddenChild = await create(
+      entry(prefix + '-hidden-child', 'place', {
+        title: 'Đà Lạt ẩn',
+        destinationId: hiddenParent.entry.id,
+        status: 'published',
+      }),
+    );
+    await update(hiddenParent, { status: 'hidden' });
+    const get = async (path) =>
+      contentPageSchema.parse(await result(await request(null, 'GET', path)));
+    const params = (q, extra = {}) => new URLSearchParams({ q, limit: '50', ...extra });
+    for (const q of ['đà lạt', 'Đà Lạt', 'ĐÀ LẠT', 'đà lạt'.normalize('NFD')]) {
+      const page = await get(
+        '/v1/content?' + params(q, { kind: 'place', destinationId: destination.entry.id }),
+      );
+      assert.deepEqual(
+        page.items.map((item) => item.entry.id),
+        expected,
+      );
+      const destinations = await get('/v1/content?' + params(q, { kind: 'destination' }));
+      assert(destinations.items.some((item) => item.entry.id === destination.entry.id));
+      assert(
+        !destinations.items.some((item) =>
+          [draft.entry.id, hiddenParent.entry.id].includes(item.entry.id),
+        ),
+      );
+    }
+    const filtered = await get(
+      '/v1/content?' +
+        params('đà lạt', {
+          kind: 'place',
+          destinationId: destination.entry.id,
+          categoryId: category.entry.id,
+        }),
+    );
+    assert.deepEqual(
+      filtered.items.map((item) => item.entry.id),
+      expected.filter((_, i) => i % 2 === 0),
+    );
+    const found = [];
+    let after;
+    do {
+      const page = await get(
+        '/v1/content?' +
+          params('đà lạt', {
+            kind: 'place',
+            destinationId: destination.entry.id,
+            limit: '5',
+            ...(after ? { after } : {}),
+          }),
+      );
+      found.push(...page.items.map((item) => item.entry.id));
+      after = page.nextCursor;
+    } while (after);
+    assert.deepEqual(found, expected);
+    const hidden = await get(
+      '/v1/content?' + params('đà lạt', { destinationId: hiddenParent.entry.id }),
+    );
+    assert(!hidden.items.some((item) => item.entry.id === hiddenChild.entry.id));
+    const managed = contentPageSchema.parse(
+      await result(
+        await request('A', 'GET', '/v1/admin/content?' + params('đà lạt', { kind: 'destination' })),
+      ),
+    );
+    assert(managed.items.some((item) => item.entry.id === draft.entry.id));
+    await result(await request('A', 'PUT', '/v1/favorites/' + expected[0]));
+    await result(await request('B', 'PUT', '/v1/favorites/' + expected[1]));
+    for (const [owner, id] of [
+      ['A', expected[0]],
+      ['B', expected[1]],
+    ]) {
+      const page = contentPageSchema.parse(
+        await result(await request(owner, 'GET', '/v1/favorites?' + params('đà lạt'))),
+      );
+      assert.deepEqual(
+        page.items.map((item) => item.entry.id),
+        [id],
+      );
+    }
+    const literal = await create(
+      entry(prefix + '-literal', 'place', {
+        title: 'Đà Lạt 100%_!',
+        destinationId: destination.entry.id,
+        status: 'published',
+      }),
+    );
+    const literalPage = await get(
+      '/v1/content?' + params('%_', { destinationId: destination.entry.id }),
+    );
+    assert.deepEqual(
+      literalPage.items.map((item) => item.entry.id),
+      [literal.entry.id],
+    );
+    assert.equal(
+      (await get('/v1/content?' + params("' OR 1=1 --", { destinationId: destination.entry.id })))
+        .items.length,
+      0,
+    );
+  }));
