@@ -37,28 +37,32 @@ function App() {
   );
   useEffect(() => {
     let cancelled = false;
-    if (location.pathname === '/auth/callback') {
-      const callback = location.href;
-      history.replaceState(history.state, '', '/');
-      setBusy(true);
-      void google
-        .complete(callback)
-        .then(async (result) => {
-          if (cancelled) return;
-          const data = await client.acceptOAuth(result.session);
-          if (!cancelled) {
-            setPlaces(data.places);
-            setNextCursor(data.nextCursor);
-            setAuthed(true);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setError('Chưa đăng nhập được hoặc tài khoản chưa có quyền quản trị.');
-        })
-        .finally(() => {
-          if (!cancelled) setBusy(false);
-        });
-    }
+    // Defer consuming the one-time callback until StrictMode's effect replay has settled.
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (location.pathname === '/auth/callback') {
+        const callback = location.href;
+        history.replaceState(history.state, '', '/');
+        setBusy(true);
+        void google
+          .complete(callback)
+          .then(async (result) => {
+            if (cancelled) return;
+            const data = await client.acceptOAuth(result.session);
+            if (!cancelled) {
+              setPlaces(data.places);
+              setNextCursor(data.nextCursor);
+              setAuthed(true);
+            }
+          })
+          .catch(() => {
+            if (!cancelled) setError('Chưa đăng nhập được hoặc tài khoản chưa có quyền quản trị.');
+          })
+          .finally(() => {
+            if (!cancelled) setBusy(false);
+          });
+      }
+    });
     const checkExpiry = () => {
       // Tab switches preserve RAM auth and unsaved edits; expiry is checked immediately on return.
       if (!client.valid()) {

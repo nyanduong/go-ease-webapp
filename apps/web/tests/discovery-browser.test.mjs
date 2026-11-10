@@ -169,6 +169,8 @@ async function setup(viewport = { width: 390, height: 844 }) {
       url = new URL(request.url()),
       method = request.method();
     if (method === 'OPTIONS') return reply(route, {});
+    if (url.pathname === '/v1/content' || url.pathname === '/v1/favorites')
+      return reply(route, { apiVersion: '1', items: [], nextCursor: null });
     if (url.pathname === '/v1/catalog/places')
       return reply(route, {
         apiVersion: '1',
@@ -303,6 +305,75 @@ async function form(page, city = 'Đà Nẵng') {
   await page.getByLabel('Số ngày', { exact: true }).fill('2');
   await page.getByLabel('Số người', { exact: true }).fill('3');
 }
+test('editorial photo failures try the exact place, matching city, then neutral without another city', async () => {
+  const f = await setup();
+  const { page, context } = f;
+  const record = {
+    entry: {
+      id: 'photo-fixture',
+      kind: 'place',
+      title: 'Biệt thự Hằng Nga',
+      summary: 'Photo fallback fixture',
+      body: 'Fixture body',
+      status: 'published',
+      destinationId: 'da-lat',
+      categoryIds: [],
+      image: {
+        url: 'https://images.example.test/missing.jpg',
+        alt: 'Missing fixture image',
+        credit: 'Fixture',
+      },
+      address: 'Đà Lạt',
+      coordinates: { latitude: 11.934791, longitude: 108.430638 },
+      destination: null,
+      sources: [{ title: 'Fixture source', url: 'https://example.test/source' }],
+    },
+    version: 1,
+    updatedAt: '2026-10-21T00:00:00Z',
+  };
+  await context.route('https://api.goease.test/v1/content/photo-fixture', (route) =>
+    route.fulfill({ json: record, headers: { 'access-control-allow-origin': base } }),
+  );
+  await context.route('https://api.goease.test/v1/content/da-lat', (route) =>
+    route.fulfill({
+      json: {
+        ...record,
+        entry: {
+          ...record.entry,
+          id: 'da-lat',
+          kind: 'destination',
+          destinationId: null,
+          destination: getDestination('da-lat'),
+        },
+      },
+      headers: { 'access-control-allow-origin': base },
+    }),
+  );
+  await context.route('https://api.goease.test/v1/content?**', (route) =>
+    route.fulfill({
+      json: { apiVersion: '1', items: [], nextCursor: null },
+      headers: { 'access-control-allow-origin': base },
+    }),
+  );
+  const attempted = [];
+  await context.route('**/travel/dalat-crazy-house.webp', (route) => {
+    attempted.push('place');
+    return route.abort();
+  });
+  await page.goto(base + '/explore/photo-fixture');
+  await page.waitForFunction(
+    () => document.querySelector('main figure img')?.getAttribute('src') === '/travel/da-lat.webp',
+  );
+  assert(attempted.includes('place'));
+  await page.getByText('Ảnh minh họa điểm đến', { exact: false }).waitFor();
+  await context.route('**/travel/da-lat.webp', (route) => route.abort());
+  await page.reload();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('main figure img')?.getAttribute('src') === '/travel/placeholder.svg',
+  );
+  await finish(f, 'editorial-photo-fallback');
+});
 async function finish(fixture, name) {
   assert.deepEqual(fixture.errors, []);
   assert.equal(
@@ -614,7 +685,7 @@ for (const viewport of [
     await page.waitForFunction(() =>
       [...document.querySelectorAll('main img')].every((img) => img.complete),
     );
-    const folder = root + '/../../docs/qa/warm-refinement/after';
+    const folder = root + '/test-results/warm-refinement';
     await mkdir(folder, { recursive: true });
     await page.screenshot({ path: `${folder}/preview-${viewport.width}.png`, fullPage: false });
     await page.getByRole('tab', { name: /^Ngày 1/ }).press('End');

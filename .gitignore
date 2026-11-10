@@ -13,6 +13,8 @@
 node_modules/
 dist/
 dist-test/
+dist-cms-test/
+dist-seed-test/
 dist-demos/
 build/
 .expo/

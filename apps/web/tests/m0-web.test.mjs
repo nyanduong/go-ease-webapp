@@ -122,6 +122,9 @@ test('temporary form and preview survive reload, stay owner scoped, and expire i
   assert.equal(restoreCreation(storage, 'project.account-A', 1000 + FORM_TTL), null);
   clearCreation(storage, 'project.account-A');
   assert.equal(restoreCreation(storage, 'project.account-A', 1001), null);
+  const editorial = { ...state, contentId: 'editorial-destination' };
+  saveCreation(storage, 'project.account-A', editorial, 1000);
+  assert.deepEqual(restoreCreation(storage, 'project.account-A', 1001), editorial);
 });
 
 test('malformed or blocked temporary storage fails safely without deleting account data', () => {

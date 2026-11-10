@@ -36,7 +36,13 @@ execFileSync(
   process.execPath,
   [
     '--test',
-    ...(targets.length ? targets : ['tests/browser.test.mjs', 'tests/discovery-browser.test.mjs']),
+    ...(targets.length
+      ? targets
+      : [
+          'tests/browser.test.mjs',
+          'tests/discovery-browser.test.mjs',
+          'tests/content-browser.test.mjs',
+        ]),
   ],
   {
     cwd: root,

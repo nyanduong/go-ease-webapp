@@ -1,8 +1,9 @@
+import { PhotoCredits, PhotoCreditsProvider } from '../components/photo-credits';
 import { Component, useEffect, type ReactNode } from 'react';
 import { AccountGate, Brand, Notice } from '../components/ui';
 import { Navigation } from './navigation';
 import { MotionRegion } from '../components/motion';
-import { Link, usePath } from './router';
+import { Link, usePath, useSearch } from './router';
 import { AccountWorkspace } from '../features/account/account-workspace';
 import { AccountHome } from '../features/account/account-home';
 import { AccountPage, LoginPage } from '../features/account/account-page';
@@ -13,10 +14,17 @@ import { SampleTrip } from '../features/trips/sample-trip';
 import { Icon } from '../components/icon';
 import { ProfileAvatarImage } from '../features/account/profile-avatar';
 import { offlineDev } from '../platform/dev-mode';
+import { ExplorePage } from '../features/content/explore-page';
+import { ContentDetail } from '../features/content/content-detail';
+import { FavoritesPage } from '../features/content/favorites-page';
 
 function Route({ path }: { path: string }) {
   if (path === '/' || path === '/login' || path === '/auth/callback') return <AccountHome />;
   if (path === '/sample') return <SampleTrip />;
+  if (path === '/explore') return <ExplorePage />;
+  if (path === '/favorites') return <FavoritesPage />;
+  const contentMatch = /^\/explore\/([a-z0-9][a-z0-9_-]{0,79})$/.exec(path);
+  if (contentMatch) return <ContentDetail id={contentMatch[1]} />;
   if (path === '/trips') return <AccountWorkspace />;
   if (path === '/trips/new') return <AccountWorkspace mode="new" />;
   if (path === '/account')
@@ -50,10 +58,23 @@ function Route({ path }: { path: string }) {
   );
 }
 export function App() {
+  return (
+    <PhotoCreditsProvider>
+      <AppContent />
+    </PhotoCreditsProvider>
+  );
+}
+function AppContent() {
   const path = usePath();
+  const search = useSearch();
   const { session, trips, workspace, profile } = useAccount();
   useEffect(() => startAccountLifecycle(), []);
-  const publicPage = path === '/' || path === '/sample' || path === '/about';
+  const publicPage =
+    path === '/' ||
+    path === '/sample' ||
+    path === '/about' ||
+    path === '/explore' ||
+    /^\/explore\/[a-z0-9][a-z0-9_-]{0,79}$/.test(path);
   if (!publicPage && !offlineDev && session.phase !== 'backend-verified') return <LoginPage />;
   if (!publicPage && !trips.ready)
     return (
@@ -76,7 +97,9 @@ export function App() {
         Đến nội dung chính
       </a>
       <Navigation path={path} />
-      <div className="min-w-0 lg:ml-64">
+      <div
+        className={`min-w-0 lg:ml-64 ${path === '/' || path === '/explore' ? 'discovery-shell' : 'core-shell'}`}
+      >
         <header
           className={[
             path.startsWith('/trips/') || path === '/sample' ? 'hidden lg:block' : '',
@@ -87,23 +110,36 @@ export function App() {
             <div className="lg:hidden">
               <Brand />
             </div>
-            <Link
-              href="/"
-              className="hidden min-h-11 items-center text-sm text-muted lg:inline-flex"
-            >
-              Một chuyến đi, theo cách bạn thích.
-            </Link>
-            <Link
-              href="/account"
-              aria-label="Mở trang cá nhân"
-              className="grid size-11 place-items-center rounded-full border border-line text-muted hover:bg-sand"
-            >
-              {profile.value ? (
-                <ProfileAvatarImage profile={profile.value} small />
-              ) : (
-                <Icon name="account" />
+            {path !== '/' && path !== '/explore' && (
+              <Link
+                href="/"
+                className="hidden min-h-11 items-center text-sm text-muted lg:inline-flex"
+              >
+                Một chuyến đi, theo cách bạn thích.
+              </Link>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {path === '/' && (
+                <Link
+                  href="/favorites"
+                  className="favorites-shortcut"
+                  aria-label="Yêu thích của tôi"
+                >
+                  <Icon name="heart" />
+                </Link>
               )}
-            </Link>
+              <Link
+                href="/account"
+                aria-label="Mở trang cá nhân"
+                className="grid size-11 place-items-center rounded-full border border-line text-muted hover:bg-sand"
+              >
+                {profile.value ? (
+                  <ProfileAvatarImage profile={profile.value} small />
+                ) : (
+                  <Icon name="account" />
+                )}
+              </Link>
+            </div>
           </div>
         </header>
         <main
@@ -121,12 +157,16 @@ export function App() {
               </div>
             )}
             <MotionRegion key={path} motionKey={path}>
-              <Route key={`${session.userId}:${path}`} path={path} />
+              <Route
+                key={`${session.userId}:${path}:${path === '/explore' ? search : ''}`}
+                path={path}
+              />
             </MotionRegion>
           </ErrorBoundary>
         </main>
         <footer className="mx-auto flex max-w-6xl flex-col gap-3 border-t border-line px-5 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-10 lg:pb-10">
           <p className="hidden text-sm text-muted lg:block">Đi cùng nhau, khám phá nhiều hơn.</p>
+          <PhotoCredits />
           <PwaStatus />
         </footer>
       </div>

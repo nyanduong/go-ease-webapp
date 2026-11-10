@@ -6,6 +6,9 @@ Bản UI/UX hiện tại: [Hướng 1 — Ấm áp, gần gũi: audit, thay đ�
 
 ## Phạm vi sản phẩm hiện tại
 
+- [GoEase V2 Core: release candidate, kiểm thử và giới hạn nghiệm thu](GOEASE_V2_CORE_RC.md)
+- [GoEase V2: contract CMS, migration và publication](GOEASE_V2_CONTRACT.md)
+
 - [Định hướng mở rộng nhiều điểm đến với SerpApi](MULTI_DESTINATION_PLAN.md)
 - [Bàn giao nhiều điểm đến: cấu hình, tests và nghiệm thu SerpApi thật](MULTI_DESTINATION_HANDOFF.md)
 - [MVP PWA đã chốt, luồng user/admin và thứ tự bàn giao](MVP_PRODUCT_PLAN.md)

@@ -1,0 +1,95 @@
+{
+  "baseline": {
+    "commit": "c55714de82ec22365f716f46516ee138b000270e",
+    "browserTestsPassed": 63
+  },
+  "testedCodeCommit": "cc8ec6fd07e9d4f98ed123efc52b9c853faa19fb",
+  "branch": "nyan/goease-v2-discovery",
+  "scope": "UI polish only; approved Home/Explore composition and app shell retained",
+  "open": {
+    "home": "http://localhost:5174/",
+    "explore": "http://localhost:5174/explore"
+  },
+  "changes": [
+    "Ảnh & nguồn thành nút i có vùng bấm 44px ngay trên thumbnail; hộp thông tin tại cùng trang giữ chủ thể, tác giả, nguồn, giấy phép và ghi chú thu nhỏ/crop. Escape đóng và trả focus.",
+    "Đã đối chiếu 8 ảnh với metadata giấy phép Commons và các bản CC BY/CC BY-SA tương ứng; giữ ShareAlike cho tài nguyên ảnh liên quan.",
+    "Banner chọn ảnh ngang của Ga Đà Lạt từ dữ liệu CMS thay vì lặp ảnh bìa điểm đến; cẩm nang vẫn giữ ảnh bìa CMS, không bịa ảnh để loại bỏ mọi lần lặp.",
+    "Focal point của ảnh Cầu Rồng, Ga Đà Lạt, thác Datanla được xem lại ở crop mobile; không thay file ảnh bằng dữ liệu ngẫu nhiên.",
+    "Home: tối đa 4 địa điểm, 2 cẩm nang; ẩm thực 1 hàng cuộn, các bản ghi đã có ảnh được ưu tiên; Xem tất cả giữ bộ lọc theo loại.",
+    "Khám phá: hai hàng chip cuộn ngang, vùng bấm >=44px, tự đưa chip được chọn vào vùng nhìn; giữ nguyên q/categoryId/destinationId và phân trang.",
+    "Desktop chỉ còn logo trong sidebar.",
+    "Phân biệt Chưa có ảnh và Ảnh chưa tải được; fallback vẫn giữ thông tin nguồn của ảnh gốc."
+  ],
+  "verified": {
+    "actualLocalEnvironment": {
+      "identity": "anonymous browser",
+      "data": "real existing local Nest API + PostgreSQL",
+      "viewports": [
+        "360x800",
+        "390x844",
+        "1440x1000"
+      ],
+      "comparisonZoom": "100%",
+      "checks": [
+        "Home/Explore screenshot after data and images finish loading",
+        "No global horizontal overflow",
+        "Home card counts 4 places / 2 articles",
+        "Banner photo differs from destination rail",
+        "Keyboard horizontal scroll on destination and food rows",
+        "Attribution dialog, original author/license/source links, Escape",
+        "Search, type filter preserving query, empty result, detail, Back restoring filters",
+        "200% text reflow",
+        "Single desktop brand logo"
+      ]
+    },
+    "browserRegression": {
+      "passed": 64,
+      "failed": 0,
+      "identity": "explicit provider fixture",
+      "log": "browser-tests.log"
+    },
+    "postgresRegression": {
+      "passed": 30,
+      "failed": 0,
+      "suites": [
+        24,
+        6
+      ],
+      "data": "new isolated real PostgreSQL + real Nest HTTP",
+      "identity": "Supabase provider is an offline double",
+      "flows": [
+        "CMS publication/visibility/ownership",
+        "Favorites add/remove/reopen and A/B isolation",
+        "Discovery/detail/manual creation/save/reload in PWA at 390px and desktop",
+        "Trip CRUD/replay/conflicts and durable snapshots",
+        "Existing Back/draft recovery tests retained"
+      ],
+      "log": "database-tests.log",
+      "evidence": "db-regression/evidence.json"
+    },
+    "build": "pass",
+    "typecheck": "pass",
+    "lint": "pass",
+    "docs": "pass",
+    "localDataAllTablesUnchanged": true
+  },
+  "screenshots": {
+    "before": "before/",
+    "after": "after/",
+    "liveEvidence": "after/evidence.json",
+    "photoRights": "photo-rights.json"
+  },
+  "notVerifiedOrRemaining": [
+    "Live Google OAuth was not re-run with a real account in this polish pass.",
+    "No physical phone keyboard/native touch test; viewport emulation and browser keyboard scrolling only.",
+    "Chợ đêm Đà Lạt still has no verified licensed photo; compact missing-photo fallback remains last in the Home food rail.",
+    "Some guide covers still match their destination CMS cover; banner no longer uses that same photograph."
+  ],
+  "preservation": [
+    "No reset, deletion or seeding of local DB; all table counts and row hashes unchanged",
+    "No auth/env changes, no new commercial features",
+    "Back fixes preserved",
+    "Original RC1 screenshots/evidence restored after regression; new evidence kept in this folder",
+    "No merge, push or production deployment"
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "source": "Live localhost:5174 + real local Nest/PostgreSQL, anonymous browser, no mocks",
+  "checks": [
+    "search",
+    "kind change preserves query",
+    "empty result",
+    "detail",
+    "browser Back restores filters",
+    "200% text reflow"
+  ],
+  "screens": [
+    {
+      "screen": "home",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "explore",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "home",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "explore",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "home",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "explore",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    }
+  ]
+}

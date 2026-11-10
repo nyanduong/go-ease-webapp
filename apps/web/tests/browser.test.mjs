@@ -191,6 +191,8 @@ async function setup(options = {}) {
       url = new URL(request.url()),
       method = request.method();
     if (method === 'OPTIONS') return reply(route, {});
+    if (url.pathname === '/v1/content' || url.pathname === '/v1/favorites')
+      return reply(route, { apiVersion: '1', items: [], nextCursor: null });
     const owner = request.headers().authorization === 'Bearer ' + tokens.B ? 'B' : 'A';
     if (url.pathname.startsWith('/v1/profile-media/') && method === 'GET') {
       const bytes = state.media.get(url.pathname);
@@ -1214,7 +1216,7 @@ test('profile shows Google identity, persists edits across reload and isolates a
     window.dispatchEvent(new Event('beforeinstallprompt', { cancelable: true })),
   );
   assert.equal(await page.getByRole('button', { name: 'Cài GoEase', exact: true }).count(), 0);
-  const photoFolder = root + '/../../docs/qa/warm-refinement/after';
+  const photoFolder = root + '/test-results/warm-refinement';
   await mkdir(photoFolder, { recursive: true });
   await page
     .getByRole('img', { name: 'Ảnh bìa của bạn', exact: true })
@@ -1371,29 +1373,58 @@ test('a revoked refresh token requires Google login and clears persistent creden
 test('online backend outage preserves login, reports server failure and recovers on retry or reconnect', async () => {
   const f = await setup(),
     { page, context, state } = f;
-  await login(page, '/account');
-  state.backendUnavailable = true;
-  await page.reload();
-  assert.equal(await page.evaluate(() => navigator.onLine), true);
-  await page.getByText('Chưa mở được GoEase. Vui lòng thử lại.', { exact: true }).waitFor();
-  assert.equal(await page.getByRole('navigation').count(), 0);
-  assert.equal(
-    await page.evaluate(
-      () => Object.keys(localStorage).filter((key) => key.endsWith('.session')).length,
-    ),
-    1,
+  const recoveryTrace = [];
+  const recordRecovery = (event, request, status) => {
+    const url = new URL(request.url());
+    if ([authOrigin, 'https://api.goease.test'].includes(url.origin))
+      recoveryTrace.push({
+        event,
+        method: request.method(),
+        path: url.pathname,
+        ...(status ? { status } : {}),
+      });
+  };
+  page.on('request', (request) => recordRecovery('request', request));
+  page.on('response', (response) =>
+    recordRecovery('response', response.request(), response.status()),
   );
-  state.backendUnavailable = false;
-  await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
-  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
-  await context.setOffline(true);
-  await page.reload();
-  await page.getByText('Bạn đang mất kết nối.', { exact: true }).waitFor();
-  await context.setOffline(false);
-  await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
-  assert.equal(state.authorize.length, 1, 'Recovery must reuse the saved session');
-  assert.equal(state.writes.length, 0);
-  await finish(f, 'server-reconnect');
+  page.on('requestfailed', (request) => recordRecovery('failed', request));
+  try {
+    await login(page, '/account');
+    state.backendUnavailable = true;
+    await page.reload();
+    assert.equal(await page.evaluate(() => navigator.onLine), true);
+    await page.getByText('Chưa mở được GoEase. Vui lòng thử lại.', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('navigation').count(), 0);
+    assert.equal(
+      await page.evaluate(
+        () => Object.keys(localStorage).filter((key) => key.endsWith('.session')).length,
+      ),
+      1,
+    );
+    state.backendUnavailable = false;
+    await page.getByRole('button', { name: 'Thử lại', exact: true }).click();
+    await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
+    await context.setOffline(true);
+    await page.reload();
+    await page.getByText('Bạn đang mất kết nối.', { exact: true }).waitFor();
+    await context.setOffline(false);
+    await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor({ timeout: 20000 });
+    assert.equal(state.authorize.length, 1, 'Recovery must reuse the saved session');
+    assert.equal(state.writes.length, 0);
+    await finish(f, 'server-reconnect');
+  } catch (error) {
+    // Paths/status only: never log headers, credentials, query strings or bodies.
+    console.error(
+      'Session recovery diagnostics:',
+      JSON.stringify({
+        path: new URL(page.url()).pathname,
+        network: recoveryTrace,
+        pageErrors: f.errors,
+      }),
+    );
+    throw error;
+  }
 });
 
 test('workspace loading stays quiet; catalog failure offers a retry without technical auth messages', async () => {
@@ -1471,7 +1502,7 @@ for (const [mode, viewport] of [
       { page, state } = f;
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.context().route('https://res.cloudinary.com/**', (route) => route.abort());
-    const folder = root + '/../../docs/qa/warm-refinement/after';
+    const folder = root + '/test-results/warm-refinement';
     await mkdir(folder, { recursive: true });
     async function capture(screen) {
       await page.evaluate(
@@ -1496,7 +1527,7 @@ for (const [mode, viewport] of [
     await page.getByRole('heading', { name: 'Bạn muốn đi đâu?', exact: true }).waitFor();
     assert.equal(
       await page.getByRole('navigation').getByRole('link').count(),
-      viewport.width < 1024 ? 3 : 6,
+      viewport.width < 1024 ? 4 : 8,
     );
     await capture('home');
     assert.equal(
@@ -1527,13 +1558,13 @@ for (const [mode, viewport] of [
     );
     await page.getByRole('link', { name: 'Quay lại', exact: true }).click();
     assert.equal(
-      await page.getByRole('link', { name: 'Tạo chuyến đi', exact: true }).getAttribute('href'),
+      await page.getByRole('link', { name: 'Lên lịch', exact: true }).getAttribute('href'),
       '/trips/new?choose=1',
     );
-    await page.getByLabel('Chọn điểm đến', { exact: true }).selectOption('da-lat');
-    await page.getByRole('link', { name: 'Tạo chuyến đi', exact: true }).click();
+    await page.getByRole('link', { name: 'Lên lịch', exact: true }).click();
     await page.getByRole('button', { name: 'Tiếp tục với Google', exact: true }).click();
-    await page.waitForURL(base + '/trips/new?destination=da-lat');
+    await page.waitForURL(base + '/trips/new?choose=1');
+    await page.getByRole('button', { name: 'Đà Lạt', exact: true }).click();
     await page.getByRole('button', { name: 'Đà Lạt Việt Nam', exact: true }).waitFor();
     await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Đà Lạt cuối tuần');
     await page.getByLabel('Số ngày', { exact: true }).fill('2');
@@ -1614,5 +1645,99 @@ for (const [mode, viewport] of [
     assert.equal(state.writes[0].body.trip.budgetVnd, 2000000);
     assert.deepEqual(f.errors, []);
     await f.context.close();
+  });
+}
+
+for (const viewport of [
+  { width: 360, height: 800 },
+  { width: 390, height: 844 },
+  { width: 1440, height: 1000 },
+]) {
+  test(`Core acceptance journey at ${viewport.width}: empty, manual create, save, reopen, edit, account and help`, async () => {
+    const f = await setup({ viewport });
+    const { page, state } = f;
+    const folder = root + '/test-results/core-final';
+    await mkdir(folder, { recursive: true });
+    async function capture(screen) {
+      await page
+        .locator('main img')
+        .evaluateAll(async (imgs) => Promise.all(imgs.map((img) => img.decode().catch(() => {}))));
+      await page.evaluate(() => scrollTo(0, 0));
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+      );
+      await page.screenshot({
+        path: `${folder}/${screen}-${viewport.width}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      });
+      await page.screenshot({
+        path: `${folder}/${screen}-${viewport.width}-viewport.png`,
+        animations: 'disabled',
+      });
+    }
+    try {
+      await login(page);
+      await page
+        .getByRole('heading', { name: 'Chuyến đi đầu tiên đang chờ bạn', exact: true })
+        .waitFor();
+      assert.equal(await page.locator('.trip-list-card').count(), 0);
+      await capture('01-empty');
+      await page.getByRole('button', { name: 'Tạo chuyến đi', exact: true }).click();
+      await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Cuối tuần Đà Lạt');
+      await page.getByLabel('Số ngày', { exact: true }).fill('1');
+      await capture('02-create');
+      await page.getByRole('button', { name: 'Tạo lịch trống', exact: true }).click();
+      await page.getByRole('button', { name: 'Thêm địa điểm', exact: true }).click();
+      await page.getByLabel('Tên hoạt động', { exact: true }).fill('Đi bộ quanh hồ');
+      await page
+        .getByLabel('Ghi chú', { exact: true })
+        .fill('Xác nhận lối đi và thời tiết trước khi khởi hành.');
+      await capture('03-edit');
+      await page.getByRole('button', { name: 'Giữ chuyến này', exact: true }).click();
+      await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).waitFor();
+      const tripUrl = page.url();
+      await page.reload();
+      await page.getByRole('heading', { name: 'Cuối tuần Đà Lạt', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Đi bộ quanh hồ', exact: true }).waitFor();
+      await capture('04-reopened');
+      await page.getByRole('tab', { name: 'Chi phí', exact: true }).click();
+      await capture('05-costs-unknown');
+      await page.getByRole('tab', { name: 'Bản đồ', exact: true }).click();
+      await capture('06-map');
+      await page.getByRole('button', { name: 'Chỉnh sửa lịch trình', exact: true }).click();
+      await page.getByLabel('Tên chuyến đi', { exact: true }).fill('Cuối tuần Đà Lạt đã chỉnh');
+      await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
+      await page.getByRole('heading', { name: 'Cuối tuần Đà Lạt đã chỉnh', exact: true }).waitFor();
+      await page.goto(base + '/trips');
+      await page
+        .getByRole('button', {
+          name: 'Mở chuyến tài khoản: Cuối tuần Đà Lạt đã chỉnh',
+          exact: true,
+        })
+        .waitFor();
+      await capture('07-list');
+      await page
+        .getByRole('button', {
+          name: 'Mở chuyến tài khoản: Cuối tuần Đà Lạt đã chỉnh',
+          exact: true,
+        })
+        .click();
+      assert.equal(page.url(), tripUrl);
+      assert.equal(state.writes.length, 2);
+      await page.goto(base + '/account');
+      await page.getByRole('heading', { name: 'Bạn A', exact: true }).waitFor();
+      await capture('08-account');
+      await page.getByRole('button', { name: 'Chỉnh sửa hồ sơ', exact: true }).click();
+      await capture('09-profile-edit');
+      await page.getByRole('button', { name: 'Hủy chỉnh sửa', exact: true }).click();
+      await page.goto(base + '/about');
+      await page.getByRole('heading', { name: 'Giới thiệu & trợ giúp', exact: true }).waitFor();
+      await capture('10-help');
+      assert.deepEqual(f.errors, []);
+    } finally {
+      await f.context.close();
+    }
   });
 }

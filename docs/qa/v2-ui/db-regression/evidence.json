@@ -1,0 +1,310 @@
+{
+  "data": "Isolated real PostgreSQL and real Nest HTTP; editorial fixture created/published through admin API. Supabase provider is an offline double; no live providers.",
+  "viewports": [
+    {
+      "name": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "tripId": "b8ce4df5-a948-46ec-a745-c8bd83cc1e11",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "PUT",
+          "path": "/v1/favorites/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/v1/trips",
+          "status": 201
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips/b8ce4df5-a948-46ec-a745-c8bd83cc1e11",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "tripId": "35ed51b9-9942-4b56-8267-2b796944b15e",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/content/aaa-browser-a5dee97f-21bd-4a66-abb1-6e9c59b509e6",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/v1/trips",
+          "status": 201
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips/35ed51b9-9942-4b56-8267-2b796944b15e",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/auth/me",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/catalog/places",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/trips",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/favorites",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

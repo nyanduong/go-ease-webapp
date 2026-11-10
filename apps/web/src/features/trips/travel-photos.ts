@@ -30,6 +30,13 @@ export function destinationPhoto(destinationId?: string): TravelPhoto {
   const photo = curated.find((item) => item.id === destinationId) ?? neutralPhoto;
   return photo;
 }
+export function placePhoto(name: string, destinationId: string): TravelPhoto | undefined {
+  return curated.find(
+    (photo) =>
+      photo.destinationId === destinationId &&
+      photo.aliases.some((alias) => normalize(alias) === normalize(name)),
+  );
+}
 
 export function activityPhotos(activity: Activity, destinationId: string): TravelPhoto[] {
   const name = normalize(activity.name);

@@ -1,0 +1,86 @@
+{
+  "scope": "Điểm duyệt Home + Khám phá trên RC1; chưa chốt UI toàn ứng dụng",
+  "branch": "nyan/goease-v2-discovery",
+  "baseCommit": "4b893681a51a01c2a6ccc52c7be2b6ba71b69af6",
+  "open": {
+    "home": "http://localhost:5174/",
+    "explore": "http://localhost:5174/explore"
+  },
+  "evidence": {
+    "before": "before/",
+    "after": "after/",
+    "live": "after/evidence.json",
+    "databaseRegression": "db-regression/evidence.json"
+  },
+  "preservation": [
+    "Giữ các sửa Back chưa commit từ đầu lượt làm việc",
+    "Không reset/xóa DB hoặc thay auth/env",
+    "So sánh SHA256 toàn bộ hàng của 9 bảng ngoài CMS trước/sau seed: khớp",
+    "Seed chạy lại không đổi payload, version, updatedAt",
+    "Giữ nguyên ảnh/evidence RC1 cũ; evidence hồi quy mới lưu riêng"
+  ],
+  "composition": [
+    "Header logo, yêu thích gọn và tài khoản",
+    "Một thanh tìm kiếm chính",
+    "Bốn shortcut có route thật",
+    "Banner lên lịch nhỏ, ảnh từ bản ghi CMS, không autoplay",
+    "Điểm đến cuộn ngang; địa điểm và ẩm thực dạng lưới",
+    "Cẩm nang có thumbnail và bố cục tự xuống dòng khi tăng chữ",
+    "Khối chuyến gần nhất chỉ hiện khi có dữ liệu"
+  ],
+  "differencesFromChillGo": [
+    "Giữ màu #FAF8F5 / #202824 / #B84332 và nhận diện GoEase",
+    "Giữ bốn tab hiện có, không thêm dịch vụ chưa hoạt động",
+    "Không rating, giá, mã ưu đãi, banner bán hàng hoặc thanh trạng thái điện thoại giả",
+    "Chủ đề lấy từ CMS, không bịa trường mùa/vùng để làm bộ lọc",
+    "Desktop dùng sidebar gọn; mobile dùng bottom navigation",
+    "Tác giả/nguồn/giấy phép trong mục Ảnh & nguồn có thể mở"
+  ],
+  "content": {
+    "destinations": 3,
+    "places": 6,
+    "food": 3,
+    "articles": 3,
+    "categories": 3,
+    "missingImages": [
+      "Hương vị quanh chợ đêm Đà Lạt: chưa có ảnh được xác minh và cấp phép phù hợp; dùng fallback nhỏ"
+    ],
+    "sources": [
+      "https://vietnam.travel/places-to-go/south-central-coast-central-highlands/dalat",
+      "https://vietnam.travel/places-to-go/south-central-coast-central-highlands/da-nang",
+      "https://vietnam.travel/places-to-go/north-central-coast/hue",
+      "https://visitlamdong.vn/en/hoxuanhuong",
+      "https://visitlamdong.vn/en/gadalat",
+      "https://visitlamdong.vn/en/thacdatanla",
+      "https://vietnam.travel/node/1100",
+      "https://www.vietnam.travel/things-to-do/how-eat-local-hue",
+      "https://eticket.hueworldheritage.org.vn/",
+      "https://www.wikidata.org/wiki/Q10769129"
+    ],
+    "photoProvenance": [
+      "apps/web/src/features/trips/curated-photos.json",
+      "apps/web/src/features/content/editorial-photos.json"
+    ],
+    "seedPolicy": "Bản ghi mới insert-only; chỉ làm giàu bản RC1 có payload khớp toàn bộ bản seed gốc và version=1. Bản chỉnh sửa/công bố của admin được giữ nguyên."
+  },
+  "verification": {
+    "browserTests": 63,
+    "postgresTests": 30,
+    "webBuild": "pass",
+    "webTypecheck": "pass",
+    "webAndApiLint": "pass",
+    "search": "pass",
+    "filterKeywordAndTopicRetention": "pass",
+    "paginationAndDeduplication": "pass",
+    "detailAndBack": "pass",
+    "noGlobalHorizontalOverflow": "pass",
+    "viewports": ["360x800", "390x844", "1440x1000"],
+    "text200": "reflow checked; articles wrap and nav labels remain readable"
+  },
+  "pending": [
+    "Chờ người dùng duyệt bố cục hai màn",
+    "Chưa thiết kế lại Chi tiết / Chuyến đi / Cá nhân trong lượt này, chỉ bỏ link mẫu ở empty state",
+    "Chưa kiểm tra bàn phím hệ điều hành trên điện thoại thật; ảnh là browser viewport emulation",
+    "Chưa merge/deploy production; không sửa tag RC1 hiện có"
+  ]
+}

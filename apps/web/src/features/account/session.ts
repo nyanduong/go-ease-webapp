@@ -20,6 +20,7 @@ import {
 } from '@goease/trip-client/offline-trip-controller';
 import { transaction } from '../../platform/browser-storage';
 import { clearCreation } from '../trips/creation-cache';
+import { resumeAfterSessionWork } from '../../platform/session-recovery';
 
 const project = import.meta.env.VITE_SUPABASE_URL?.match(
   /^https:\/\/([a-z0-9]{20})\.supabase\.co$/,
@@ -288,12 +289,29 @@ export const accountSession = {
   },
   async resume() {
     const epoch = lifecycle;
-    // Auth can publish its error before the enclosing restore/connect finishes.
-    // Queue an explicit Retry behind that work instead of dropping the click.
-    await restoring;
-    await maintaining;
-    if (epoch !== lifecycle) return;
-    return maintainSession(true);
+    // Initialization can start another maintenance/restore after the first
+    // restore publishes its error. Drain each handoff so the user's retry is
+    // still applied if that background attempt also fails.
+    return resumeAfterSessionWork(
+      initialized,
+      () => restoring ?? maintaining,
+      () => epoch === lifecycle,
+      () => maintainSession(true),
+    );
+  },
+  async contentRequest(method: 'GET' | 'PUT' | 'DELETE', path: string, signal?: AbortSignal) {
+    const owner = session.userId,
+      epoch = lifecycle;
+    if (restoring) await restoring;
+    else if (initialized) await initialized;
+    await maintainSession();
+    assertSessionOwner();
+    if (!owner || owner !== session.userId || epoch !== lifecycle)
+      throw Error('Tài khoản đã thay đổi.');
+    const result = await auth.contentRequest(method, path, signal);
+    assertSessionOwner();
+    if (owner !== session.userId || epoch !== lifecycle) throw Error('Tài khoản đã thay đổi.');
+    return result;
   },
   loadProfile: () => profileRequest(),
   saveProfile: (input: ProfileInput) => profileRequest(input),

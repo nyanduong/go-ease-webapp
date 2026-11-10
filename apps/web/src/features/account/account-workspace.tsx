@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Trip } from '@goease/contracts';
+import { getDestination, type Trip } from '@goease/contracts';
 import { Button, Notice, dateLabel } from '../../components/ui';
 import { Link, navigate } from '../../app/router';
 import { NewAccountTrip } from '../trips/new-account-trip';
@@ -17,6 +17,10 @@ export function AccountWorkspace({
   id?: string;
 }) {
   const { trips, catalog } = useAccount();
+  const [cancelPath] = useState(() => {
+    const content = new URLSearchParams(location.search).get('content');
+    return content ? `/explore/${encodeURIComponent(content)}` : '/trips';
+  });
   const [creating, setCreating] = useState(mode === 'new'),
     [created, setCreated] = useState<string | null>(null),
     [deleted, setDeleted] = useState(false),
@@ -56,8 +60,8 @@ export function AccountWorkspace({
     if (created && !creating) navigate(`/trips/${encodeURIComponent(created)}`, true);
   }, [created, creating]);
   useEffect(() => {
-    if (cancelled && !creating) navigate('/trips', true);
-  }, [cancelled, creating]);
+    if (cancelled && !creating) navigate(cancelPath, true);
+  }, [cancelled, creating, cancelPath]);
   useEffect(() => {
     if (deleted && !trips.busy) navigate('/trips', true);
   }, [deleted, trips.busy]);
@@ -272,10 +276,13 @@ export function AccountWorkspace({
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
           {trips.items.map((item) => (
             <div
-              className="flex min-w-0 flex-col gap-5 rounded-3xl border border-line bg-paper p-5 sm:p-6"
+              className="trip-list-card surface flex min-w-0 flex-col gap-3 p-4 sm:p-5"
               key={item.id}
             >
               <TripCover destinationId={item.destinationId} />
+              <p className="text-xs font-semibold text-teal">
+                {getDestination(item.destinationId ?? '')?.name ?? 'Điểm đến trong lịch trình'}
+              </p>
               <h3>{item.name}</h3>
               <p>
                 {dateLabel(item.startDate)} · {item.durationDays} ngày · {item.people} người
@@ -309,14 +316,11 @@ export function AccountWorkspace({
         <p role="status">Đang tải danh sách chuyến đi…</p>
       )}
       {mode === 'list' && !trips.items.length && trips.ready && listReady && (
-        <div className="surface flex flex-col items-center gap-3 px-6 py-12 text-center">
+        <div className="surface flex flex-col items-center gap-3 px-5 py-8 text-center">
           <h2>Chuyến đi đầu tiên đang chờ bạn</h2>
           <p className="max-w-md text-muted">
             Chọn một điểm đến, tạo lịch trình rồi lưu lại ở đây để mở bất cứ khi nào có kết nối.
           </p>
-          <Link href="/sample" className="text-action text-teal underline">
-            Xem thử lịch trình mẫu
-          </Link>
         </div>
       )}
       {mode === 'list' && !creating && (
@@ -332,6 +336,7 @@ export function AccountWorkspace({
       {creating && (
         <NewAccountTrip
           disabled={locked}
+          cancelDisabled={blocked || !!trips.pending}
           onCancel={() => {
             setCreating(false);
             setCancelled(true);

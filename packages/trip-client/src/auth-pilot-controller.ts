@@ -647,6 +647,28 @@ export function createAuthPilot(options: {
         }
       }
     },
+    async contentRequest(method: 'GET' | 'PUT' | 'DELETE', path: string, signal?: AbortSignal) {
+      if (
+        !/^\/v1\/favorites(?:\?[A-Za-z0-9_%=&-]*|\/[a-z0-9][a-z0-9_-]{0,79})?$/.test(path) ||
+        (method !== 'GET' && !/^\/v1\/favorites\/[a-z0-9][a-z0-9_-]{0,79}$/.test(path))
+      )
+        throw Error('Yêu cầu yêu thích không hợp lệ.');
+      return verifiedDiscovery(async (backend, access, requestSignal) => {
+        const response = await (options.fetcher ?? fetch)(backend + path, {
+          method,
+          redirect: 'error',
+          credentials: 'omit',
+          signal: AbortSignal.any([requestSignal, AbortSignal.timeout(10000)]),
+          headers: { authorization: `Bearer ${access}`, accept: 'application/json' },
+        });
+        if (response.status === 401)
+          throw new ServerTripError('AUTH_REQUIRED', 'Đăng nhập lại để mở yêu thích.', 401);
+        if (!response.ok) throw Error(`Chưa xử lý được yêu thích (${response.status}).`);
+        const raw = await response.text();
+        if (raw.length > 2000000) throw Error('Phản hồi yêu thích quá lớn.');
+        return JSON.parse(raw) as unknown;
+      }, signal);
+    },
     async uploadProfileImage(jpeg: string, signal?: AbortSignal) {
       return verifiedDiscovery(async (backend, access, requestSignal) => {
         const response = await (options.fetcher ?? fetch)(backend + '/v1/profile-media', {

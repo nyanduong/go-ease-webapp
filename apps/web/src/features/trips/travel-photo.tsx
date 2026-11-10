@@ -1,3 +1,4 @@
+import { usePhotoCredit } from '../../components/photo-credits';
 import { useRef, useState } from 'react';
 import type { TravelPhoto } from './travel-photos';
 
@@ -28,6 +29,17 @@ function PhotoChain({
   const [closing, setClosing] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const photo = photos[index];
+  usePhotoCredit(
+    photo && photo.sourceUrl
+      ? {
+          src: photo.src,
+          title: photo.alt,
+          credit: `${photo.author}${photo.license ? ' · ' + photo.license : ''}`,
+          sourceUrl: photo.sourceUrl,
+          licenseUrl: photo.licenseUrl,
+        }
+      : undefined,
+  );
   const closeViewer = () => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) dialog.current?.close();
     else setClosing(true);

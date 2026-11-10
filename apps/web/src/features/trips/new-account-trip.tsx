@@ -24,6 +24,7 @@ import { TripForm } from './trip-form';
 import { DiscoveryReview } from './discovery-review';
 import { confirmAction } from '../../platform/confirmation';
 import { offlineDev } from '../../platform/dev-mode';
+import { contentDetail } from '../content/content-api';
 import { clearCreation, restoreCreation, saveCreation } from './creation-cache';
 
 const interests = [
@@ -39,16 +40,22 @@ const interests = [
 
 export function NewAccountTrip({
   disabled,
+  cancelDisabled = disabled,
   onCancel,
   onCreate,
 }: {
   disabled: boolean;
+  cancelDisabled?: boolean;
   onCancel: () => void;
   onCreate: (trip: Trip) => Promise<void>;
 }) {
   const { catalog, trips } = useAccount();
   const owner = trips.owner!;
-  const [restored] = useState(() => restoreCreation(sessionStorage, owner));
+  const [contentId] = useState(() => new URLSearchParams(location.search).get('content'));
+  const [restored] = useState(() => {
+    const saved = restoreCreation(sessionStorage, owner);
+    return (saved?.contentId ?? null) === contentId ? saved : null;
+  });
   const [initial] = useState(() => {
     const base = initialTripForm(new Date());
     const query = new URLSearchParams(location.search);
@@ -58,7 +65,7 @@ export function NewAccountTrip({
       name: 'Chuyến đi của tôi',
       ...(destination
         ? { destinationId: destination.id, destination }
-        : query.has('choose') || query.has('destination')
+        : query.has('choose') || query.has('destination') || query.has('content')
           ? { destinationId: '', destination: undefined }
           : {}),
     };
@@ -85,6 +92,7 @@ export function NewAccountTrip({
     if (completed.current || accountTrips.getSnapshot().owner !== owner) return;
     setCacheFailed(
       !saveCreation(sessionStorage, owner, {
+        contentId,
         form,
         pace,
         interests: selectedInterests,
@@ -101,6 +109,50 @@ export function NewAccountTrip({
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState('');
   const [destinationBusy, setDestinationBusy] = useState(false);
+  const [editorial, setEditorial] = useState(!!contentId);
+  const [editorialLoading, setEditorialLoading] = useState(!!contentId);
+  useEffect(() => {
+    if (!contentId) return;
+    const request = new AbortController();
+    setEditorialLoading(true);
+    void (async () => {
+      const selected = await contentDetail(contentId, request.signal);
+      const parent =
+        selected.entry.kind === 'destination'
+          ? selected
+          : selected.entry.destinationId
+            ? await contentDetail(selected.entry.destinationId, request.signal)
+            : null;
+      if (!parent?.entry.destination) throw Error('Nội dung chưa có điểm đến để lập kế hoạch.');
+      if (request.signal.aborted || accountTrips.getSnapshot().owner !== owner) return;
+      if (restored) {
+        // Revalidate publication without reapplying the original handoff over later user edits.
+        // A provider preview proves the user already switched to discovery creation.
+        setEditorial(
+          !restored.preview && restored.form.destinationId === parent.entry.destination.id,
+        );
+        return;
+      }
+      setForm((current) => ({
+        ...current,
+        destinationId: parent.entry.destination!.id,
+        destination: parent.entry.destination!,
+      }));
+      setPreview(null);
+      setEditorial(true);
+      setMessage(
+        'Đã chọn điểm đến từ nội dung GoEase. Tạo lịch trống để tự thêm những địa điểm bạn muốn ghé.',
+      );
+    })()
+      .catch(() => {
+        if (!request.signal.aborted)
+          setMessage('Chưa mở được điểm đến từ nội dung này. Hãy chọn lại điểm đến để tiếp tục.');
+      })
+      .finally(() => {
+        if (!request.signal.aborted) setEditorialLoading(false);
+      });
+    return () => request.abort();
+  }, [contentId, owner, restored]);
   const submitting = useRef(false);
   async function createDraft(trip: Trip) {
     if (submitting.current || disabled) return;
@@ -121,13 +173,13 @@ export function NewAccountTrip({
   const controller = useRef<AbortController | null>(null);
   const confirming = useRef(false),
     mounted = useRef(true),
-    current = useRef({ form, selectedInterests, disabled, busy, destinationBusy });
-  current.current = { form, selectedInterests, disabled, busy, destinationBusy };
+    current = useRef({ form, selectedInterests, cancelDisabled, busy, destinationBusy });
+  current.current = { form, selectedInterests, cancelDisabled, busy, destinationBusy };
   const changed =
     JSON.stringify(form) !== JSON.stringify(initial) ||
     selectedInterests.length > 0 ||
     pace !== 'relaxed';
-  useLeaveGuard(changed, disabled || busy || destinationBusy);
+  useLeaveGuard(changed, cancelDisabled || busy || destinationBusy);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -136,9 +188,10 @@ export function NewAccountTrip({
     };
   }, []);
   async function cancel() {
-    if (confirming.current || disabled || busy || destinationBusy) return;
+    if (confirming.current || cancelDisabled || busy || destinationBusy) return;
     const snapshot = current.current,
-      owner = accountTrips.getSnapshot().owner;
+      accountBefore = accountTrips.getSnapshot(),
+      owner = accountBefore.owner;
     confirming.current = true;
     try {
       if (
@@ -156,7 +209,7 @@ export function NewAccountTrip({
         account = accountTrips.getSnapshot();
       if (
         !mounted.current ||
-        latest.disabled ||
+        latest.cancelDisabled ||
         latest.busy ||
         latest.destinationBusy ||
         latest.form !== snapshot.form ||
@@ -164,7 +217,7 @@ export function NewAccountTrip({
         !account.ready ||
         account.busy ||
         account.pending ||
-        account.draft ||
+        account.draft !== accountBefore.draft ||
         account.owner !== owner
       )
         return;
@@ -183,9 +236,9 @@ export function NewAccountTrip({
     return result;
   };
   async function discover() {
-    if (offlineDev) return manual();
+    if (offlineDev || editorial) return manual();
     const parsed = validate();
-    if (!parsed.ok || busy || destinationBusy || disabled) return;
+    if (!parsed.ok || busy || destinationBusy || editorialLoading || disabled) return;
     const request = new AbortController();
     controller.current = request;
     setBusy(true);
@@ -219,7 +272,7 @@ export function NewAccountTrip({
   }
   async function manual() {
     const parsed = validate();
-    if (!parsed.ok || busy || destinationBusy || disabled) return;
+    if (!parsed.ok || busy || destinationBusy || editorialLoading || disabled) return;
     const destination = parsed.input.destination ?? getDestination(parsed.input.destinationId);
     if (!destination) return;
     const id = crypto.randomUUID();
@@ -310,11 +363,16 @@ export function NewAccountTrip({
     );
   return (
     <section
-      className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-6"
+      className="trip-creation mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-5"
       aria-label="Lên kế hoạch chuyến đi"
     >
-      <div>
-        <button type="button" className="text-action mb-4" onClick={() => void cancel()}>
+      <div className="core-page-heading">
+        <button
+          type="button"
+          className="text-action mb-4"
+          disabled={cancelDisabled || busy || destinationBusy}
+          onClick={() => void cancel()}
+        >
           <Icon name="back" /> Tạo chuyến đi
         </button>
         <h1 ref={formHeading} tabIndex={-1} className="outline-none">
@@ -326,10 +384,14 @@ export function NewAccountTrip({
           Xem lại lịch gợi ý
         </Button>
       )}
-      <p className="text-sm text-muted">
-        Thông tin đang nhập được giữ trong tab này tối đa 24 giờ sau lần sửa cuối; lịch gợi ý tối đa
-        1 giờ. Chỉ chuyến đã lưu mới đồng bộ tài khoản. Đăng xuất hoặc đóng tab sẽ bỏ dữ liệu tạm.
-      </p>
+      <details className="creation-retention text-sm text-muted">
+        <summary>Thông tin đang nhập được giữ thế nào?</summary>
+        <p>
+          Thông tin đang nhập được giữ trong tab này tối đa 24 giờ sau lần sửa cuối; lịch gợi ý tối
+          đa 1 giờ. Chỉ chuyến đã lưu mới đồng bộ tài khoản. Đăng xuất hoặc đóng tab sẽ bỏ dữ liệu
+          tạm.
+        </p>
+      </details>
       {cacheFailed && (
         <Notice error>
           Trình duyệt chưa giữ được thông tin tạm. Hãy hoàn tất chuyến trước khi tải lại trang.
@@ -347,6 +409,7 @@ export function NewAccountTrip({
           values={form}
           onChange={(value) => {
             setForm(value);
+            if (value.destinationId !== form.destinationId) setEditorial(false);
             setPreview(null);
             setMessage('');
             setErrors({});
@@ -357,7 +420,7 @@ export function NewAccountTrip({
             setPreview(null);
           }}
           errors={errors}
-          disabled={disabled || busy}
+          disabled={disabled || busy || editorialLoading}
           searchDestinations={accountSession.searchDestinations}
           onSearchBusyChange={setDestinationBusy}
           options={
@@ -414,7 +477,7 @@ export function NewAccountTrip({
           </Notice>
         )}
         <div className="flex flex-col gap-3">
-          {!offlineDev && (
+          {!offlineDev && !editorial && (
             <Button type="submit" disabled={disabled || busy || destinationBusy}>
               {busy ? 'Đang tạo lịch trình…' : 'Tạo lịch trình'} <Icon name="arrow" />
             </Button>
@@ -428,7 +491,7 @@ export function NewAccountTrip({
           </Button>
           <Button
             secondary
-            disabled={disabled || busy || destinationBusy}
+            disabled={cancelDisabled || busy || destinationBusy}
             onClick={() => {
               void cancel();
             }}

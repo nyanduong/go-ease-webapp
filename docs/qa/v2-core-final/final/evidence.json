@@ -1,0 +1,248 @@
+{
+  "source": "Live localhost:5174 + real local Nest/PostgreSQL, anonymous browser, no mocks",
+  "testedCommit": "68f55c8372a3834a31cdb6e0911fd34216ea3d43",
+  "checks": [
+    "search",
+    "kind change preserves query",
+    "empty result",
+    "detail",
+    "browser Back restores filters",
+    "200% text reflow"
+  ],
+  "screens": [
+    {
+      "screen": "home",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "explore",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "detail-destination",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "id": "da-lat",
+      "realCms": true
+    },
+    {
+      "screen": "detail-place",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "id": "da-nang-cau-rong",
+      "realCms": true
+    },
+    {
+      "screen": "detail-food",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "id": "am-thuc-cho-dem-da-lat",
+      "realCms": true
+    },
+    {
+      "screen": "detail-article",
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "id": "cam-nang-da-lat-theo-nhip-rieng",
+      "realCms": true
+    },
+    {
+      "screen": "home",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "explore",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "detail-destination",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "id": "da-lat",
+      "realCms": true
+    },
+    {
+      "screen": "detail-place",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "id": "da-nang-cau-rong",
+      "realCms": true
+    },
+    {
+      "screen": "detail-food",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "id": "am-thuc-cho-dem-da-lat",
+      "realCms": true
+    },
+    {
+      "screen": "detail-article",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "id": "cam-nang-da-lat-theo-nhip-rieng",
+      "realCms": true
+    },
+    {
+      "screen": "home",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "explore",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "overflow": false,
+      "firstDestinations": [
+        {
+          "title": "Đà Lạt",
+          "photoLoaded": true,
+          "visible": true
+        },
+        {
+          "title": "Đà Nẵng",
+          "photoLoaded": true,
+          "visible": true
+        }
+      ],
+      "largeCategoryCards": 0
+    },
+    {
+      "screen": "detail-destination",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "id": "da-lat",
+      "realCms": true
+    },
+    {
+      "screen": "detail-place",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "id": "da-nang-cau-rong",
+      "realCms": true
+    },
+    {
+      "screen": "detail-food",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "id": "am-thuc-cho-dem-da-lat",
+      "realCms": true
+    },
+    {
+      "screen": "detail-article",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "id": "cam-nang-da-lat-theo-nhip-rieng",
+      "realCms": true
+    }
+  ]
+}

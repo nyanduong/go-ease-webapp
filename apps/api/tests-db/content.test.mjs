@@ -5,7 +5,8 @@ import { Pool } from 'pg';
 import { createApi } from '../dist/bootstrap.js';
 import { contentPageSchema, contentRecordSchema, getDestination } from '@goease/contracts';
 import { isolatedUrl } from '../scripts/db-tools.mjs';
-import { initialContent, seedContent } from '../scripts/content-seed.mjs';
+import { initialContent, originalContent, seedContent } from '../scripts/content-seed.mjs';
+import { checkCmsDatabaseBrowser } from '../../web/tests/cms-db-browser.mjs';
 
 if (process.env.GOEASE_DB_TEST_ACK !== 'isolated') throw Error('Isolated real database required');
 const adminUrl = process.env.GOEASE_DB_TEST_ADMIN_URL;
@@ -55,6 +56,7 @@ async function fixture(run) {
     B = randomUUID(),
     prefix = 'cms-' + randomUUID();
   const tokens = { A: token(A), B: token(B) };
+  let authClock = Date.now();
   const { app } = await createApi(
     {
       TRIPS_ENABLED: 'true',
@@ -71,6 +73,7 @@ async function fixture(run) {
     undefined,
     {},
     {
+      now: () => authClock,
       fetcher: async (_url, options) => {
         const who = Object.keys(tokens).find(
           (key) => options.headers.authorization === 'Bearer ' + tokens[key],
@@ -114,7 +117,19 @@ async function fixture(run) {
       issuer,
       A,
     ]);
-    await run({ A, B, prefix, request, create, update, base, token: tokens.A });
+    await run({
+      A,
+      B,
+      prefix,
+      request,
+      create,
+      update,
+      base,
+      token: tokens.A,
+      advanceAuthWindow: () => {
+        authClock += 60000;
+      },
+    });
   } finally {
     await app.close();
   }
@@ -399,12 +414,33 @@ test('sourced editorial seed is repeatable and preserves admin payload, version 
       assert(value.sources.every((source) => source.url.startsWith('https://')));
     }
     await seedContent(adminUrl);
+    const legacy = originalContent.find((entry) => entry.id === 'dalat-bietthuhangnga');
+    await admin.query('UPDATE "EditorialContent" SET payload=$1::jsonb,version=1 WHERE id=$2', [
+      JSON.stringify(legacy),
+      legacy.id,
+    ]);
+    await seedContent(adminUrl);
+    const upgraded = (
+      await admin.query('SELECT payload,version FROM "EditorialContent" WHERE id=$1', [legacy.id])
+    ).rows[0];
+    assert(upgraded.payload.image, 'Untouched RC1 content receives its verified photograph');
+    assert.equal(upgraded.version, 2);
     const read = () =>
       admin.query('SELECT * FROM "EditorialContent" WHERE id=ANY($1::varchar[]) ORDER BY id', [
         ids,
       ]);
     const before = (await read()).rows;
     assert.equal(before.length, ids.length);
+    for (const value of initialContent) {
+      const links = await admin.query(
+        'SELECT "categoryId" FROM "EditorialCategory" WHERE "contentId"=$1 ORDER BY "categoryId"',
+        [value.id],
+      );
+      assert.deepEqual(
+        links.rows.map((row) => row.categoryId),
+        [...value.categoryIds].sort(),
+      );
+    }
     await seedContent(adminUrl);
     assert.deepEqual((await read()).rows, before);
     const page = contentPageSchema.parse(
@@ -425,4 +461,167 @@ test('sourced editorial seed is repeatable and preserves admin payload, version 
     assert.equal(row.version, edited.version);
     assert.equal(row.updatedAt.toISOString(), edited.updatedAt);
     await failure(await request(null, 'GET', '/v1/content/' + original.entry.id), 404, 'NOT_FOUND');
+  }));
+
+test('real PostgreSQL CMS publication reaches PWA discovery, favorites and saved reopened manual plans at mobile and desktop widths', () =>
+  fixture(async ({ A, B, create, update, base, token, request, advanceAuthWindow }) => {
+    const id = 'aaa-browser-' + randomUUID();
+    const draft = await create(
+      entry(id, 'destination', {
+        title: 'Đà Lạt — Hành trình cao nguyên',
+        summary: 'Chọn một nhịp đi chậm giữa những khoảng xanh và góc phố cao nguyên.',
+        body: 'Nội dung minh họa cho kiểm thử CMS với PostgreSQL thật. Bạn có thể tự sắp xếp các điểm dừng và kiểm tra thông tin trước chuyến đi.',
+        destination: { ...getDestination('da-lat'), id, name: 'Đà Lạt — Hành trình cao nguyên' },
+      }),
+    );
+    await failure(await request(null, 'GET', '/v1/content/' + id), 404, 'NOT_FOUND');
+    const published = await update(draft, { status: 'published' });
+    const { tripIds } = await checkCmsDatabaseBrowser({
+      base,
+      token,
+      owner: A,
+      record: published,
+      advanceAuthWindow,
+    });
+    assert.equal(tripIds.length, 3);
+    const trips = await admin.query(
+      'SELECT id,"ownerSubject",destination FROM "Trip" WHERE id=ANY($1::varchar[])',
+      [tripIds],
+    );
+    assert.equal(trips.rowCount, 3);
+    for (const trip of trips.rows) {
+      assert.equal(trip.ownerSubject, A);
+      assert.equal(trip.destination.id, id);
+    }
+    assert.equal((await result(await request('A', 'GET', '/v1/favorites'))).items.length, 0);
+    assert.equal((await result(await request('B', 'GET', '/v1/favorites'))).items.length, 0);
+    await failure(await request('B', 'GET', '/v1/trips/' + tripIds[0]), 404, 'NOT_FOUND');
+    assert.notEqual(A, B);
+  }));
+
+test('Vietnamese search folds Unicode in C locale and preserves filters, cursors, visibility and owners', () =>
+  fixture(async ({ prefix, request, create, update }) => {
+    const destination = await create(
+      entry(prefix + '-destination', 'destination', { title: 'Đà Lạt', status: 'published' }),
+    );
+    const category = await create(
+      entry(prefix + '-category', 'category', { title: 'Thiên nhiên', status: 'published' }),
+    );
+    const expected = [];
+    for (let i = 0; i < 23; i++) {
+      const id = prefix + '-place-' + String(i).padStart(2, '0');
+      expected.push(id);
+      await create(
+        entry(id, 'place', {
+          title: i === 1 ? 'Ghé ĐÀ LẠT'.normalize('NFD') : 'Ghé Đà Lạt',
+          destinationId: destination.entry.id,
+          categoryIds: i % 2 ? [] : [category.entry.id],
+          status: 'published',
+        }),
+      );
+    }
+    const draft = await create(
+      entry(prefix + '-draft', 'destination', { title: 'Đà Lạt chưa công bố' }),
+    );
+    const hiddenParent = await create(
+      entry(prefix + '-hidden-parent', 'destination', { title: 'Đà Lạt ẩn', status: 'published' }),
+    );
+    const hiddenChild = await create(
+      entry(prefix + '-hidden-child', 'place', {
+        title: 'Đà Lạt ẩn',
+        destinationId: hiddenParent.entry.id,
+        status: 'published',
+      }),
+    );
+    await update(hiddenParent, { status: 'hidden' });
+    const get = async (path) =>
+      contentPageSchema.parse(await result(await request(null, 'GET', path)));
+    const params = (q, extra = {}) => new URLSearchParams({ q, limit: '50', ...extra });
+    for (const q of ['đà lạt', 'Đà Lạt', 'ĐÀ LẠT', 'đà lạt'.normalize('NFD')]) {
+      const page = await get(
+        '/v1/content?' + params(q, { kind: 'place', destinationId: destination.entry.id }),
+      );
+      assert.deepEqual(
+        page.items.map((item) => item.entry.id),
+        expected,
+      );
+      const destinations = await get('/v1/content?' + params(q, { kind: 'destination' }));
+      assert(destinations.items.some((item) => item.entry.id === destination.entry.id));
+      assert(
+        !destinations.items.some((item) =>
+          [draft.entry.id, hiddenParent.entry.id].includes(item.entry.id),
+        ),
+      );
+    }
+    const filtered = await get(
+      '/v1/content?' +
+        params('đà lạt', {
+          kind: 'place',
+          destinationId: destination.entry.id,
+          categoryId: category.entry.id,
+        }),
+    );
+    assert.deepEqual(
+      filtered.items.map((item) => item.entry.id),
+      expected.filter((_, i) => i % 2 === 0),
+    );
+    const found = [];
+    let after;
+    do {
+      const page = await get(
+        '/v1/content?' +
+          params('đà lạt', {
+            kind: 'place',
+            destinationId: destination.entry.id,
+            limit: '5',
+            ...(after ? { after } : {}),
+          }),
+      );
+      found.push(...page.items.map((item) => item.entry.id));
+      after = page.nextCursor;
+    } while (after);
+    assert.deepEqual(found, expected);
+    const hidden = await get(
+      '/v1/content?' + params('đà lạt', { destinationId: hiddenParent.entry.id }),
+    );
+    assert(!hidden.items.some((item) => item.entry.id === hiddenChild.entry.id));
+    const managed = contentPageSchema.parse(
+      await result(
+        await request('A', 'GET', '/v1/admin/content?' + params('đà lạt', { kind: 'destination' })),
+      ),
+    );
+    assert(managed.items.some((item) => item.entry.id === draft.entry.id));
+    await result(await request('A', 'PUT', '/v1/favorites/' + expected[0]));
+    await result(await request('B', 'PUT', '/v1/favorites/' + expected[1]));
+    for (const [owner, id] of [
+      ['A', expected[0]],
+      ['B', expected[1]],
+    ]) {
+      const page = contentPageSchema.parse(
+        await result(await request(owner, 'GET', '/v1/favorites?' + params('đà lạt'))),
+      );
+      assert.deepEqual(
+        page.items.map((item) => item.entry.id),
+        [id],
+      );
+    }
+    const literal = await create(
+      entry(prefix + '-literal', 'place', {
+        title: 'Đà Lạt 100%_!',
+        destinationId: destination.entry.id,
+        status: 'published',
+      }),
+    );
+    const literalPage = await get(
+      '/v1/content?' + params('%_', { destinationId: destination.entry.id }),
+    );
+    assert.deepEqual(
+      literalPage.items.map((item) => item.entry.id),
+      [literal.entry.id],
+    );
+    assert.equal(
+      (await get('/v1/content?' + params("' OR 1=1 --", { destinationId: destination.entry.id })))
+        .items.length,
+      0,
+    );
   }));

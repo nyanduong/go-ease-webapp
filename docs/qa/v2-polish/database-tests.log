@@ -1,0 +1,81 @@
+✔ multi-destination discovered snapshots round-trip through PostgreSQL without Place rows and preserve null versus zero (1145.0693ms)
+✔ provider refresh does not rewrite a saved discovery snapshot; edit/reopen/replay retain provenance and owner/version guards (474.2386ms)
+✔ destination/snapshot mismatches and cross-city catalogue references are rejected before any trip rows are written (166.1053ms)
+✔ popular destination suggestions accept and reopen manual empty trips without fabricated catalogue places (437.4218ms)
+✔ custom destination snapshots preserve their valid IANA time zone and SQL guards reject incomplete JSON snapshots (415.2821ms)
+✔ Vietnam destination outside popular suggestions retains its provider source through PostgreSQL save/reopen/edit without a live provider or current selection proof (286.6014ms)
+✔ new manual trips and destination changes reject foreign GPS despite forged Vietnam country metadata (380.5262ms)
+✔ new or changed discovered activities reject foreign GPS while unchanged historical place snapshots remain editable (252.7946ms)
+✔ historical foreign snapshots remain readable and editable without permitting a different foreign destination (288.1245ms)
+✔ real PostgreSQL CRUD preserves normalized ordering/null/zero/legacy source and scopes every endpoint by verified user (312.7468ms)
+✔ lost-response retries replay create/update/delete without duplicate rows or extra version; changed payload/key conflicts (230.4841ms)
+✔ concurrent creates with same mutation serialize once; concurrent stale updates have one winner and one conflict (148.0554ms)
+✔ unknown owner/role/catalog, invalid days/money/IDs, query and version are rejected without writes; full valid 60-activity payload fits (233.3725ms)
+[Nest] 9588  - 17:21:13 21/10/2026   ERROR [API] Object(3) {
+  requestId: '960e56a9-d9b8-42e2-a754-06130677ba6a',
+  status: 503,
+  code: 'DB_UNAVAILABLE'
+}
+✔ forced DB error after children/header update rolls back aggregate, version and mutation receipt together (200.2649ms)
+✔ runtime role cannot DDL/seed/bypass RLS; missing or wrong tenant context cannot read other project/user data (202.1816ms)
+✔ pagination is bounded and deterministic, ledger/quota expiry fails safely without silently overwriting (881.2535ms)
+✔ data survives real API + PostgreSQL restart; migration is repeatable from isolated empty database (1508.8535ms)
+✔ mobile consumer → real Nest HTTP → Prisma/Postgres saves/reads/conflicts/deletes (provider double + URL shim, not native TLS proof) (179.5568ms)
+✔ private backup restores into a NEW isolated database with owner/RLS/version intact; never overwrite original DB (1138.4803ms)
+✔ product account login/restore/logout + workspace CRUD/conflict use real HTTP/Postgres; A/B remain isolated (Auth provider double) (264.5288ms)
+✔ product workspace lost response survives app recreation and same-owner replay does not create duplicate Postgres trips (228.7946ms)
+[Nest] 9588  - 17:21:17 21/10/2026   ERROR [API] Object(3) {
+  requestId: 'ab06fb3c-4374-40e7-8972-6709e3cd46b1',
+  status: 503,
+  code: 'DB_UNAVAILABLE'
+}
+✔ catalog admin is DB-granted, versioned and revocable; disabled referenced places preserve trips and admin cannot read other owners (385.6842ms)
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 176 modules transformed.
+rendering chunks...
+computing gzip size...
+../admin/dist-test/index.html                   0.46 kB │ gzip:   0.30 kB
+../admin/dist-test/assets/index-DaljZF6w.css    3.28 kB │ gzip:   1.28 kB
+../admin/dist-test/assets/dist-DUv6x2D9.js    214.40 kB │ gzip:  55.16 kB
+../admin/dist-test/assets/index-B5eW3zpr.js   323.95 kB │ gzip: 100.42 kB
+
+✓ built in 266ms
+✔ web browser login/edit/disable/refresh/deep-link uses real Nest/PostgreSQL with isolated provider fixtures (3449.2111ms)
+✔ admin creates beyond 20 and cursor pages read every sourced Place through real PostgreSQL (313.2686ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15251.8484
+✔ editorial publication requires current admin permission, complete sources and optimistic version (734.6657ms)
+✔ editorial references reject missing/wrong/unpublished parents and categories; hiding parents hides children and favorites (256.5511ms)
+✔ editorial keyset pagination exceeds twenty records without duplicates and validates bounds (350.0629ms)
+✔ favorites reopen idempotently and PostgreSQL RLS isolates user and issuer even outside API filters (151.0352ms)
+✔ sourced editorial seed is repeatable and preserves admin payload, version and publication edits (241.1578ms)
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 239 modules transformed.
+rendering chunks...
+computing gzip size...
+../web/dist-cms-test/index.html                     1.02 kB │ gzip:   0.57 kB
+../web/dist-cms-test/assets/osm-map-vh-t_kPv.css   15.09 kB │ gzip:   6.36 kB
+../web/dist-cms-test/assets/index-LNQLrJnO.css     63.91 kB │ gzip:  12.57 kB
+../web/dist-cms-test/assets/osm-map-C8Jv-z4Y.js   151.42 kB │ gzip:  44.76 kB
+../web/dist-cms-test/assets/dist-DUv6x2D9.js      214.40 kB │ gzip:  55.16 kB
+../web/dist-cms-test/assets/index-EuVwAflB.js     498.48 kB │ gzip: 148.28 kB
+
+✓ built in 436ms
+✔ real PostgreSQL CMS publication reaches PWA discovery, favorites and saved reopened manual plans at mobile and desktop widths (4687.7257ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8126.402
+Isolated Postgres stopped; private test files retained in OS temp for inspection.

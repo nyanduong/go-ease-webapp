@@ -2,15 +2,20 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { authProject } from './auth-pilot-controller.js';
 
 export function safeReturnPath(value: string | null): string {
+  if (!value || /[\r\n]/.test(value)) return '/';
   // Preserve only the supported, local create-form handoff across Google OAuth.
   if (
     value &&
     !/[\r\n]/.test(value) &&
-    /^\/trips\/new\?(?:destination=[a-z0-9-]{1,80}|choose=1)$/.test(value)
+    /^\/trips\/new\?(?:destination=[a-z0-9-]{1,80}|content=[a-z0-9][a-z0-9_-]{0,79}|choose=1)$/.test(
+      value,
+    )
   )
     return value;
   return value &&
-    /^\/(?:trips(?:\/(?:new|[A-Za-z0-9_-]{1,80}))?|account|about|travel-services)?$/.test(value)
+    /^\/(?:trips(?:\/(?:new|[A-Za-z0-9_-]{1,80}))?|explore(?:\/[a-z0-9][a-z0-9_-]{0,79})?|favorites|account|about|travel-services)?$/.test(
+      value,
+    )
     ? value
     : '/';
 }
