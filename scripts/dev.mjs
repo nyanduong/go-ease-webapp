@@ -129,7 +129,8 @@ async function waitForHttp(url, validate, timeoutMs = 60000) {
 
 async function main() {
   const pnpm = process.env.npm_execpath;
-  if (!pnpm) throw Error('Chạy bằng pnpm dev từ thư mục gốc dự án.');
+  if (!pnpm || !process.env.npm_config_user_agent?.startsWith('pnpm/'))
+    throw Error('Dự án dùng pnpm. Chạy pnpm dev từ thư mục gốc dự án (thay cho npm run dev).');
   if (process.argv.includes('--offline')) {
     await assertPortFree(5175);
     console.info('[dev] Chuẩn bị dev offline: không dùng database/API hoặc đăng nhập.');
